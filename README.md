@@ -2,6 +2,8 @@
 
 API REST para la gestión de un restaurante: usuarios y roles, mesas, reservas, menú, pedidos, cocina en tiempo real, facturación, estadísticas y notificaciones por email.
 
+> 🌐 **App en producción:** [resto-api-f5.vercel.app](https://resto-api-f5.vercel.app) · API: [restoapi-47sp.onrender.com](https://restoapi-47sp.onrender.com) ([Swagger](https://restoapi-47sp.onrender.com/docs))
+
 > Frontend: [IA-P1-BCN/Resto-API_Frontend](https://github.com/IA-P1-BCN/Resto-API_Frontend) · Despliegue: [docs/deploy.md](docs/deploy.md) (solo Anna despliega) · Modelo de datos: [docs/er.md](docs/er.md) ([imagen](docs/er-diagram.png))
 
 ## Stack
