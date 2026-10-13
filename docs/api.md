@@ -165,13 +165,15 @@ así que no retrasa la respuesta. Con `EMAIL_ENABLED=false` solo se escribe en e
 | Endpoint | Roles |
 |---|---|
 | `POST /orders/` | `admin`, `waiter`. El pedido guarda en `waiter_id` el usuario que lo crea |
-| `GET /orders/`, `GET /orders/{id}` | `admin`, `waiter`, `kitchen` |
-| `PATCH /orders/{id}/status` | `admin`, `waiter`, `kitchen` |
-| `PATCH /orders/{id}/items/{item_id}` | Marca una línea como preparada o servida (o la desmarca). `{"prepared": bool}`: `admin`, `kitchen`. `{"served": bool}`: `admin`, `waiter` |
+| `GET /orders/`, `GET /orders/{id}` | `admin`, `waiter`, `kitchen`, `bartender` |
+| `PATCH /orders/{id}/status` | `admin`, `waiter`, `kitchen`, `bartender` |
+| `PATCH /orders/{id}/items/{item_id}` | Marca una línea como preparada o servida (o la desmarca). `{"prepared": bool}`: `admin`, `kitchen`, `bartender`. `{"served": bool}`: `admin`, `waiter` |
 
-Sin token → `401`. `customer` en cualquier endpoint, `kitchen` creando un pedido o marcando `served`, o `waiter` marcando `prepared` → `403`.
+Sin token → `401`. `customer` en cualquier endpoint, `kitchen` o `bartender` creando un pedido o marcando `served`, o `waiter` marcando `prepared` → `403`.
 
-Cada línea de `items` lleva `prepared` (cocina la tiene lista) y `served` (sala la ha llevado a la mesa), las dos `false` al crear el pedido. Marcar una línea de otro pedido o que no existe → `404`; de un pedido `paid` o `cancelled` → `409`; sin `prepared` ni `served` en el cuerpo → `422`.
+Cada línea de `items` lleva `prepared` (cocina o barra la tiene lista) y `served` (sala la ha llevado a la mesa), las dos `false` al crear el pedido. Marcar una línea de otro pedido o que no existe → `404`; de un pedido `paid` o `cancelled` → `409`; sin `prepared` ni `served` en el cuerpo → `422`.
+
+El WebSocket de cocina (`/ws/kitchen`) admite `admin`, `kitchen` y `bartender`.
 
 ## Facturas y exportación CSV · HU-14
 

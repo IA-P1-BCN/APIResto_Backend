@@ -15,7 +15,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect, status
 from sqlalchemy.orm import Session
 
-from app.core.permissions import KITCHEN
+from app.core.permissions import BARTENDER, KITCHEN
 from app.core.security import decode_access_token
 from app.database import get_db
 from app.models.model_user import User
@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
-ALLOWED_ROLES = {role.value for role in KITCHEN}
+ALLOWED_ROLES = {role.value for role in (*KITCHEN, *BARTENDER)}
 
 
 @router.websocket("/ws/kitchen")

@@ -4,7 +4,7 @@ from typing import Annotated
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from app.core.permissions import KITCHEN, ORDERS, require_role
+from app.core.permissions import BARTENDER, KITCHEN, ORDERS, require_role
 from app.crud import crud_order
 from app.database import get_db
 from app.models.model_user import User
@@ -18,7 +18,7 @@ from app.schemas.schema_order import (
 router = APIRouter(prefix="/orders", tags=["orders"])
 
 Waiter = Annotated[User, Depends(require_role(*ORDERS))]
-STAFF = [Depends(require_role(*ORDERS, *KITCHEN))]
+STAFF = [Depends(require_role(*ORDERS, *KITCHEN, *BARTENDER))]
 
 @router.post("/", response_model=OrderOut, status_code=201)
 def create_order(
@@ -60,7 +60,7 @@ def update_order_status(
 
 
 ITEM_FIELD_ROLES = {
-    "prepared": {role.value for role in KITCHEN},
+    "prepared": {role.value for role in (*KITCHEN, *BARTENDER)},
     "served": {role.value for role in ORDERS},
 }
 
@@ -70,12 +70,12 @@ def update_order_item(
     order_id: int,
     item_id: int,
     body: OrderItemUpdate,
-    user: Annotated[User, Depends(require_role(*ORDERS, *KITCHEN))],
+    user: Annotated[User, Depends(require_role(*ORDERS, *KITCHEN, *BARTENDER))],
     db: Session = Depends(get_db),  # noqa: B008
 ):
     """Marca una línea como preparada (cocina) o servida en la mesa (sala), o las desmarca.
 
-    `prepared`: admin, kitchen. `served`: admin, waiter.
+    `prepared`: admin, kitchen, bartender. `served`: admin, waiter.
     """
     changes = body.model_dump(exclude_none=True)
     for field in changes:
