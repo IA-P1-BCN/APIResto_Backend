@@ -12,21 +12,17 @@ ventas nuevas no se ven. Con `STATS_CACHE_TTL=0` no se guarda nada.
 """
 
 from dataclasses import dataclass
-from datetime import date, datetime, time, timedelta
+from datetime import date
 from decimal import Decimal
 from threading import Lock
 
 from cachetools import TTLCache, cached
 from cachetools.keys import hashkey
-from sqlalchemy import Select, func, select
 from sqlalchemy.orm import Session
 
 from app.config import settings
-from app.models.model_dish import Dish
-from app.models.model_order import Order
-from app.models.model_order_item import OrderItem
+from app.repositories import stats_repository
 
-SALE_STATUSES = ("served", "paid")
 CENT = Decimal("0.01")
 ZERO = Decimal("0.00")
 
@@ -80,20 +76,6 @@ def _as_date(value: object) -> date:
     return date.fromisoformat(str(value))
 
 
-def _sales_filter(
-    stmt: Select, date_from: date | None, date_to: date | None
-) -> Select:
-    """Solo pedidos que son venta y, si se indican, dentro del rango de fechas."""
-    stmt = stmt.where(Order.status.in_(SALE_STATUSES))
-    if date_from is not None:
-        stmt = stmt.where(Order.created_at >=
-                          datetime.combine(date_from, time.min))
-    if date_to is not None:
-        next_day = datetime.combine(date_to + timedelta(days=1), time.min)
-        stmt = stmt.where(Order.created_at < next_day)
-    return stmt
-
-
 @cached(
     _sales_cache,
     key=lambda db, date_from=None, date_to=None: hashkey(date_from, date_to),
@@ -103,13 +85,7 @@ def sales_summary(
     db: Session, date_from: date | None = None, date_to: date | None = None
 ) -> SalesSummary:
     """Número de pedidos, total vendido, ticket medio y desglose por día."""
-    day = func.date(Order.created_at)
-    stmt = _sales_filter(
-        select(day, func.count(Order.id), func.sum(Order.total)),
-        date_from,
-        date_to,
-    )
-    rows = db.execute(stmt.group_by(day).order_by(day)).all()
+    rows = stats_repository.sales_by_day(db, date_from, date_to)
 
     daily = tuple(
         SalesDay(day=_as_date(d), orders_count=count,
@@ -144,22 +120,10 @@ def top_dishes(
     limit: int = 5,
 ) -> tuple[TopDish, ...]:
     """Platos más vendidos por unidades. Empate: más ingresos y luego menor id."""
-    quantity = func.sum(OrderItem.quantity)
-    revenue = func.sum(OrderItem.quantity * OrderItem.unit_price)
-    stmt = _sales_filter(
-        select(Dish.id, Dish.name, quantity, revenue)
-        .join(OrderItem, OrderItem.dish_id == Dish.id)
-        .join(Order, Order.id == OrderItem.order_id),
-        date_from,
-        date_to,
-    )
-    stmt = (
-        stmt.group_by(Dish.id, Dish.name)
-        .order_by(quantity.desc(), revenue.desc(), Dish.id)
-        .limit(limit)
-    )
     return tuple(
         TopDish(dish_id=dish_id, name=name,
                 quantity=int(qty), revenue=_money(rev))
-        for dish_id, name, qty, rev in db.execute(stmt).all()
+        for dish_id, name, qty, rev in stats_repository.top_dishes_rows(
+            db, date_from, date_to, limit
+        )
     )

@@ -1,5 +1,7 @@
+from datetime import date, datetime, time, timedelta
+
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from app.models.model_order import Order
 from app.models.model_order_item import OrderItem
@@ -36,6 +38,23 @@ def list_orders(
         query = query.filter(Order.created_at <= date_to)
 
     return query.offset(skip).limit(limit).all()
+
+
+def list_for_export(
+    db: Session,
+    status: str | None = None,
+    date_from: date | None = None,
+    date_to: date | None = None,
+) -> list[Order]:
+    stmt = select(Order).options(selectinload(Order.items), selectinload(Order.invoice))
+    if status is not None:
+        stmt = stmt.where(Order.status == status)
+    if date_from is not None:
+        stmt = stmt.where(Order.created_at >= datetime.combine(date_from, time.min))
+    if date_to is not None:
+        next_day = datetime.combine(date_to + timedelta(days=1), time.min)
+        stmt = stmt.where(Order.created_at < next_day)
+    return list(db.scalars(stmt.order_by(Order.id)).all())
 
 
 def add_with_items(db: Session, order: Order, items: list[dict]) -> Order:
