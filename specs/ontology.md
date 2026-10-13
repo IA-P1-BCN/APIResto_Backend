@@ -1,0 +1,98 @@
+# Ontología del dominio — Identidad y acceso
+
+> Vocabulario compartido entre el equipo y los agentes. Prosa en español,
+> identificadores en inglés. Prioridad: **M** Must · **S** Should · **C** Could.
+> Aprobada por Levi (PO). Las specs de HU citan las reglas por su id (R-xx).
+
+## 1. Glosario (EN ↔ ES)
+
+| Identificador | Término de negocio | Significado |
+|---|---|---|
+| `User` | usuario | Persona con cuenta en RestoAPI |
+| `Role` | rol | Perfil de permisos: `admin`, `waiter`, `kitchen`, `bartender`, `customer` |
+| `bartender` | barra | Rol de la estación de barra (bebidas/postres); no se llama `bar` para no chocar con la ubicación de mesa |
+| `customer` | cliente | Rol por defecto del auto-registro (equivale al `user` del brief P3) |
+| `AccessToken` | token de acceso | JWT corto que autoriza peticiones |
+| `RefreshToken` | token de renovación | Credencial larga, de un solo uso, para obtener un nuevo par |
+| `RevokedToken` | token revocado | `jti` de un access token invalidado antes de caducar |
+| `EmailVerificationToken` | token de verificación | Un solo uso, confirma que el email es del usuario |
+| `PasswordResetToken` | token de recuperación | Un solo uso, permite fijar una contraseña nueva |
+| `SocialAccount` | cuenta social | Vínculo de un usuario con Google/GitHub |
+| `jti` | identificador de token | Id único dentro del JWT |
+
+## 2. Entidades
+
+### User (M) — tabla `users`
+| Atributo | Tipo | Reglas |
+|---|---|---|
+| `id` | int, PK | |
+| `name` | str | obligatorio |
+| `email` | str | único, minúsculas (R-01) |
+| `password_hash` | str | bcrypt; nunca expuesto (R-02) |
+| `phone` | str, opcional | |
+| `role` | str(20), valor del enum `Role` | obligatorio, por defecto `customer` (R-03) |
+| `is_active` | bool | por defecto `true`; "borrar" = `false` (R-04) |
+| `created_at`, `updated_at` | datetime UTC | `updated_at` nuevo en P3 |
+| `email_verified` | bool | (S) por defecto `false` |
+| `deleted_at`, `created_by`, `updated_by` | datetime / FK users, nulos | (S) soft delete + auditoría |
+| `totp_secret`, `totp_enabled` | str cifrado / bool | (C) 2FA |
+
+### Role (M) — enum `Role`, sin tabla
+Valores: `admin`, `waiter`, `kitchen`, `bartender`, `customer`. Se guarda como string en `users.role`.
+`bartender` confirmado por el equipo.
+Conjunto cerrado: no se crean roles desde la API.
+
+### AccessToken (M) — sin tabla
+JWT sin estado. Claims: `sub` (user id), `jti`, `role`, `exp`. Caducidad por
+`JWT_EXPIRE_MINUTES`.
+
+### RefreshToken (M) — tabla `refresh_tokens`
+`id`, `user_id` (FK), `token_hash` (el valor en claro nunca se guarda),
+`expires_at`, `revoked_at` (nulo = vigente), `created_at`.
+Caducidad: la fija quien lleve auth/tokens en su spec; se lee de una variable de entorno (p. ej. `JWT_REFRESH_EXPIRE_DAYS`).
+
+### RevokedToken (M) — tabla `revoked_tokens`
+`jti` (PK), `expires_at` (cuándo caducaría el access token; luego se puede purgar),
+`revoked_at`.
+
+### EmailVerificationToken (S) y PasswordResetToken (S)
+Misma forma, dos entidades separadas para mantener el vocabulario: `id`, `user_id`
+(FK), `token_hash`, `expires_at`, `used_at` (nulo = no usado), `created_at`.
+
+### SocialAccount (C) — tabla `social_accounts`
+`id`, `user_id` (FK), `provider` (`google` / `github`), `provider_user_id`.
+Único por (`provider`, `provider_user_id`).
+
+## 3. Relaciones
+
+- `Role` (enum) → `User.role`: un valor por usuario, sin FK
+- `User 1:N RefreshToken`
+- `User 1:N EmailVerificationToken` · `User 1:N PasswordResetToken` (S)
+- `User 1:N SocialAccount` (C)
+- `AccessToken` ↔ `RevokedToken`: relación por `jti`, sin FK (el access no se guarda).
+
+**Referencias externas** (definidas en el modelo de P2, no se redefinen aquí):
+`Reservation.user_id → User` · `Order.waiter_id → User` · `Category.station` (enum `kitchen`/`bar`) decide qué rol recibe cada ítem: `kitchen` ve estación `kitchen`, `bartender` ve `bar`. Por eso un `User` nunca se
+borra físicamente (R-04).
+
+## 4. Reglas de negocio
+
+| Id | Prio | Regla |
+|---|---|---|
+| R-01 | M | El email es único sin distinguir mayúsculas y se guarda en minúsculas. Duplicado → 409 |
+| R-02 | M | Contraseña ≥ 8 caracteres (débil → 422), hash bcrypt; `password_hash` no aparece en ningún schema de salida ni en logs |
+| R-03 | M | `POST /auth/register` ignora el rol del payload y crea un `customer`. Solo `admin` crea cuentas `waiter`/`kitchen`/`bartender`/`admin` o cambia roles. El primer admin lo crea `python -m app.scripts.create_admin` |
+| R-04 | M | Borrar usuario = `is_active=false`; los inactivos no pueden iniciar sesión. No hay borrado físico |
+| R-05 | M | Login correcto emite un par AccessToken + RefreshToken |
+| R-06 | M | Rotación: usar un RefreshToken emite un par nuevo y marca `revoked_at` en el usado. Uno ya revocado o caducado → 401 |
+| R-07 | M | Logout revoca el RefreshToken actual y añade el `jti` del AccessToken a `RevokedToken`. Un `jti` revocado → 401 en cualquier endpoint |
+| R-08 | M | Un usuario desactivado invalida el acceso: sus refresh tokens se rechazan |
+| R-09 | S | Los tokens de un solo uso (verificación, recuperación) caducan y se marcan `used_at` al usarse; reutilizar → 400/410 |
+| R-10 | S | Rate limiting en login: tras N intentos fallidos desde la misma IP/email → 429 (N y ventana: los fija la spec de la HU de rate limiting, por variable de entorno) |
+| R-11 | S | Soft delete: `deleted_at` oculta al usuario de los listados; los cambios registran `updated_by`/`updated_at` |
+| R-12 | C | Con `totp_enabled`, el login exige además un código TOTP válido |
+| R-13 | C | El login social crea o vincula un `User` (rol `customer`) |
+
+## 5. Pendientes
+Ninguno a nivel de ontología. Los parámetros numéricos (caducidad del refresh, límite del rate limiting) los fija la spec de su HU.
+Las decisiones de verificación de email (¿bloquea el login?) y de recuperación de códigos 2FA se toman en la spec de su HU, que es donde se implementan.
