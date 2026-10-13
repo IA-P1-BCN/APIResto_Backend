@@ -4,16 +4,21 @@ from typing import Annotated
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from app.core.permissions import KITCHEN, ORDERS, require_role
+from app.core.permissions import BARTENDER, KITCHEN, ORDERS, require_role
 from app.crud import crud_order
 from app.database import get_db
 from app.models.model_user import User
-from app.schemas.schema_order import OrderCreate, OrderOut, OrderStatusUpdate
+from app.schemas.schema_order import (
+    OrderCreate,
+    OrderItemUpdate,
+    OrderOut,
+    OrderStatusUpdate,
+)
 
 router = APIRouter(prefix="/orders", tags=["orders"])
 
 Waiter = Annotated[User, Depends(require_role(*ORDERS))]
-STAFF = [Depends(require_role(*ORDERS, *KITCHEN))]
+STAFF = [Depends(require_role(*ORDERS, *KITCHEN, *BARTENDER))]
 
 @router.post("/", response_model=OrderOut, status_code=201)
 def create_order(
@@ -52,3 +57,28 @@ def update_order_status(
     db: Session = Depends(get_db),  # noqa: B008
 ):
     return crud_order.update_order_status(db, order_id, body.status, background_tasks)
+
+
+ITEM_FIELD_ROLES = {
+    "prepared": {role.value for role in (*KITCHEN, *BARTENDER)},
+    "served": {role.value for role in ORDERS},
+}
+
+
+@router.patch("/{order_id}/items/{item_id}", response_model=OrderOut)
+def update_order_item(
+    order_id: int,
+    item_id: int,
+    body: OrderItemUpdate,
+    user: Annotated[User, Depends(require_role(*ORDERS, *KITCHEN, *BARTENDER))],
+    db: Session = Depends(get_db),  # noqa: B008
+):
+    """Marca una línea como preparada (cocina) o servida en la mesa (sala), o las desmarca.
+
+    `prepared`: admin, kitchen, bartender. `served`: admin, waiter.
+    """
+    changes = body.model_dump(exclude_none=True)
+    for field in changes:
+        if user.role not in ITEM_FIELD_ROLES[field]:
+            raise HTTPException(status_code=403, detail="Not enough permissions")
+    return crud_order.update_item(db, order_id, item_id, changes)

@@ -9,7 +9,7 @@ from app.core.security import decode_access_token
 from app.database import get_db
 from app.models.model_user import Role, User
 
-ALL_ROLES = (Role.admin, Role.waiter, Role.kitchen, Role.customer)
+ALL_ROLES = (Role.admin, Role.waiter, Role.kitchen, Role.bartender, Role.customer)
 USERS = (Role.admin,)
 MENU_READ = ALL_ROLES
 MENU_WRITE = (Role.admin,)
@@ -17,6 +17,7 @@ TABLES = (Role.admin, Role.waiter)
 RESERVATIONS = (Role.admin, Role.waiter, Role.customer)
 ORDERS = (Role.admin, Role.waiter)
 KITCHEN = (Role.admin, Role.kitchen)
+BARTENDER = (Role.admin, Role.bartender)
 INVOICES = (Role.admin, Role.waiter)
 STATS = (Role.admin,)
 

@@ -2,7 +2,7 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, model_validator
 
 
 class OrderItemCreate(BaseModel):
@@ -20,9 +20,24 @@ class OrderItemOut(BaseModel):
     quantity: int
     unit_price: Decimal
     notes: str | None = None
+    prepared: bool = False
+    served: bool = False
 
     class Config:
         from_attributes = True
+
+class OrderItemUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    prepared: bool | None = None
+    served: bool | None = None
+
+    @model_validator(mode="after")
+    def _at_least_one(self) -> "OrderItemUpdate":
+        if self.prepared is None and self.served is None:
+            raise ValueError("Indica prepared, served o los dos")
+        return self
+
 
 class OrderStatusUpdate(BaseModel):
     status: Literal["pending", "in_kitchen", "served", "paid", "cancelled"]
