@@ -13,6 +13,7 @@ from app.schemas.dining_table import TableLocation, TableStatus
 
 TABLE_LOCATIONS: tuple[str, ...] = get_args(TableLocation)
 TABLE_STATUSES: tuple[str, ...] = get_args(TableStatus)
+OUT_OF_SERVICE = "out_of_service"
 
 
 def _in_list(column: str, values: tuple[str, ...]) -> str:

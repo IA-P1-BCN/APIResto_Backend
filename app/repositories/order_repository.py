@@ -1,7 +1,14 @@
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models.model_order import Order
 from app.models.model_order_item import OrderItem
+
+
+def exists_for_table(db: Session, table_id: int) -> bool:
+    return (
+        db.scalar(select(Order.id).where(Order.table_id == table_id).limit(1)) is not None
+    )
 
 
 def get_by_id(db: Session, order_id: int) -> Order | None:
