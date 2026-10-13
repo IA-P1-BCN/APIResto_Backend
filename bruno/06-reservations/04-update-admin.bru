@@ -1,0 +1,72 @@
+meta {
+  name: Editar reserva (admin)
+  type: http
+  seq: 4
+}
+
+patch {
+  url: {{baseUrl}}/reservations/:reservation_id
+  body: json
+  auth: bearer
+}
+
+params:path {
+  reservation_id: {{reservationId}}
+}
+
+headers {
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "party_size": 5,
+    "notes": "Ahora son 5 personas"
+  }
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+
+  test("shape: id, user_id, table_id, reserved_at, duration_min, ends_at, party_size, status, notes, created_at", function() {
+    expect(res.body).to.have.property("id");
+    expect(res.body).to.have.property("user_id");
+    expect(res.body).to.have.property("table_id");
+    expect(res.body).to.have.property("reserved_at");
+    expect(res.body).to.have.property("duration_min");
+    expect(res.body).to.have.property("ends_at");
+    expect(res.body).to.have.property("party_size");
+    expect(res.body).to.have.property("status");
+    expect(res.body).to.have.property("notes");
+    expect(res.body).to.have.property("created_at");
+  });
+
+  test("aplica los cambios", function() {
+    expect(res.body.party_size).to.equal(5);
+  });
+}
+
+docs {
+  **`PATCH /reservations/{reservation_id}`**
+
+  Edición parcial. Si cambian mesa, hora, duración o personas se revalidan la capacidad (422) y el solapamiento (409). `status` solo lo pueden cambiar admin y waiter.
+
+  **Roles permitidos:** admin, waiter y el dueño
+
+  **Auth en este request:** Bearer `{{token}}` (admin)
+
+  **Respuestas posibles:**
+
+  - `200`: `ReservationRead`
+  - `401`: sin token
+  - `403`: rol sin acceso o reserva de otro usuario (`reservation_forbidden`)
+  - `404`: reserva, mesa o usuario inexistente (`reservation_not_found`, `table_not_found`, `user_not_found`)
+  - `409`: solapamiento (`reservation_conflict`) o no cancelable (`reservation_not_cancellable`)
+  - `422`: datos no válidos o `party_size` > capacidad (`party_size_exceeds_capacity`)
+}

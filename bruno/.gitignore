@@ -1,0 +1,4 @@
+# Variables locales de Bruno (process.env) y reportes del CLI: nunca se suben
+.env
+*.env
+reports/

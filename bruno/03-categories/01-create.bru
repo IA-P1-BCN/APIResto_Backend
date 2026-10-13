@@ -1,0 +1,63 @@
+meta {
+  name: Crear categoría
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/categories/
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "name": "Bruno {{runId}}",
+    "sort_order": 99
+  }
+}
+
+script:post-response {
+  if (res.status === 201) {
+    bru.setVar("categoryId", res.body.id);
+    bru.setVar("categoryName", res.body.name);
+  }
+}
+
+tests {
+  test("status 201", function() {
+    expect(res.status).to.equal(201);
+  });
+
+  test("shape: id, name, sort_order", function() {
+    expect(res.body).to.have.property("id");
+    expect(res.body).to.have.property("name");
+    expect(res.body).to.have.property("sort_order");
+  });
+}
+
+docs {
+  **`POST /categories/`**
+
+  Crea una categoría (`name` ≤ 50 caracteres, único). Guarda `categoryId`.
+
+  **Roles permitidos:** admin
+
+  **Auth en este request:** Bearer `{{token}}` (admin)
+
+  **Respuestas posibles:**
+
+  - `201`: `CategoryOut`
+  - `401`: sin token
+  - `403`: escritura con un rol distinto de admin
+  - `404`: `Category not found`
+  - `409`: nombre duplicado o categoría con platos
+}

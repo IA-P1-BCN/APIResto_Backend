@@ -1,0 +1,49 @@
+meta {
+  name: Exportar facturas de hoy a CSV
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/exports/invoices?date_from={{today}}&date_to={{today}}
+  body: none
+  auth: bearer
+}
+
+params:query {
+  date_from: {{today}}
+  date_to: {{today}}
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+
+  test("devuelve un CSV descargable", function() {
+    expect(res.headers["content-type"]).to.include("text/csv");
+    expect(res.headers["content-disposition"]).to.include("attachment");
+    expect(res.body).to.be.a("string").that.is.not.empty;
+  });
+}
+
+docs {
+  **`GET /exports/invoices`**
+
+  Facturas ordenadas por número. Filtros `date_from`, `date_to` (fecha de emisión).
+
+  **Roles permitidos:** admin
+
+  **Auth en este request:** Bearer `{{token}}` (admin)
+
+  **Respuestas posibles:**
+
+  - `200`: `text/csv` con `Content-Disposition: attachment`
+  - `401`: sin token
+  - `403`: el rol no es admin
+  - `422`: `invalid_date_range` o `status` no válido
+}

@@ -1,0 +1,48 @@
+meta {
+  name: Exportar pedidos pagados a CSV
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/exports/orders?status=paid
+  body: none
+  auth: bearer
+}
+
+params:query {
+  status: paid
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+
+  test("devuelve un CSV descargable", function() {
+    expect(res.headers["content-type"]).to.include("text/csv");
+    expect(res.headers["content-disposition"]).to.include("attachment");
+    expect(res.body).to.be.a("string").that.is.not.empty;
+  });
+}
+
+docs {
+  **`GET /exports/orders`**
+
+  Pedidos por id, con nº de líneas y nº de factura. Filtros `status` (`pending` | `in_kitchen` | `served` | `paid` | `cancelled`), `date_from`, `date_to`.
+
+  **Roles permitidos:** admin
+
+  **Auth en este request:** Bearer `{{token}}` (admin)
+
+  **Respuestas posibles:**
+
+  - `200`: `text/csv`
+  - `401`: sin token
+  - `403`: el rol no es admin
+  - `422`: `invalid_date_range` o `status` no válido
+}

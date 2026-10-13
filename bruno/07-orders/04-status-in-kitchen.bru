@@ -1,0 +1,58 @@
+meta {
+  name: Estado → in_kitchen (kitchen)
+  type: http
+  seq: 4
+}
+
+patch {
+  url: {{baseUrl}}/orders/:order_id/status
+  body: json
+  auth: bearer
+}
+
+params:path {
+  order_id: {{orderId}}
+}
+
+headers {
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{tokenKitchen}}
+}
+
+body:json {
+  {
+    "status": "in_kitchen"
+  }
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+
+  test("in_kitchen", function() {
+    expect(res.body.status).to.equal("in_kitchen");
+  });
+}
+
+docs {
+  **`PATCH /orders/{order_id}/status`**
+
+  Cambia el estado del pedido. Notifica por WebSocket (`order_status_changed`). `status`: `pending` | `in_kitchen` | `served` | `paid` | `cancelled`.
+
+  **Roles permitidos:** admin, waiter, kitchen, bartender
+
+  **Auth en este request:** Bearer `{{tokenKitchen}}` (kitchen)
+
+  **Respuestas posibles:**
+
+  - `200`: `OrderOut`
+  - `401`: sin token
+  - `403`: rol no permitido
+  - `404`: `Order not found` / `Table not found` / `Order item not found`
+  - `409`: transición no válida, plato no disponible o pedido cerrado
+  - `422`: datos no válidos
+}

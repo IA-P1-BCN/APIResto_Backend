@@ -1,0 +1,58 @@
+meta {
+  name: Editar notas (customer dueño)
+  type: http
+  seq: 7
+}
+
+patch {
+  url: {{baseUrl}}/reservations/:reservation_id
+  body: json
+  auth: bearer
+}
+
+params:path {
+  reservation_id: {{customerReservationId}}
+}
+
+headers {
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{tokenCustomer}}
+}
+
+body:json {
+  {
+    "notes": "Mesa cerca de la ventana"
+  }
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+
+  test("notas actualizadas", function() {
+    expect(res.body.notes).to.equal("Mesa cerca de la ventana");
+  });
+}
+
+docs {
+  **`PATCH /reservations/{reservation_id}`**
+
+  El dueño puede editar su reserva (salvo `status`).
+
+  **Roles permitidos:** admin, waiter y el dueño
+
+  **Auth en este request:** Bearer `{{tokenCustomer}}` (customer)
+
+  **Respuestas posibles:**
+
+  - `200`: `ReservationRead`
+  - `401`: sin token
+  - `403`: rol sin acceso o reserva de otro usuario (`reservation_forbidden`)
+  - `404`: reserva, mesa o usuario inexistente (`reservation_not_found`, `table_not_found`, `user_not_found`)
+  - `409`: solapamiento (`reservation_conflict`) o no cancelable (`reservation_not_cancellable`)
+  - `422`: datos no válidos o `party_size` > capacidad (`party_size_exceeds_capacity`)
+}

@@ -1,0 +1,53 @@
+meta {
+  name: Ver categoría (customer)
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/categories/:category_id
+  body: none
+  auth: bearer
+}
+
+params:path {
+  category_id: {{categoryId}}
+}
+
+auth:bearer {
+  token: {{tokenCustomer}}
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+
+  test("shape: id, name, sort_order", function() {
+    expect(res.body).to.have.property("id");
+    expect(res.body).to.have.property("name");
+    expect(res.body).to.have.property("sort_order");
+  });
+
+  test("es la categoría pedida", function() {
+    expect(res.body.id).to.equal(bru.getVar("categoryId"));
+  });
+}
+
+docs {
+  **`GET /categories/{category_id}`**
+
+  Detalle de una categoría.
+
+  **Roles permitidos:** todos
+
+  **Auth en este request:** Bearer `{{tokenCustomer}}` (customer)
+
+  **Respuestas posibles:**
+
+  - `200`: `CategoryOut`
+  - `401`: sin token
+  - `403`: escritura con un rol distinto de admin
+  - `404`: `Category not found`
+  - `409`: nombre duplicado o categoría con platos
+}

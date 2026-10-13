@@ -1,0 +1,55 @@
+meta {
+  name: Error 403 · kitchen marca una línea como servida
+  type: http
+  seq: 10
+}
+
+patch {
+  url: {{baseUrl}}/orders/:order_id/items/:item_id
+  body: json
+  auth: bearer
+}
+
+params:path {
+  order_id: {{orderId}}
+  item_id: {{orderItemId}}
+}
+
+headers {
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{tokenKitchen}}
+}
+
+body:json {
+  {
+    "served": false
+  }
+}
+
+tests {
+  test("status 403", function() {
+    expect(res.status).to.equal(403);
+  });
+
+  test("error {detail, code} con code forbidden", function() {
+    expect(res.body.detail).to.be.a("string");
+    expect(res.body.code).to.equal("forbidden");
+  });
+}
+
+docs {
+  **`PATCH /orders/{order_id}/items/{item_id}`**
+
+  `served` es solo de admin y waiter.
+
+  **Roles permitidos:** admin, waiter
+
+  **Auth en este request:** Bearer `{{tokenKitchen}}` (kitchen)
+
+  **Respuestas posibles:**
+
+  - `403`: `Not enough permissions`
+}

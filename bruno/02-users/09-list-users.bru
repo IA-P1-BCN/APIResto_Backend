@@ -1,0 +1,54 @@
+meta {
+  name: Listar usuarios
+  type: http
+  seq: 9
+}
+
+get {
+  url: {{baseUrl}}/users/?skip=0&limit=100
+  body: none
+  auth: bearer
+}
+
+params:query {
+  skip: 0
+  limit: 100
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+
+  test("devuelve una lista", function() {
+    expect(res.body).to.be.an("array");
+  });
+
+  test("no expone password ni password_hash", function() {
+    expect(JSON.stringify(res.body)).to.not.match(/"password(_hash)?"/);
+  });
+
+  test("respeta limit", function() {
+    expect(res.body.length).to.be.at.most(100);
+  });
+}
+
+docs {
+  **`GET /users/`**
+
+  Lista de usuarios con paginación `skip` (≥ 0) y `limit` (1-500). Devuelve una lista simple, no un `Page`. Los filtros y la búsqueda (HU-24) todavía no existen.
+
+  **Roles permitidos:** admin
+
+  **Auth en este request:** Bearer `{{token}}` (admin)
+
+  **Respuestas posibles:**
+
+  - `200`: `list[UserOut]`
+  - `401`: sin token
+  - `403`: el rol no es admin
+}

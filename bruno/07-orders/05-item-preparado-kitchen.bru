@@ -1,0 +1,70 @@
+meta {
+  name: Marcar línea preparada (kitchen)
+  type: http
+  seq: 5
+}
+
+patch {
+  url: {{baseUrl}}/orders/:order_id/items/:item_id
+  body: json
+  auth: bearer
+}
+
+params:path {
+  order_id: {{orderId}}
+  item_id: {{orderItemId}}
+}
+
+headers {
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{tokenKitchen}}
+}
+
+body:json {
+  {
+    "prepared": true
+  }
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+
+  test("shape: id, table_id, waiter_id, status, total, created_at, updated_at, items", function() {
+    expect(res.body).to.have.property("id");
+    expect(res.body).to.have.property("table_id");
+    expect(res.body).to.have.property("waiter_id");
+    expect(res.body).to.have.property("status");
+    expect(res.body).to.have.property("total");
+    expect(res.body).to.have.property("created_at");
+    expect(res.body).to.have.property("updated_at");
+    expect(res.body).to.have.property("items");
+  });
+
+  test("línea preparada", function() {
+    expect(res.body.items[0].prepared).to.equal(true);
+  });
+}
+
+docs {
+  **`PATCH /orders/{order_id}/items/{item_id}`**
+
+  Marca o desmarca una línea (HU-45). `prepared`: admin, kitchen, bartender. `served`: admin, waiter. Hay que enviar al menos uno de los dos.
+
+  **Roles permitidos:** admin, waiter, kitchen, bartender (según el campo)
+
+  **Auth en este request:** Bearer `{{tokenKitchen}}` (kitchen)
+
+  **Respuestas posibles:**
+
+  - `200`: `OrderOut`
+  - `401`: sin token
+  - `403`: rol no permitido
+  - `404`: `Order not found` / `Table not found` / `Order item not found`
+  - `409`: transición no válida, plato no disponible o pedido cerrado
+  - `422`: datos no válidos
+}

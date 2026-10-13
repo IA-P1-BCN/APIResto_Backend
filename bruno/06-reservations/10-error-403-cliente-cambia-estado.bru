@@ -1,0 +1,54 @@
+meta {
+  name: Error 403 · customer cambia el estado
+  type: http
+  seq: 10
+}
+
+patch {
+  url: {{baseUrl}}/reservations/:reservation_id
+  body: json
+  auth: bearer
+}
+
+params:path {
+  reservation_id: {{customerReservationId}}
+}
+
+headers {
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{tokenCustomer}}
+}
+
+body:json {
+  {
+    "status": "completed"
+  }
+}
+
+tests {
+  test("status 403", function() {
+    expect(res.status).to.equal(403);
+  });
+
+  test("error {detail, code} con code reservation_forbidden", function() {
+    expect(res.body.detail).to.be.a("string");
+    expect(res.body.code).to.equal("reservation_forbidden");
+  });
+}
+
+docs {
+  **`PATCH /reservations/{reservation_id}`**
+
+  `status` solo lo cambian admin y waiter.
+
+  **Roles permitidos:** admin, waiter
+
+  **Auth en este request:** Bearer `{{tokenCustomer}}` (customer)
+
+  **Respuestas posibles:**
+
+  - `403`: `Solo admin y waiter pueden cambiar el estado de una reserva`
+}

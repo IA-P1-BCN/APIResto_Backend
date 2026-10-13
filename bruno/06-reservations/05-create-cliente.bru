@@ -1,0 +1,76 @@
+meta {
+  name: Crear reserva (customer a su nombre)
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{baseUrl}}/reservations
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{tokenCustomer}}
+}
+
+body:json {
+  {
+    "table_id": {{tableId}},
+    "reserved_at": "{{reservedAtCustomer}}",
+    "duration_min": 60,
+    "party_size": 2
+  }
+}
+
+script:post-response {
+  if (res.status === 201) {
+    bru.setVar("customerReservationId", res.body.id);
+  }
+}
+
+tests {
+  test("status 201", function() {
+    expect(res.status).to.equal(201);
+  });
+
+  test("shape: id, user_id, table_id, reserved_at, duration_min, ends_at, party_size, status, notes, created_at", function() {
+    expect(res.body).to.have.property("id");
+    expect(res.body).to.have.property("user_id");
+    expect(res.body).to.have.property("table_id");
+    expect(res.body).to.have.property("reserved_at");
+    expect(res.body).to.have.property("duration_min");
+    expect(res.body).to.have.property("ends_at");
+    expect(res.body).to.have.property("party_size");
+    expect(res.body).to.have.property("status");
+    expect(res.body).to.have.property("notes");
+    expect(res.body).to.have.property("created_at");
+  });
+
+  test("a nombre del customer", function() {
+    expect(res.body.user_id).to.equal(bru.getVar("customerId"));
+  });
+}
+
+docs {
+  **`POST /reservations`**
+
+  Un customer reserva para sí mismo sin indicar `user_id`. Guarda `customerReservationId`.
+
+  **Roles permitidos:** admin, waiter, customer
+
+  **Auth en este request:** Bearer `{{tokenCustomer}}` (customer)
+
+  **Respuestas posibles:**
+
+  - `201`: `ReservationRead`
+  - `401`: sin token
+  - `403`: rol sin acceso o reserva de otro usuario (`reservation_forbidden`)
+  - `404`: reserva, mesa o usuario inexistente (`reservation_not_found`, `table_not_found`, `user_not_found`)
+  - `409`: solapamiento (`reservation_conflict`) o no cancelable (`reservation_not_cancellable`)
+  - `422`: datos no válidos o `party_size` > capacidad (`party_size_exceeds_capacity`)
+}

@@ -1,0 +1,52 @@
+meta {
+  name: Error 409 · número de mesa duplicado
+  type: http
+  seq: 11
+}
+
+post {
+  url: {{baseUrl}}/tables
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "number": {{tableNumber}},
+    "capacity": 2,
+    "location": "indoor"
+  }
+}
+
+tests {
+  test("status 409", function() {
+    expect(res.status).to.equal(409);
+  });
+
+  test("error {detail, code} con code conflict", function() {
+    expect(res.body.detail).to.be.a("string");
+    expect(res.body.code).to.equal("conflict");
+  });
+}
+
+docs {
+  **`POST /tables`**
+
+  `number` es único.
+
+  **Roles permitidos:** admin
+
+  **Auth en este request:** Bearer `{{token}}` (admin)
+
+  **Respuestas posibles:**
+
+  - `409`: `Table number <n> already exists`
+}

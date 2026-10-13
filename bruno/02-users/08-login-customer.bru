@@ -1,0 +1,58 @@
+meta {
+  name: Login customer
+  type: http
+  seq: 8
+}
+
+post {
+  url: {{baseUrl}}/auth/login
+  body: formUrlEncoded
+  auth: none
+}
+
+headers {
+  Content-Type: application/x-www-form-urlencoded
+}
+
+body:form-urlencoded {
+  username: {{customerEmail}}
+  password: {{testPassword}}
+}
+
+script:post-response {
+  if (res.status === 200) {
+    bru.setVar("tokenCustomer", res.body.access_token);
+  }
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+
+  test("shape: access_token, token_type", function() {
+    expect(res.body).to.have.property("access_token");
+    expect(res.body).to.have.property("token_type");
+  });
+
+  test("token_type bearer", function() {
+    expect(res.body.token_type).to.equal("bearer");
+    expect(res.body.access_token).to.be.a("string").that.is.not.empty;
+  });
+}
+
+docs {
+  **`POST /auth/login`**
+
+  Login del usuario `customer` recién creado. Guarda `tokenCustomer`, que se usa en los casos de rol.
+
+  **Roles permitidos:** público
+
+  **Auth en este request:** ninguna
+
+  **Respuestas posibles:**
+
+  - `200`: `{access_token, token_type: "bearer"}`
+  - `401`: credenciales incorrectas o usuario desactivado (`unauthorized`)
+  - `422`: faltan `username` o `password` (`validation_error`)
+}

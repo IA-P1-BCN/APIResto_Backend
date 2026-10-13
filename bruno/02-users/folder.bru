@@ -1,0 +1,10 @@
+meta {
+  name: 02 · Users
+  seq: 3
+}
+
+docs {
+  CRUD de usuarios (solo admin). Crea un usuario de cada rol y hace login con cada uno para obtener `tokenWaiter`, `tokenKitchen`, `tokenBartender` y `tokenCustomer`.
+
+  No existe `/auth/register` (HU-22) ni `DELETE /users/{id}`: la baja es `PATCH /users/{id}/deactivate` (ver carpeta 11-cleanup).
+}
