@@ -1,4 +1,13 @@
-from sqlalchemy import CheckConstraint, Column, ForeignKey, Integer, Numeric, String
+from sqlalchemy import (
+    Boolean,
+    CheckConstraint,
+    Column,
+    ForeignKey,
+    Integer,
+    Numeric,
+    String,
+    false,
+)
 
 from app.database import Base
 
@@ -12,6 +21,8 @@ class OrderItem(Base):
     quantity = Column(Integer, nullable=False)
     unit_price = Column(Numeric(8, 2), nullable=False)
     notes = Column(String(255))
+    prepared = Column(Boolean, nullable=False, default=False, server_default=false())
+    served = Column(Boolean, nullable=False, default=False, server_default=false())
 
     __table_args__ = (
         CheckConstraint("quantity > 0", name="check_quantity_positive"),

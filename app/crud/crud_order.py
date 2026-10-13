@@ -143,3 +143,23 @@ def update_order_status(db: Session, order_id: int, new_status: str, background_
     return order
 
 
+CLOSED_STATUSES = {"paid", "cancelled"}
+
+
+def update_item(db: Session, order_id: int, item_id: int, changes: dict[str, bool]):
+    order = db.query(Order).filter(Order.id == order_id).first()
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    item = next((i for i in order.items if i.id == item_id), None)
+    if item is None:
+        raise HTTPException(status_code=404, detail="Order item not found")
+    if order.status in CLOSED_STATUSES:
+        raise HTTPException(
+            status_code=409,
+            detail=f"Cannot change items of an order in status '{order.status}'",
+        )
+    for field, value in changes.items():
+        setattr(item, field, value)
+    db.commit()
+    db.refresh(order)
+    return order
