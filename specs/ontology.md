@@ -2,7 +2,7 @@
 
 > Vocabulario compartido entre el equipo y los agentes. Prosa en español,
 > identificadores en inglés. Prioridad: **M** Must · **S** Should · **C** Could.
-> Aprobada por Levi (PO). Las specs de HU citan las reglas por su id (R-xx).
+> Aprobada por Levi (PO). Las issues, los PR y el ai-log citan las reglas por su id (R-xx).
 
 ## 1. Glosario (EN ↔ ES)
 

@@ -22,14 +22,14 @@ agente los lee al empezar y trabaja con el mismo vocabulario. `CLAUDE.md` los en
    `dev`, borrar tests), para que no cause daños.
 3. Como revisora, quiero que el código generado use los nombres de la ontología, para
    revisar contra un vocabulario único.
-4. Como Product Owner, quiero aprobar la ontología antes de que se escriban specs de HU,
-   para controlar las reglas de negocio.
+4. Como Product Owner, quiero aprobar la ontología, que es la spec general, para
+   controlar las reglas de negocio que siguen los agentes.
 5. Como usuaria de Claude Code, quiero que `CLAUDE.md` apunte a `AGENTS.md`, para no
    mantener dos copias.
 6. Como Carla (OpenCode), quiero que `AGENTS.md` sea neutral respecto a la herramienta,
    para que me sirva igual que a quienes usan Claude Code.
-7. Como agente, quiero saber que sin spec de la HU debo parar y preguntar, para no
-   inventar requisitos.
+7. Como agente, quiero saber que, sin spec propia de la HU, debo usar la ontología y la
+   issue y preguntar ante cualquier regla que falte, para no inventar requisitos.
 8. Como Scrum Master, quiero que `AGENTS.md` explique cómo rellenar `docs/ai-log.md`,
    para cumplir el entregable de trazabilidad.
 9. Como agente, quiero saber qué roles existen (`admin`, `waiter`, `kitchen`,
@@ -42,11 +42,11 @@ agente los lee al empezar y trabaja con el mismo vocabulario. `CLAUDE.md` los en
 - `specs/ontology.md`: entidades `User`, `Role` (enum de 5 valores, sin tabla),
   `AccessToken` (JWT sin estado), `RefreshToken`, `RevokedToken` (Must);
   `EmailVerificationToken`, `PasswordResetToken` (Should); `SocialAccount` y TOTP
-  (Could). Reglas numeradas R-01…R-13 que las specs de HU citan por id. Glosario
+  (Could). Reglas numeradas R-01…R-13 que las issues, los PR y el ai-log citan por id. Glosario
   EN↔ES. Referencias externas de una línea (`Reservation`, `Order`, `Category.station`).
 - Identificadores en inglés, prosa en español.
-- `AGENTS.md`: stack, estructura y capas, comandos, convenciones, regla "sin spec no
-  se codifica", los tests son el contrato, lista de "no hagas", revisión de seguridad,
+- `AGENTS.md`: stack, estructura y capas, comandos, convenciones, regla "sin spec
+  propia: ontología + issue, y preguntar si falta una regla", los tests son el contrato, lista de "no hagas", revisión de seguridad,
   uso de `docs/ai-log.md`, resumen de la DoD.
 - `CLAUDE.md` mínimo: `@AGENTS.md`.
 - Decisiones de fondo recogidas en `specs/ontology.md` (alcance, tokens, ciclo de vida de
@@ -72,7 +72,8 @@ agente los lee al empezar y trabaja con el mismo vocabulario. `CLAUDE.md` los en
 - [ ] PR < 400 líneas, revisado por Rita
 
 ## Out of Scope
-- Specs de las demás HU (una por HU, después de esta).
+- Specs de las demás HU: el equipo decidió (13/10) no escribir una spec por HU; la spec
+  general es la ontología + `AGENTS.md`.
 - Implementar `bartender`, `station` o cualquier entidad en código (otras HU).
 - Skills, comandos y subagentes personalizados de OpenCode (Could).
 - Configurar herramientas y modelos (HU-21).
