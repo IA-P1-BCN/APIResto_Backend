@@ -7,13 +7,14 @@ import sys
 
 from sqlalchemy.orm import Session
 
-from app.crud.crud_user import get_user_by_email, hash_password
+from app.core.security import hash_password
 from app.database import Base, SessionLocal, engine
 from app.models.model_user import Role, User
+from app.repositories import user_repository
 
 
 def create_admin(db: Session, email: str, password: str, name: str = "Admin") -> User:
-    user = get_user_by_email(db, email)
+    user = user_repository.get_by_email(db, email)
     if user is None:
         user = User(name=name, email=email, password_hash=hash_password(password))
         db.add(user)

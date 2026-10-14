@@ -12,6 +12,7 @@ from sqlalchemy.dialects import postgresql
 from app.core.logging import JsonFormatter
 from app.models.dining_table import DiningTable
 from app.models.reservation import Reservation
+from app.repositories import reservation_repository
 from app.services import reservations as service
 
 
@@ -34,7 +35,7 @@ def test_reservation_repr_includes_table_and_time():
 
 
 def test_reservation_end_compiles_to_make_interval_in_postgres():
-    stmt = select(service.reservation_end(Reservation.reserved_at, Reservation.duration_min))
+    stmt = select(reservation_repository.reservation_end(Reservation.reserved_at, Reservation.duration_min))
 
     sql = str(stmt.compile(dialect=postgresql.dialect()))
 

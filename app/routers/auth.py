@@ -6,9 +6,9 @@ from sqlalchemy.orm import Session
 
 from app.core.permissions import CurrentUser
 from app.core.security import create_access_token
-from app.crud import crud_user
 from app.database import get_db
 from app.schemas.schema_user import UserOut
+from app.services import user_service
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -18,12 +18,8 @@ DbSession = Annotated[Session, Depends(get_db)]
 @router.post("/login")
 def login(form_data: Annotated[OAuth2PasswordRequestForm, Depends()], db: DbSession):
     """Inicia sesión y devuelve un token JWT."""
-    user = crud_user.get_user_by_email(db, form_data.username)
-    if (
-        not user
-        or not user.is_active
-        or not crud_user.verify_password(form_data.password, user.password_hash)
-    ):
+    user = user_service.authenticate(db, form_data.username, form_data.password)
+    if user is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Credenciales incorrectas",

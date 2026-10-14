@@ -18,7 +18,7 @@ from sqlalchemy.orm import Session
 from app.core.permissions import BARTENDER, KITCHEN
 from app.core.security import decode_access_token
 from app.database import get_db
-from app.models.model_user import User
+from app.repositories import user_repository
 from app.websocket.kitchen import kitchen_manager
 
 logger = logging.getLogger(__name__)
@@ -48,7 +48,7 @@ async def kitchen_websocket(
     está desactivado o no tiene rol admin o kitchen.
     """
     user_id = decode_access_token(token) if token else None
-    user = db.get(User, user_id) if user_id is not None else None
+    user = user_repository.get_by_id(db, user_id) if user_id is not None else None
     allowed = user is not None and user.is_active and user.role in ALLOWED_ROLES
     db.close()
     if not allowed:
