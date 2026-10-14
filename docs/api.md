@@ -160,6 +160,28 @@ así que no retrasa la respuesta. Con `EMAIL_ENABLED=false` solo se escribe en e
 | 422 | `party_size_exceeds_capacity` | `party_size` supera la capacidad de la mesa |
 | 422 | `validation_error` | Validación de Pydantic (campos que faltan, `party_size <= 0`, campos desconocidos…) |
 
+## Usuarios (`/users`) · HU-32
+
+Todos los endpoints son solo `admin` (otro rol → `403`).
+
+| Endpoint | Descripción |
+|---|---|
+| `POST /users/` | Crea un usuario; guarda `created_by` y `updated_by` (el admin que lo crea) |
+| `GET /users/` | Lista los usuarios no borrados. `?include_deleted=true` incluye los borrados |
+| `GET /users/{id}` | Un borrado → `404`, salvo con `?include_deleted=true` |
+| `PUT /users/{id}` | Edita; actualiza `updated_by` y `updated_at` |
+| `PATCH /users/{id}/deactivate` | `is_active=false`: suspensión temporal, sigue en los listados y no puede iniciar sesión |
+| `DELETE /users/{id}` | Soft delete: `deleted_at` + `is_active=false`; desaparece de los listados. Devuelve el usuario |
+| `POST /users/{id}/restore` | `deleted_at=null` e `is_active=true`. Solo si estaba borrado |
+
+`UserOut` incluye `updated_at`, `deleted_at`, `created_by` y `updated_by` (nulos en usuarios anteriores a la HU-32 o creados por auto-registro). Un usuario nunca se borra físicamente; su email sigue reservado (crearlo otra vez → `409`).
+
+| Código | Cuándo |
+|---|---|
+| `403` | Un admin intenta borrarse o desactivarse a sí mismo |
+| `404` | Usuario inexistente o ya borrado |
+| `409` | Email ya registrado; `restore` sobre un usuario no borrado |
+
 ## Pedidos (`/orders`) · HU-07, HU-05
 
 | Endpoint | Roles |
