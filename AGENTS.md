@@ -25,13 +25,15 @@ pydantic-settings · PyJWT + bcrypt · PostgreSQL 16 · pytest + httpx · ruff.
 
 ## Estructura
 ```
-app/{main.py, config.py, database.py, core/, models/, schemas/, routers/, crud/,
-     services/, websocket/, scripts/}
+app/{main.py, config.py, database.py, core/, models/, schemas/, routers/,
+     services/, repositories/, websocket/, scripts/}
 tests/{conftest.py, unit/, integration/, test_*.py}   docs/   scripts/
 ```
-Capas hoy: `routers` (HTTP) → `services` y `crud` (lógica y acceso a datos) → `models`.
-La HU de arquitectura por capas introducirá `repositories/`; hasta que llegue a `dev`,
-sigue el patrón existente. El primer admin se crea con
+Capas: `routers` (solo HTTP) → `services` (reglas de negocio, errores de dominio,
+transacciones) → `repositories` (solo consultas a la BD, sin HTTP ni reglas) →
+`models`. Los `schemas` definen la entrada y salida. Una consulta nueva va en
+`repositories/<entidad>_repository.py`; una regla nueva, en `services/`. El primer admin
+se crea con
 `python -m app.scripts.create_admin EMAIL PASSWORD [NOMBRE]`.
 Los schemas de entrada y salida van separados; `password_hash` nunca sale en un schema.
 
