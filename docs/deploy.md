@@ -48,7 +48,7 @@ Pasos (por si hay que recrearlo):
 4. Comprobar que **Auto-Deploy está en Off** (el deploy lo lanza GitHub Actions).
 5. Cuando exista `/health` (D3): abrir `https://<servicio>.onrender.com/docs`.
 
-> El arranque (`sh docker-entrypoint.sh`) aplica `alembic upgrade head` solo si existe `alembic.ini`, así que la API ya se puede desplegar antes de tener migraciones.
+> El arranque (`sh docker-entrypoint.sh`) aplica `alembic upgrade head` antes de levantar la API. Ver [sección 8](#8-migraciones-con-alembic-hu-23).
 
 ## 3. GitHub Actions (repo Backend)
 
@@ -207,4 +207,44 @@ docker compose down -v           # parar y BORRAR los datos de la BD
 - Login: `POST /auth/login` como formulario OAuth2 (`username` = email, `password`) devuelve `{access_token, token_type}`. En Swagger (`/docs`), el botón **Authorize** hace el login y añade el token a las peticiones.
 - Para levantar el frontend sin API se puede usar datos simulados: `VITE_USE_MOCK=true` en el `.env` y `docker compose up --build`.
 - Primer admin (sin él nadie puede usar `/users`): `docker compose exec api python -m app.scripts.create_admin EMAIL PASSWORD [NOMBRE]`. Si el email ya existe, lo convierte en admin.
-- Mientras no haya Alembic, las tablas se crean con `create_all`, que no añade columnas nuevas a tablas existentes: si una BD local es anterior a HU-05 (sin `users.role`), recrearla con `docker compose down -v`.
+- Si el volumen de la BD de Docker se creó antes de Alembic, el arranque falla porque las tablas ya existen: marcarla una vez con `docker compose exec api alembic stamp 0001` y luego `docker compose exec api alembic upgrade head` (o recrearla con `docker compose down -v`).
+
+## 8. Migraciones con Alembic (HU-23)
+
+Los cambios en el modelo de datos se hacen con migraciones de Alembic (`migrations/versions/`), nunca a mano en la BD. La primera migración (`0001_esquema_inicial`) crea las 8 tablas tal como están en P2; la `0002_platos_preparados_y_servidos` añade las columnas `prepared` y `served` a `order_items`.
+
+```bash
+alembic upgrade head        # aplicar las migraciones pendientes
+alembic current             # en qué migración está la BD
+alembic check               # ¿hay cambios en los modelos sin migración?
+
+# Después de cambiar un modelo:
+alembic revision --autogenerate -m "descripción corta"
+# Revisar el fichero generado en migrations/versions/ y probarlo con upgrade y downgrade
+```
+
+- La URL de la BD sale de `DATABASE_URL` (variable de entorno o `.env`), igual que en la app.
+- El CI comprueba que hay una sola cabeza de migraciones, aplica `alembic upgrade head` sobre PostgreSQL y falla si los modelos no coinciden con las migraciones (`tests/test_migrations.py`).
+- Si dos PRs crean migraciones a la vez, la segunda tiene que cambiar su `down_revision` para colgar de la primera (o crear una migración de `merge`).
+
+### BD que ya existían antes de Alembic
+
+Las BD creadas con `create_all` ya tienen las tablas: en ellas **no** se ejecuta la migración inicial, solo se marca como aplicada **una vez** (riesgo R18 del plan) y después se aplican las siguientes. Se ha comprobado que el esquema de Neon `main` y de la BD local coincide con `0001_esquema_inicial` (aún sin `prepared` ni `served`).
+
+| BD | Qué hacer (una vez) |
+|---|---|
+| Neon `main` (producción) | `alembic stamp 0001` **antes** de desplegar la versión con Alembic (si no, el arranque intenta crear tablas que ya existen y falla); el arranque de Render aplica después la `0002` |
+| Neon `dev` | Está vacía: `alembic upgrade head` |
+| BD local (SQLite) creada antes de Alembic | `alembic stamp 0001` y `alembic upgrade head` |
+| Volumen de Docker creado antes de Alembic | `docker compose exec api alembic stamp 0001` y `docker compose exec api alembic upgrade head`, o `docker compose down -v` |
+| BD creada con `create_all` que ya tiene `prepared` y `served` | `alembic stamp head` |
+
+Para lanzarlo contra Neon desde el equipo, igual que el primer admin: la URL solo en la variable de entorno de ese comando.
+
+```bash
+# PowerShell
+$env:DATABASE_URL = "postgresql+psycopg://...neon.tech/restoapi?sslmode=require"
+alembic stamp 0001
+alembic upgrade head
+Remove-Item Env:DATABASE_URL
+```
