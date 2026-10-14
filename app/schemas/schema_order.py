@@ -2,7 +2,7 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class OrderItemCreate(BaseModel):
@@ -20,6 +20,8 @@ class OrderItemOut(BaseModel):
     quantity: int
     unit_price: Decimal
     notes: str | None = None
+    prepared_quantity: int = 0
+    served_quantity: int = 0
     prepared: bool = False
     served: bool = False
 
@@ -31,11 +33,20 @@ class OrderItemUpdate(BaseModel):
 
     prepared: bool | None = None
     served: bool | None = None
+    prepared_quantity: int | None = Field(default=None, ge=0)
+    served_quantity: int | None = Field(default=None, ge=0)
 
     @model_validator(mode="after")
     def _at_least_one(self) -> "OrderItemUpdate":
-        if self.prepared is None and self.served is None:
-            raise ValueError("Indica prepared, served o los dos")
+        if self.prepared is not None and self.prepared_quantity is not None:
+            raise ValueError("Indica prepared o prepared_quantity, no los dos")
+        if self.served is not None and self.served_quantity is not None:
+            raise ValueError("Indica served o served_quantity, no los dos")
+        if all(
+            value is None
+            for value in (self.prepared, self.served, self.prepared_quantity, self.served_quantity)
+        ):
+            raise ValueError("Indica prepared, served, prepared_quantity o served_quantity")
         return self
 
 
