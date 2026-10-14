@@ -8,17 +8,16 @@ Decisiones (issue #12):
 """
 
 import logging
-from datetime import UTC, date, datetime, time, timedelta
+from datetime import UTC, date, datetime
 from decimal import ROUND_HALF_UP, Decimal
 
-from sqlalchemy import Select, func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.exceptions import ConflictError, NotFoundError
 from app.core.pagination import Page, PageParams, paginate
 from app.models.model_invoice import Invoice
-from app.models.model_order import Order
+from app.repositories import invoice_repository, order_repository
 from app.schemas.schema_invoice import InvoiceOut
 
 logger = logging.getLogger(__name__)
@@ -45,14 +44,12 @@ def format_invoice_number(year: int, sequence: int) -> str:
 
 def next_sequence(db: Session, year: int) -> int:
     """Siguiente número correlativo del año (1 si es la primera factura del año)."""
-    last = db.scalar(select(func.max(Invoice.sequence)
-                            ).where(Invoice.year == year))
-    return (last or 0) + 1
+    return (invoice_repository.max_sequence(db, year) or 0) + 1
 
 
 def create_invoice(db: Session, order_id: int) -> Invoice:
     """Genera la factura de un pedido servido. 404 si no existe, 409 si no se puede."""
-    order = db.get(Order, order_id)
+    order = order_repository.get_by_id(db, order_id)
     if order is None:
         raise NotFoundError("Order not found")
     if order.status != INVOICEABLE_STATUS:
@@ -82,7 +79,7 @@ def create_invoice(db: Session, order_id: int) -> Invoice:
         total=base + tax,
         issued_at=issued_at,
     )
-    db.add(invoice)
+    invoice_repository.add(db, invoice)
     try:
         db.commit()
     except IntegrityError as exc:
@@ -101,24 +98,10 @@ def create_invoice(db: Session, order_id: int) -> Invoice:
 
 
 def get_invoice_or_404(db: Session, invoice_id: int) -> Invoice:
-    invoice = db.get(Invoice, invoice_id)
+    invoice = invoice_repository.get_by_id(db, invoice_id)
     if invoice is None:
         raise NotFoundError("Invoice not found")
     return invoice
-
-
-def invoices_query(
-    date_from: date | None = None, date_to: date | None = None
-) -> Select:
-    """Facturas ordenadas por número, filtradas por fecha de emisión (ambas incluidas)."""
-    stmt = select(Invoice)
-    if date_from is not None:
-        stmt = stmt.where(Invoice.issued_at >=
-                          datetime.combine(date_from, time.min))
-    if date_to is not None:
-        next_day = datetime.combine(date_to + timedelta(days=1), time.min)
-        stmt = stmt.where(Invoice.issued_at < next_day)
-    return stmt.order_by(Invoice.year, Invoice.sequence)
 
 
 def list_invoices(
@@ -127,4 +110,4 @@ def list_invoices(
     date_from: date | None = None,
     date_to: date | None = None,
 ) -> Page[InvoiceOut]:
-    return paginate(db, invoices_query(date_from, date_to), params, InvoiceOut)
+    return paginate(db, invoice_repository.list_query(date_from, date_to), params, InvoiceOut)

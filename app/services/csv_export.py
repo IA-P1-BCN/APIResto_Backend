@@ -7,14 +7,11 @@ Excel muestre bien los acentos al abrir el archivo.
 import csv
 import io
 from collections.abc import Iterable, Sequence
-from datetime import date, datetime, time, timedelta
+from datetime import date, datetime
 
-from sqlalchemy import select
-from sqlalchemy.orm import Session, selectinload
+from sqlalchemy.orm import Session
 
-from app.models.model_invoice import Invoice
-from app.models.model_order import Order
-from app.services.invoices import invoices_query
+from app.repositories import invoice_repository, order_repository
 
 INVOICE_COLUMNS = [
     "number",
@@ -74,9 +71,7 @@ def export_filename(
 def invoices_csv(
     db: Session, date_from: date | None = None, date_to: date | None = None
 ) -> str:
-    stmt = invoices_query(date_from, date_to).options(
-        selectinload(Invoice.order))
-    invoices = db.scalars(stmt).all()
+    invoices = invoice_repository.list_with_orders(db, date_from, date_to)
     rows = (
         [
             invoice.number,
@@ -99,17 +94,7 @@ def orders_csv(
     date_from: date | None = None,
     date_to: date | None = None,
 ) -> str:
-    stmt = select(Order).options(selectinload(
-        Order.items), selectinload(Order.invoice))
-    if status is not None:
-        stmt = stmt.where(Order.status == status)
-    if date_from is not None:
-        stmt = stmt.where(Order.created_at >=
-                          datetime.combine(date_from, time.min))
-    if date_to is not None:
-        next_day = datetime.combine(date_to + timedelta(days=1), time.min)
-        stmt = stmt.where(Order.created_at < next_day)
-    orders = db.scalars(stmt.order_by(Order.id)).all()
+    orders = order_repository.list_for_export(db, status, date_from, date_to)
     rows = (
         [
             order.id,

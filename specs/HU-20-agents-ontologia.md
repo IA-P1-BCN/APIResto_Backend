@@ -52,7 +52,7 @@ agente los lee al empezar y trabaja con el mismo vocabulario. `CLAUDE.md` los en
 - Decisiones de fondo recogidas en `specs/ontology.md` (alcance, tokens, ciclo de vida de
   `User`, asignación de roles, refresh/logout, invariantes, `station`).
 - El contenido refleja el **código real** de `dev` (p. ej. `Role` es enum, la capa de
-  datos hoy es `crud/`), no la documentación de arquitectura, que estaba desfasada.
+  datos entonces era `crud/`; HU-29 la sustituyó por `repositories/`), no la documentación de arquitectura, que estaba desfasada.
 
 ## Testing Decisions
 - Es una HU de documentación: el "test" es la prueba de humo. En una sesión nueva de

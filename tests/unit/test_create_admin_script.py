@@ -13,7 +13,7 @@ import pytest
 from sqlalchemy.orm import sessionmaker
 
 from app import database
-from app.crud.crud_user import verify_password
+from app.core.security import verify_password
 from app.models.model_user import Role, User
 from app.scripts import create_admin as script
 

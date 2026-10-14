@@ -10,13 +10,11 @@ Los permisos (quién puede tocar qué reserva) se comprueban en el router.
 """
 
 import logging
-from datetime import date, datetime, time, timedelta
+from datetime import date, datetime, timedelta
 from html import escape
 
-from sqlalchemy import DateTime, Select, select
-from sqlalchemy.ext.compiler import compiles
+from sqlalchemy import Select
 from sqlalchemy.orm import Session
-from sqlalchemy.sql.functions import FunctionElement
 
 from app.core.exceptions import (
     ConflictError,
@@ -26,40 +24,20 @@ from app.core.exceptions import (
 )
 from app.models.dining_table import DiningTable
 from app.models.model_user import User
-from app.models.reservation import Reservation
+from app.models.reservation import CANCELLED, CONFIRMED, Reservation
+from app.repositories import (
+    dining_table_repository,
+    reservation_repository,
+    user_repository,
+)
+from app.repositories.reservation_repository import find_overlapping
 from app.schemas.reservation import ReservationCreate, ReservationUpdate
 
 logger = logging.getLogger(__name__)
 
-CANCELLED = "cancelled"
-CONFIRMED = "confirmed"
-
-
-class reservation_end(FunctionElement):
-    """Expresión SQL `reserved_at + duration_min minutos`, según el dialecto."""
-
-    type = DateTime()
-    inherit_cache = True
-    name = "reservation_end"
-
-
-@compiles(reservation_end)
-def _reservation_end_postgres(element, compiler, **kw) -> str:
-    start, minutes = (compiler.process(arg, **kw) for arg in element.clauses)
-    return f"({start} + make_interval(mins => {minutes}))"
-
-
-@compiles(reservation_end, "sqlite")
-def _reservation_end_sqlite(element, compiler, **kw) -> str:
-    start, minutes = (compiler.process(arg, **kw) for arg in element.clauses)
-    return (
-        f"(strftime('%Y-%m-%d %H:%M:%f', {start}, '+' || {minutes} || ' minutes')"
-        " || '000')"
-    )
-
 
 def get_reservation(db: Session, reservation_id: int) -> Reservation:
-    reservation = db.get(Reservation, reservation_id)
+    reservation = reservation_repository.get_by_id(db, reservation_id)
     if reservation is None:
         logger.warning("Reserva id=%s no encontrada", reservation_id)
         raise NotFoundError(
@@ -76,47 +54,9 @@ def list_reservations_query(
     user_id: int | None = None,
 ) -> Select[tuple[Reservation]]:
     """Select de reservas filtrado y ordenado por fecha (se pagina en el router)."""
-    stmt = select(Reservation).order_by(Reservation.reserved_at, Reservation.id)
-    if status is not None:
-        stmt = stmt.where(Reservation.status == status)
-    if table_id is not None:
-        stmt = stmt.where(Reservation.table_id == table_id)
-    if user_id is not None:
-        stmt = stmt.where(Reservation.user_id == user_id)
-    if day is not None:
-        start = datetime.combine(day, time.min)
-        stmt = stmt.where(
-            Reservation.reserved_at >= start,
-            Reservation.reserved_at < start + timedelta(days=1),
-        )
-    return stmt
-
-
-def find_overlapping(
-    db: Session,
-    *,
-    table_id: int,
-    reserved_at: datetime,
-    duration_min: int,
-    exclude_id: int | None = None,
-) -> Reservation | None:
-    """Primera reserva activa de la mesa que se solapa con el intervalo dado."""
-    ends_at = reserved_at + timedelta(minutes=duration_min)
-    stmt = (
-        select(Reservation)
-        .where(
-            Reservation.table_id == table_id,
-            Reservation.status != CANCELLED,
-            Reservation.reserved_at < ends_at,
-            reservation_end(Reservation.reserved_at, Reservation.duration_min)
-            > reserved_at,
-        )
-        .order_by(Reservation.reserved_at)
-        .limit(1)
+    return reservation_repository.list_query(
+        status=status, table_id=table_id, day=day, user_id=user_id
     )
-    if exclude_id is not None:
-        stmt = stmt.where(Reservation.id != exclude_id)
-    return db.scalar(stmt)
 
 
 def _get_table_for_update(db: Session, table_id: int) -> DiningTable:
@@ -125,9 +65,7 @@ def _get_table_for_update(db: Session, table_id: int) -> DiningTable:
     El bloqueo serializa las reservas concurrentes de una misma mesa, para que
     dos peticiones simultáneas no pasen a la vez la comprobación de solapamiento.
     """
-    table = db.scalar(
-        select(DiningTable).where(DiningTable.id == table_id).with_for_update()
-    )
+    table = dining_table_repository.get_by_id_for_update(db, table_id)
     if table is None:
         logger.warning("Mesa id=%s no encontrada al reservar", table_id)
         raise NotFoundError(f"La mesa {table_id} no existe", code="table_not_found")
@@ -174,7 +112,7 @@ def _ensure_no_overlap(
 
 
 def ensure_user_exists(db: Session, user_id: int) -> User:
-    user = db.get(User, user_id)
+    user = user_repository.get_by_id(db, user_id)
     if user is None:
         raise NotFoundError(f"El usuario {user_id} no existe", code="user_not_found")
     return user
@@ -196,7 +134,7 @@ def create_reservation(
         reservation = Reservation(
             **data.model_dump(exclude={"user_id"}), user_id=user_id, status=CONFIRMED
         )
-        db.add(reservation)
+        reservation_repository.add(db, reservation)
         db.commit()
     except Exception:
         db.rollback()
@@ -269,7 +207,7 @@ def cancel_reservation(db: Session, reservation: Reservation) -> Reservation:
 
 def delete_reservation(db: Session, reservation: Reservation) -> None:
     reservation_id = reservation.id
-    db.delete(reservation)
+    reservation_repository.delete(db, reservation)
     db.commit()
     logger.info("Reserva id=%s borrada", reservation_id)
 
@@ -278,10 +216,10 @@ def confirmation_email(
     db: Session, reservation: Reservation
 ) -> tuple[str, str, str] | None:
     """(to, subject, html) del email de confirmación, o None si no hay destinatario."""
-    user = db.get(User, reservation.user_id)
+    user = user_repository.get_by_id(db, reservation.user_id)
     if user is None or not user.email:
         return None
-    table = db.get(DiningTable, reservation.table_id)
+    table = dining_table_repository.get_by_id(db, reservation.table_id)
     table_label = f"mesa {table.number}" if table else f"mesa {reservation.table_id}"
     subject = "Tu reserva está confirmada"
     html = (
@@ -298,10 +236,10 @@ def cancellation_email(
     db: Session, reservation: Reservation
 ) -> tuple[str, str, str] | None:
     """(to, subject, html) del email de cancelación, o None si no hay destinatario."""
-    user = db.get(User, reservation.user_id)
+    user = user_repository.get_by_id(db, reservation.user_id)
     if user is None or not user.email:
         return None
-    table = db.get(DiningTable, reservation.table_id)
+    table = dining_table_repository.get_by_id(db, reservation.table_id)
     table_label = f"mesa {table.number}" if table else f"mesa {reservation.table_id}"
     subject = "Tu reserva ha sido cancelada"
     html = (
