@@ -7,8 +7,9 @@ from sqlalchemy.orm import Session
 from app.core.permissions import CurrentUser
 from app.core.security import create_access_token
 from app.database import get_db
+from app.schemas.schema_social import SocialLoginRequest, SocialProvider
 from app.schemas.schema_user import UserOut, UserRegister
-from app.services import user_service
+from app.services import social_auth_service, user_service
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -40,6 +41,16 @@ def login(form_data: Annotated[OAuth2PasswordRequestForm, Depends()], db: DbSess
             headers={"WWW-Authenticate": "Bearer"},
         )
 
+    return {"access_token": create_access_token(user.id), "token_type": "bearer"}
+
+
+@router.post("/social/{provider}", summary="Login con Google o GitHub")
+def social_login(provider: SocialProvider, data: SocialLoginRequest, db: DbSession):
+    """Intercambia el `code` OAuth del proveedor y devuelve un token JWT (HU-38).
+
+    Crea un `customer` si no existe, o vincula la cuenta si el email está verificado.
+    """
+    user = social_auth_service.login(db, provider, data)
     return {"access_token": create_access_token(user.id), "token_type": "bearer"}
 
 

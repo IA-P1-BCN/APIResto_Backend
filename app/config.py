@@ -15,5 +15,9 @@ class Settings(BaseSettings):
     BREVO_API_KEY: str = ""
     MAIL_FROM: str = ""
     STATS_CACHE_TTL: int = 60
+    GOOGLE_CLIENT_ID: str = ""
+    GOOGLE_CLIENT_SECRET: str = ""
+    GITHUB_CLIENT_ID: str = ""
+    GITHUB_CLIENT_SECRET: str = ""
 
 settings = Settings()
