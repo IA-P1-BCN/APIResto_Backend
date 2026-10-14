@@ -40,7 +40,7 @@ Pasos (por si hay que recrearlo):
    | Variable | Valor |
    |---|---|
    | `DATABASE_URL` | Neon, rama `main` (pooled), empezando por `postgresql+psycopg://` (no `postgresql://`: ver paso 3 de Neon) |
-   | `ALLOWED_ORIGINS` | URL de producción de Vercel, exacta y sin `/` final (p. ej. `https://restoapi.vercel.app`). Varias, separadas por comas |
+   | `ALLOWED_ORIGINS` | URLs de producción de Vercel, exactas, sin `/` final y separadas por comas sin espacios. Ahora: `https://resto-api-f5.vercel.app,https://apiresto-f5.vercel.app` |
    | `BREVO_API_KEY`, `MAIL_FROM` | Vacías hasta HU-19 (D7) |
    | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET` | Login social (HU-38). Vacías = ese proveedor responde `503`. Se crean en Google Cloud Console y en GitHub (OAuth App) con la callback `<URL de Vercel>/auth/callback`; los secretos solo en Render |
 
