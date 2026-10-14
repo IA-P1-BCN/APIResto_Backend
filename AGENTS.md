@@ -11,12 +11,15 @@ roles, etc. Producción: https://restoapi.onrender.com (`/docs`, `/health`).
 ## Antes de escribir código (obligatorio)
 1. Lee `specs/ontology.md`: es el vocabulario. Usa esos nombres exactos
    (`User`, `Role`, `RefreshToken`, `RevokedToken`…); no inventes sinónimos.
-2. Lee la issue de la HU que te piden (historia y criterios de aceptación). El equipo no
-   escribe una spec por HU: la spec general es `specs/ontology.md` + este fichero.
-3. **Si la HU no tiene spec propia**, trabaja con la ontología (reglas `R-xx`) y los
-   criterios de la issue. Si una regla falta o es ambigua, **para y pregunta a una
-   persona; no la inventes**. Cuando una persona decida algo así, apúntalo en la
-   sección de esa HU de `docs/ai-log.md`.
+2. Lee la issue de la HU que te piden (historia y criterios de aceptación). **Al empezar
+   cada sesión de una HU, la persona que la lleva establece primero su spec**: copia
+   `specs/HU-TEMPLATE.md` a `specs/HU-XX-descripcion.md`, resuelve las preguntas
+   abiertas (una a una, con el equipo o con el agente) y commitéala antes de escribir
+   código. La guía de cómo hacerlo está al principio de la plantilla.
+3. **Si la HU aún no tiene spec propia** (HU anteriores a esta regla), trabaja con la
+   ontología (reglas `R-xx`) y los criterios de la issue. Si una regla falta o es
+   ambigua, **para y pregunta a una persona; no la inventes**. Cuando una persona
+   decida algo así, apúntalo en la sección de esa HU de `docs/ai-log.md`.
 4. Una tarea = una tarjeta Kanban = una sesión = una rama = un PR. Mantenla pequeña.
 
 ## Stack

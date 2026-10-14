@@ -13,8 +13,13 @@ def get_by_email(db: Session, email: str) -> User | None:
     return db.query(User).filter(func.lower(User.email) == normalized).first()
 
 
-def list_users(db: Session, skip: int = 0, limit: int = 100) -> list[User]:
-    return db.query(User).offset(skip).limit(limit).all()
+def list_users(
+    db: Session, skip: int = 0, limit: int = 100, include_deleted: bool = False
+) -> list[User]:
+    query = db.query(User)
+    if not include_deleted:
+        query = query.filter(User.deleted_at.is_(None))
+    return query.order_by(User.id).offset(skip).limit(limit).all()
 
 
 def add(db: Session, user: User) -> User:
