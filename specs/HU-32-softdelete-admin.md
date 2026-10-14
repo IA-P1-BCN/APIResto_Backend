@@ -29,7 +29,7 @@ fecha. No hay borrado físico (R-04).
 ## Implementation Decisions
 - **Modelo**: `users` gana `deleted_at` (datetime, nulo), `created_by` y `updated_by`
   (FK `users.id`, nulos, `ON DELETE SET NULL`) y `updated_at` (datetime). Migración
-  Alembic `0003`: columnas nulas; rellena `updated_at = created_at` en filas
+  Alembic `0004`: columnas nulas; rellena `updated_at = created_at` en filas
   existentes; `created_by`/`updated_by` quedan en NULL para los usuarios previos.
 - **Dos estados**: desactivar (`is_active=false`) = suspensión temporal, el usuario sigue
   en los listados y no puede iniciar sesión. Borrar = `deleted_at` + `is_active=false`,
