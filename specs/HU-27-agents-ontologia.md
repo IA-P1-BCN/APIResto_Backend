@@ -1,0 +1,230 @@
+# HU-27 · Colección Bruno para pruebas de la API
+
+> > Issue: #70 · Prioridad Must · Nivel Entregable · Escribe: Levi ·
+> Revisa: quien la vea primero · Aprueba: Levi (PO). Vocabulario: `specs/ontology.md`.
+> Reglas del repo: `AGENTS.md`.
+
+## Problem Statement
+La API de RestoAPI expone 44 endpoints HTTP sobre FastAPI, con roles
+(`admin`, `waiter`, `kitchen`, `bartender`, `customer`), JWT, refresh tokens,
+permisos por estación, facturación, stats y export CSV. No existe una forma
+**versionada, reproducible y compartida** de probar la API de punta a punta:
+cada persona del equipo prueba a mano con `curl` o Swagger, y cada PR depende
+de que quien revisa sepa qué flujo ejercitar.
+
+Sin una colección de pruebas común:
+- Los PR de otras HUs se revisan sin un contrato ejecutable previo.
+- El frontend adivina payloads y códigos de error.
+- El onboarding de nuevas personas (Manon, futuras incorporaciones) es lento.
+- No hay una verificación end-to-end reproducible antes del merge.
+
+## Solution
+Una **colección Bruno** versionada en `bruno/` (formato abierto, basado en
+archivos `.bru` de texto plano) que:
+
+1. Cubre **todos los endpoints HTTP** que hoy existen en `app/routers/*.py`.
+2. Documenta el flujo completo por roles: login admin → alta de usuarios por
+   rol → login por rol → CRUD de menú/mesas/reservas/pedidos → factura →
+   stats/export → limpieza → desactivación.
+3. Incluye **casos de error y seguridad** por endpoint: 401, 403, 404, 409, 422.
+4. Tiene entornos `Local` y `Production` con `baseUrl` y credenciales como
+   variables secretas (nunca hardcodeadas en `.bru`).
+5. Se ejecuta de dos formas:
+   - **Bruno app**: manual, explorable por dominio.
+   - **Bruno CLI** (`npx @usebruno/cli`): Collection Runner automatizado para
+     verificación end-to-end antes del merge.
+6. Documenta los **WebSocket** (cocina/barra) como request manual fuera del
+   runner: Bruno no es una herramienta WS de primera clase y la verificación
+   real de WS ya vive en `tests/integration/test_kitchen_websocket.py`.
+
+La colección **solo documenta lo que existe hoy**. Los endpoints futuros se
+añadirán en la PR de su propia HU.
+
+## Desarrollo Agéntico con Agent Teams
+
+Esta HU se desarrolla siguiendo el flujo SDD definido en `AGENTS.md` y el
+briefing del proyecto: **spec → agente → PR → revisión**. Para esta tarea
+concreta, se utiliza **Agent Teams** de Claude Code, con un **agente líder**
+que orquesta y **agentes especialistas** que ejecutan tareas únicas y
+bien delimitadas.
+
+### Cómo se activa el equipo
+
+1. Se habilita el flag experimental de agent teams en Claude Code.
+2. Se invoca al agente líder con la instrucción de crear el equipo.
+3. El líder lee `specs/agents/HU-27/lead.md` y reparte las tareas según los
+   archivos `agent-*.md`.
+4. Los agentes especialistas trabajan **en paralelo**, cada uno en su
+   carpeta de dominio dentro de `bruno/`, sin solapamiento de archivos.
+5. El líder verifica que cada especialista entrega lo pactado y consolida.
+
+### Agentes y tareas
+
+| Agente | Archivo de directriz | Tarea única | Archivos que posee |
+|---|---|---|---|
+| **Lead** | `specs/agents/HU-27/lead.md` | Orquestar, verificar, consolidar, abrir PR | Ninguno (solo lectura + coordinación) |
+| **Auth & Users** | `specs/agents/HU-27/agent-auth.md` | Revisar/crear `.bru` de `01-auth/` y `02-users/` | `bruno/01-auth/`, `bruno/02-users/` |
+| **Menus & Tables** | `specs/agents/HU-27/agent-menus.md` | Revisar/crear `.bru` de `03-categories/`, `04-dishes/`, `05-tables/` | `bruno/03-categories/`, `bruno/04-dishes/`, `bruno/05-tables/` |
+| **Orders & Invoices** | `specs/agents/HU-27/agent-orders.md` | Revisar/crear `.bru` de `07-orders/` y `08-invoices/` | `bruno/07-orders/`, `bruno/08-invoices/` |
+| **Reservations** | `specs/agents/HU-27/agent-reservations.md` | Revisar/crear `.bru` de `06-reservations/` | `bruno/06-reservations/` |
+| **Stats, Export & Cleanup** | `specs/agents/HU-27/agent-cleanup.md` | Revisar/crear `.bru` de `09-stats/`, `10-exports/`, `11-cleanup/` | `bruno/09-stats/`, `bruno/10-exports/`, `bruno/11-cleanup/` |
+
+*Nota: El agente Lead no escribe archivos `.bru`; solo coordina, verifica y
+consolida. Los especialistas escriben únicamente en las carpetas que
+poseen.*
+
+### Reglas para los agentes especialistas
+
+Cada agente especialista debe:
+1. Leer primero `AGENTS.md`, luego `specs/ontology.md`, luego su archivo
+   `specs/agents/HU-27/agent-*.md`.
+2. Trabajar **únicamente** en las carpetas de `bruno/` que se le asignan.
+3. No tocar código de `app/`, `tests/`, migraciones, CI ni configuración de
+   despliegue.
+4. No inventar endpoints ni campos que no existan en los schemas reales.
+5. Seguir el estilo de los `.bru` existentes (meta, request, body,
+   script:post-response, tests).
+6. Reportar al líder al terminar, indicando archivos modificados y cualquier
+   duda.
+
+### Reglas para el agente líder
+
+El agente líder debe:
+1. Leer `specs/agents/HU-27/lead.md` antes de hacer nada.
+2. Crear el equipo de agentes especialistas.
+3. Asignar tareas según la tabla de arriba.
+4. Verificar que cada especialista entrega lo pactado.
+5. Si hay conflictos o dudas, resolverlos o escalar a Levi.
+6. Consolidar los cambios y preparar la rama para la PR.
+7. No escribir archivos `.bru` directamente; solo coordinar.
+
+## User Stories
+1. Como desarrolladora, quiero probar cualquier endpoint sin escribir `curl`,
+   para iterar rápido con una interfaz gráfica (Bruno app).
+2. Como revisora de PR, quiero ejecutar la colección completa con un comando,
+   para verificar que la API sigue funcionando antes de aprobar.
+3. Como frontend, quiero ver en cada request el body real y la respuesta
+   esperada, para integrarme sin leer el código del backend.
+4. Como Tech Lead, quiero que los casos de error (401, 403, 404, 409, 422)
+   estén cubiertos, para que el contrato de la API quede documentado.
+5. Como equipo, quiero que la colección viva en Git junto al código, para
+   que las PR puedan modificarla cuando cambie el contrato.
+6. Como agente de IA en futuras HUs, quiero leer `bruno/README.md` y la
+   estructura de `bruno/`, para no inventar endpoints ni campos.
+7. Como PO, quiero que la colección no toque `app/` ni tests ni CI, para
+   no arriesgar el trabajo de otras HUs.
+8. Como equipo, quiero que las credenciales del admin viajen como variables
+   secretas, para no commitear secretos.
+9. Como agente líder, quiero directrices claras sobre cómo orquestar el
+   equipo, para no solaparme con los especialistas ni generar conflictos.
+10. Como agente especialista, quiero una tarea única y acotada a un conjunto
+    de carpetas, para no pisar el trabajo de otro agente.
+
+## Implementation Decisions
+- **Formato**: Bruno (no Postman) porque:
+  - Los `.bru` son archivos de texto plano versionables en Git con diffs
+    legibles (frente al JSON monolítico de Postman).
+  - No requiere cuenta ni licencia para uso individual o de equipo pequeño.
+  - Coherente con `AGENTS.md` ("no subir secretos; solo `.env.example`") y
+    con la filosofía del repo (`specs/`, `docs/` versionados).
+- **Estructura**: `bruno/<NN-dominio>/<NN-nombre>.bru`. Los prefijos numéricos
+  indican el orden de ejecución. Dominios según `app/routers/*.py`:
+  - `00-health`, `01-auth`, `02-users`, `03-categories`, `04-dishes`,
+    `05-tables`, `06-reservations`, `07-orders`, `08-invoices`, `09-stats`,
+    `10-exports`, `11-cleanup`.
+- **Entornos**: `environments/Local.bru` (`http://localhost:8000`) y
+  `environments/Production.bru` (`https://restoapi-47sp.onrender.com`).
+  `adminEmail` y `adminPassword` son variables secretas, definidas por quien
+  ejecuta (nunca en el repo). Se documenta en `bruno/README.md`.
+- **Variables encadenadas**: cada request protegido usa `{{token}}`. Los
+  `script:post-response` guardan `token`, `refreshToken` (si aplica) e IDs
+  creados (`userId`, `orderId`, `dishId`, `tableId`, `reservationId`,
+  `invoiceId`) para el siguiente request del flujo.
+- **Tests en cada request**: al menos un assert de status y uno de shape del
+  response (campos obligatorios del schema). Se verifica también que
+  `password` / `password_hash` **no aparecen nunca** en las respuestas de
+  usuario (`R-02` de `specs/ontology.md`).
+- **Alcance acotado a lo existente**:
+  - Quedan fuera (se añadirán en la PR de su HU):
+    `/auth/register` (HU-22), refresh/logout (HU-30), `/users/me` y cambio
+    de contraseña (HU-25), filtros de `GET /users` (HU-24), estación de barra
+    en categorías/pedidos (HU-40).
+  - Comportamiento actual documentado, aunque no sea el ideal:
+    - HU-43: un `customer` puede crear reservas para sí mismo (201); el 403
+      solo salta si apunta a otro `user_id`.
+    - HU-08: el 409 de factura es **por pedido** (`invoice_already_exists`,
+      `order_not_served`), no por mesa.
+- **WebSocket**: `bruno/websocket/kitchen-ws.bru` se documenta como request
+  manual, fuera del runner. El README explica la alternativa CLI
+  (`websocat`) y enlaza a los tests de WS existentes.
+- **No toca nada fuera de `bruno/`**: ni `app/`, ni `tests/`, ni
+  `.github/workflows/`, ni `requirements.txt`, ni `Dockerfile`, ni
+  `render.yaml`, ni `.env`.
+
+## Testing Decisions
+- La colección **es el propio test**: su valor se mide por lo que se ejecuta,
+  no por lo que documenta.
+- **Punto de prueba único (seam)**: el Collection Runner de Bruno CLI
+  (`npx @usebruno/cli run -r --env Local ...`).
+- **Criterio de verde**: 130/130 requests en local con la API levantada y el
+  admin creado vía `python -m app.scripts.create_admin`.
+- No se ejecuta la colección en CI en esta HU (no hay GH Action que ejecute
+  Bruno en este momento). Si en el futuro se añade, será en una PR aparte
+  (HU-36 es de otro tipo).
+- La colección **no duplica** los tests de `tests/`: los complementa. Los
+  tests de pytest siguen siendo el contrato automatizado; Bruno es la
+  verificación manual reproducible end-to-end.
+
+## Criterios de aceptación
+- [ ] `bruno/bruno.json` válido y la colección se importa en Bruno sin errores.
+- [ ] Entornos `Local` y `Production` con `baseUrl` correcto.
+- [ ] Todos los endpoints HTTP actuales de `app/routers/*.py` cubiertos por
+      al menos un request.
+- [ ] Flujo `login admin → alta usuarios por rol → login por rol → CRUD →
+      factura → stats → cleanup → desactivación (401)` completo.
+- [ ] Casos de error 401, 403, 404, 409 y 422 presentes donde la API los
+      devuelva.
+- [ ] Tests en cada request: status, shape del schema y ausencia de
+      `password` / `password_hash` en respuestas de usuario.
+- [ ] `bruno/README.md` explica instalación de Bruno, importar, elegir
+      entorno, configurar `adminEmail`/`adminPassword` como secretos, orden
+      de ejecución, Collection Runner (app y CLI), WebSocket manual y tabla
+      de cobertura.
+- [ ] **130/130 requests en verde** en local con la API levantada y el admin
+      creado.
+- [ ] Ninguna credencial real ni token hardcodeado en el repo.
+- [ ] **`git status` solo muestra cambios dentro de `bruno/`** en la PR.
+- [ ] PR revisada por otra persona y aprobada por Levi (PO).
+- [ ] Los archivos `specs/agents/HU-27/*.md` existen y describen las tareas
+      de cada agente de forma clara y sin solapamiento.
+
+## Out of Scope
+- Modificar `app/`, `tests/`, migraciones, CI ni configuración de despliegue.
+- Añadir endpoints que no existen hoy (se añaden en la PR de su HU).
+- Colección Postman (se elige Bruno; Postman se descarta según la
+  justificación de `Implementation Decisions`).
+- Integración de Bruno en GitHub Actions (queda para otra PR).
+- Pruebas de rendimiento o carga (fuera del alcance de HU-27).
+- Swagger enriquecido (tags, ejemplos, Authorize): es HU-26 (Rita), no HU-27.
+
+## Further Notes
+- Referencias:
+  - `AGENTS.md` — reglas del repo, stack, estructura, "no hagas".
+  - `specs/ontology.md` — vocabulario, roles, reglas `R-01`…`R-13`.
+  - `docs/api.md` — documentación funcional de la API.
+  - `docs/deploy.md` — despliegue y entornos (Local, Production).
+  - Swagger: https://restoapi-47sp.onrender.com/docs
+  - `specs/agents/HU-27/lead.md` — directriz del agente líder.
+  - `specs/agents/HU-27/agent-*.md` — directrices de los agentes especialistas.
+- Alineado con `R-02` (no exponer `password_hash`), `R-03` (roles y creación
+  de cuentas), `R-04` (desactivación lógica) y `R-05`/`R-06`/`R-07` (par de
+  tokens) en la medida en que el código actual los implementa.
+- Este fichero **no sustituye** a `AGENTS.md`: lo complementa para la HU-27.
+  Cualquier agente que trabaje en esta rama debe leer primero `AGENTS.md` y
+  luego este fichero.
+- Cuando una HU futura añada endpoints (HU-22, HU-24, HU-25, HU-30, HU-40,
+  etc.), su PR deberá:
+  1. Añadir el `.bru` correspondiente en la carpeta del dominio.
+  2. Actualizar la tabla de cobertura de `bruno/README.md`.
+  3. Actualizar este fichero si la lista de "Out of Scope" cambia.
+- Mantenedor de este fichero: Levi (PO / Dev QA).
