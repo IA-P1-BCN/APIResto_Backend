@@ -38,8 +38,8 @@ fecha. No hay borrado físico (R-04).
   - `DELETE /users/{id}` → soft delete; devuelve el `UserOut` actualizado (200).
   - `POST /users/{id}/restore` → `deleted_at=NULL`, `is_active=true`.
   - `GET /users/` acepta `include_deleted` (por defecto `false`); `GET /users/{id}` de
-    un borrado → 404 salvo `include_deleted=true`. Coordinar el nombre del parámetro
-    con HU-24 (filtros admin).
+    un borrado → 404 salvo `include_deleted=true`. El nombre lo fija esta spec; HU-24
+    (filtros admin) se adapta.
   - `UserOut` expone `deleted_at`, `created_by`, `updated_by`, `updated_at`.
 - **Auditoría a nivel de servicio**: `user_service` recibe el admin que actúa y rellena
   `created_by` al crear; `updated_by` y `updated_at` al editar, desactivar, borrar o
@@ -75,8 +75,7 @@ fecha. No hay borrado físico (R-04).
 - Endpoint de reactivación tras desactivar (hoy no existe; se puede editar `is_active` con `PUT`).
 
 ## Preguntas abiertas
-- [NEEDS CLARIFICATION: nombre final del parámetro `include_deleted` frente al de los
-  filtros de HU-24 (Rita), que está en curso.]
+Ninguna.
 
 ## Decisiones de la sesión
 Sesión de 14/10/2026 (Manon, con Claude Code). Cada decisión, con su porqué y las
@@ -92,3 +91,4 @@ alternativas rechazadas:
 - **Barandillas** (no autoborrado, 404/409) → evita dejar el sistema sin admin.
 - **Migración con NULL para filas previas** → no afirma una autoría falsa. Rechazado:
   asignar el admin más antiguo.
+- **Parámetro `include_deleted`** → lo fija esta HU; Rita adapta los filtros de HU-24.
