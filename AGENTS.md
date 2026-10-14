@@ -43,9 +43,9 @@ ruff check .                     # lint (arreglar: ruff check . --fix)
 pytest                           # tests
 pytest --cov=app --cov-report=term-missing   # el CI exige la cobertura mínima (COVERAGE_MIN)
 ```
-Alembic está en `requirements.txt` pero aún no hay `alembic.ini` ni migraciones
-(HU-23). Hasta que llegue a `dev`, no inventes comandos de migración; cuando exista:
-`alembic upgrade head` y `alembic revision --autogenerate -m "descripcion"`.
+Migraciones con Alembic (`alembic.ini`, `migrations/versions/`; ver `docs/deploy.md`):
+`alembic upgrade head` y `alembic revision --autogenerate -m "descripcion"`. Un cambio
+de modelo sin migración rompe `tests/test_migrations.py`.
 Ojo: con SQLite local, los tests de mesas/reservas se saltan; el CI usa Postgres y
 puede fallar donde tú no viste nada.
 
