@@ -4,9 +4,14 @@ from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
 from app.core.security import hash_password, verify_password
-from app.models.model_user import User
+from app.models.model_user import Role, User
 from app.repositories import user_repository
-from app.schemas.schema_user import UserCreate, UserUpdate
+from app.schemas.schema_user import UserCreate, UserRegister, UserUpdate
+
+
+def normalize_email(email: str) -> str:
+    """R-01: el email se guarda en minúsculas y sin espacios sobrantes."""
+    return email.strip().lower()
 
 
 def get_user(db: Session, user_id: int, include_deleted: bool = False) -> User:
@@ -23,12 +28,13 @@ def list_users(
 
 
 def create_user(db: Session, data: UserCreate, actor: User | None = None) -> User:
-    if user_repository.get_by_email(db, data.email):
+    email = normalize_email(data.email)
+    if user_repository.get_by_email(db, email):
         raise HTTPException(status_code=409, detail="Email already registered")
 
     user = User(
         name=data.name,
-        email=data.email,
+        email=email,
         password_hash=hash_password(data.password),
         phone=data.phone,
         role=data.role.value,
@@ -38,17 +44,32 @@ def create_user(db: Session, data: UserCreate, actor: User | None = None) -> Use
     return user_repository.add(db, user)
 
 
-def update_user(db: Session, user_id: int, data: UserUpdate, actor: User) -> User:
-    user = get_user(db, user_id)
-
-    if (
-        data.email
-        and data.email != user.email
-        and user_repository.get_by_email(db, data.email)
-    ):
+def register_user(db: Session, data: UserRegister) -> User:
+    """Auto-registro público: crea siempre un `customer`, ignora el rol (R-03)."""
+    email = normalize_email(data.email)
+    if user_repository.get_by_email(db, email):
         raise HTTPException(status_code=409, detail="Email already registered")
 
-    for field, value in data.model_dump(mode="json", exclude_unset=True).items():
+    user = User(
+        name=data.name,
+        email=email,
+        password_hash=hash_password(data.password),
+        phone=data.phone,
+        role=Role.customer.value,
+    )
+    return user_repository.add(db, user)
+
+
+def update_user(db: Session, user_id: int, data: UserUpdate, actor: User) -> User:
+    user = get_user(db, user_id)
+    fields = data.model_dump(mode="json", exclude_unset=True)
+
+    if "email" in fields:
+        fields["email"] = normalize_email(fields["email"])
+        if fields["email"] != user.email and user_repository.get_by_email(db, fields["email"]):
+            raise HTTPException(status_code=409, detail="Email already registered")
+
+    for field, value in fields.items():
         if field == "password":
             user.password_hash = hash_password(value)
         else:
