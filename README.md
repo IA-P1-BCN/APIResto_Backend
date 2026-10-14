@@ -4,7 +4,7 @@ API REST para la gestión de un restaurante: usuarios y roles, mesas, reservas, 
 
 > 🌐 **App en producción:** [resto-api-f5.vercel.app](https://resto-api-f5.vercel.app) · API: [restoapi-47sp.onrender.com](https://restoapi-47sp.onrender.com) ([Swagger](https://restoapi-47sp.onrender.com/docs))
 
-> Frontend: [IA-P1-BCN/Resto-API_Frontend](https://github.com/IA-P1-BCN/Resto-API_Frontend) · Despliegue: [docs/deploy.md](docs/deploy.md) (solo Anna despliega) · Modelo de datos: [docs/er.md](docs/er.md) ([imagen](docs/er-diagram.png))
+> Frontend: [IA-P1-BCN/Resto-API_Frontend](https://github.com/IA-P1-BCN/Resto-API_Frontend) · Despliegue: [docs/deploy.md](docs/deploy.md) (solo Anna despliega) · Modelo de datos: [docs/er.md](docs/er.md) ([imagen](docs/er-diagram.png)) · Bitácora de IA: [docs/ai-log.md](docs/ai-log.md)
 
 ## Stack
 
@@ -78,3 +78,4 @@ git push -u origin feature/HU-07-crear-pedido
 - `.env` nunca se sube; solo `.env.example` sin valores reales.
 - Una sola persona (Carla) mergea migraciones de Alembic en `dev`, de una en una.
 - PRs pequeños (idealmente < 400 líneas).
+- Si usas un agente de IA (Claude Code, OpenCode), añade tu entrada en [docs/ai-log.md](docs/ai-log.md) en la misma PR.
