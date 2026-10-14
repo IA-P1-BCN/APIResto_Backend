@@ -17,6 +17,54 @@ contrato por módulo. Formatos comunes:
 
 <!-- TODO(Rita, R-08): completar el resto de módulos. -->
 
+## Autenticación (`/auth`) · HU-04, HU-22
+
+| Método | Ruta | Qué hace | Éxito |
+|---|---|---|---|
+| `POST` | `/auth/register` | Auto-registro público de un `customer` | `201` |
+| `POST` | `/auth/login` | Inicia sesión y devuelve un `AccessToken` | `200` |
+| `GET` | `/auth/me` | Datos del usuario autenticado | `200` |
+
+### Auto-registro (`POST /auth/register`)
+
+No requiere token. Crea la cuenta al instante (`is_active=true`); el `role` del payload se
+ignora y siempre se crea un `customer` (R-03). No emite token: hay que iniciar sesión
+después con `POST /auth/login`.
+
+```json
+{"name": "Ana Gómez", "email": "ana@test.com", "phone": "600123456", "password": "secreto123"}
+```
+
+Respuesta `201` (`UserOut`; nunca incluye `password_hash` ni el token):
+
+```json
+{"id": 7, "name": "Ana Gómez", "email": "ana@test.com", "phone": "600123456",
+ "role": "customer", "is_active": true, "created_at": "2026-10-14T10:15:00"}
+```
+
+- **Email único sin distinguir mayúsculas** y guardado en minúsculas (R-01): se puede
+  iniciar sesión con cualquier combinación de mayúsculas/minúsculas. Duplicado → `409`.
+- **Contraseña ≥ 8 caracteres** (R-02); se guarda hasheada con bcrypt.
+
+### Iniciar sesión (`POST /auth/login`)
+
+`application/x-www-form-urlencoded` con `username` (el email) y `password`. Devuelve
+`{"access_token": "...", "token_type": "bearer"}` (`200`). Credenciales incorrectas o
+usuario desactivado → `401`.
+
+### Usuario autenticado (`GET /auth/me`)
+
+Requiere `Authorization: Bearer <token>` y devuelve el `UserOut` del token. Sin token o
+con un token no válido o caducado → `401`.
+
+### Códigos de error
+
+| HTTP | `code` | Cuándo |
+|---|---|---|
+| 401 | `unauthorized` | Credenciales incorrectas, usuario inactivo, o token ausente/no válido |
+| 409 | `conflict` | El email ya está registrado (R-01) |
+| 422 | `validation_error` | Email con formato incorrecto, contraseña < 8 caracteres o campos que faltan (R-02) |
+
 ## Mesas disponibles (`GET /tables/available`) · HU-18
 
 Roles: `admin` y `waiter`. `kitchen` y `customer` → `403`.

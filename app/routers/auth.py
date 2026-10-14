@@ -7,12 +7,26 @@ from sqlalchemy.orm import Session
 from app.core.permissions import CurrentUser
 from app.core.security import create_access_token
 from app.database import get_db
-from app.schemas.schema_user import UserOut
+from app.schemas.schema_user import UserOut, UserRegister
 from app.services import user_service
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 DbSession = Annotated[Session, Depends(get_db)]
+
+
+@router.post(
+    "/register",
+    response_model=UserOut,
+    status_code=status.HTTP_201_CREATED,
+    summary="Auto-registro de cliente",
+)
+def register(data: UserRegister, db: DbSession):
+    """Crea una cuenta `customer` activa al instante (R-03).
+
+    No emite token: el usuario inicia sesión después con `POST /auth/login`.
+    """
+    return user_service.register_user(db, data)
 
 
 @router.post("/login")
