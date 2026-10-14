@@ -260,7 +260,7 @@ Todos los endpoints son solo `admin` (otro rol → `403`).
 | `POST /orders/` | `admin`, `waiter`. El pedido guarda en `waiter_id` el usuario que lo crea |
 | `GET /orders/`, `GET /orders/{id}` | `admin`, `waiter`, `kitchen`, `bartender` |
 | `PATCH /orders/{id}/status` | `admin`, `waiter`, `kitchen`, `bartender` |
-| `PATCH /orders/{id}/items/{item_id}` | Marca una línea como preparada o servida (o la desmarca). `{"prepared": bool}`: `admin`, `kitchen`, `bartender`. `{"served": bool}`: `admin`, `waiter` |
+| `PATCH /orders/{id}/items/{item_id}` | Marca cuántas unidades de una línea están preparadas o servidas: `{"prepared_quantity": 1}` (de 0 a `quantity`; si es mayor, 422). `{"prepared": true}` marca todas y `false`, ninguna. `prepared` / `prepared_quantity`: `admin`, `kitchen`, `bartender`. `served` / `served_quantity`: `admin`, `waiter`. La respuesta trae `prepared_quantity`, `served_quantity` y `prepared` / `served` (true si están todas) |
 
 Sin token → `401`. `customer` en cualquier endpoint, `kitchen` o `bartender` creando un pedido o marcando `served`, o `waiter` marcando `prepared` → `403`.
 
