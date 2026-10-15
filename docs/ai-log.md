@@ -139,6 +139,18 @@ Copia este bloque en la sección de tu HU:
 - **Decisiones humanas:** `Page[UserOut]` aunque sea breaking-api, filtros `role` + `is_active`, un solo `q` en nombre o email, orden fijo por `id` (Rita).
 - **Lección:** leer `AGENTS.md` y `dev` antes de empezar funcionó otra vez: detectó que la PR #110 había vuelto a exigir spec por HU, y que HU-32 ya fijaba `include_deleted`.
 
+#### 2026-10-15 · Revisión de Manon: acentos, longitud de q y skip/limit · @arita-pereira
+
+- **Herramienta y modelo:** Claude (claude.ai, no Claude Code) · Opus 5.5
+- **Issue y reglas:** #67 (PR #126 ya integrada) · nada
+- **Prompt clave:** los tres comentarios de Manon en la PR #126
+- **Resultado:** aceptado. Búsqueda sin acentos con `translate()` (`app/core/text_search.py`), `q` con máximo 100 caracteres y casillas de la spec marcadas.
+- **Errores o alucinaciones:** en la PR #126 el agente afirmó que los tests pasaban "con SQLite y con Postgres 16", y era falso: `tests/conftest.py` usa siempre SQLite en memoria, aunque se le pase la URL de Postgres. Causa raíz: dio por bueno que cambiar `DATABASE_URL` cambiaba la base de datos de los tests, sin leer el `conftest.py`. Por eso no vio que el `lower()` no quita los acentos. Corregido probando la consulta directamente contra Postgres. Además, el primer intento (48 `replace()` anidados) desbordó la pila de SQLite.
+- **Trabajo descartado:** los `replace()` anidados; la extensión `unaccent` (migración y no existe en SQLite).
+- **Mi prompt o la spec:** la spec no decía nada de acentos, aunque el equipo trabaja con nombres en español y portugués.
+- **Decisiones humanas:** `translate()` sin migración; `skip`/`limit` sin 422, solo la etiqueta `breaking-api` (Rita).
+- **Lección:** antes de decir "probado en X", comprobar qué base de datos usan los tests de verdad.
+
 ### HU-53 · Bitácora de IA
 
 #### 2026-10-14 · Creación de la bitácora · @arita-pereira

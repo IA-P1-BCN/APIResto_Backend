@@ -263,7 +263,7 @@ Todos los endpoints son solo `admin` (otro rol → `403`).
 | `size` | int 1-100 (por defecto 20) | Elementos por página |
 | `role` | `admin`, `waiter`, `kitchen`, `bartender`, `customer` | Solo ese rol. Otro valor → `422` |
 | `is_active` | bool | `true` solo activos, `false` solo desactivados. Sin valor: todos |
-| `q` | texto | Búsqueda parcial, sin distinguir mayúsculas, en `name` o `email`. Vacío o solo espacios: no filtra. `%` y `_` cuentan como texto |
+| `q` | texto, máx. 100 caracteres (más → `422`) | Búsqueda parcial, sin distinguir mayúsculas ni acentos (`jose` encuentra "José"), en `name` o `email`. Vacío o solo espacios: no filtra. `%` y `_` cuentan como texto |
 | `include_deleted` | bool (por defecto `false`) | Incluye los borrados (HU-32) |
 
 Los parámetros se combinan entre sí; `total` cuenta los usuarios que cumplen todos los filtros. Orden fijo por `id` ascendente. Ejemplo: `GET /users/?role=waiter&q=ana&page=1&size=20`.

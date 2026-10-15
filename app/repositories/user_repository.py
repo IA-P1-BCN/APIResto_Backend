@@ -1,6 +1,7 @@
 from sqlalchemy import Select, func, or_, select
 from sqlalchemy.orm import Session
 
+from app.core.text_search import normalize_text, normalized_column
 from app.models.model_user import Role, User
 
 LIKE_ESCAPE_CHAR = "\\"
@@ -22,7 +23,7 @@ def _like_pattern(text: str) -> str:
         .replace("%", LIKE_ESCAPE_CHAR + "%")
         .replace("_", LIKE_ESCAPE_CHAR + "_")
     )
-    return f"%{escaped.lower()}%"
+    return f"%{normalize_text(escaped)}%"
 
 
 def filtered_query(
@@ -44,8 +45,8 @@ def filtered_query(
         pattern = _like_pattern(search)
         stmt = stmt.where(
             or_(
-                func.lower(User.name).like(pattern, escape=LIKE_ESCAPE_CHAR),
-                func.lower(User.email).like(pattern, escape=LIKE_ESCAPE_CHAR),
+                normalized_column(User.name).like(pattern, escape=LIKE_ESCAPE_CHAR),
+                normalized_column(User.email).like(pattern, escape=LIKE_ESCAPE_CHAR),
             )
         )
 

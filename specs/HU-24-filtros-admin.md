@@ -64,13 +64,14 @@ existe (HU-32). Todos los parámetros se combinan entre sí.
 
 ## Criterios de aceptación
 
-- [ ] `GET /users/` devuelve `Page[UserOut]` y acepta `page`/`size` con los límites de HU-11.
-- [ ] `?role=` filtra por rol; un rol inexistente da 422.
-- [ ] `?is_active=` filtra activos o desactivados.
-- [ ] `?q=` busca de forma parcial y sin distinguir mayúsculas en nombre o email.
-- [ ] Los filtros se combinan entre sí y con `include_deleted`; `total` refleja el filtro.
-- [ ] El orden es estable por `id` ascendente entre páginas.
-- [ ] Tests nuevos en verde, tests de HU-32 adaptados, lint limpio y `docs/api.md` actualizado.
+- [x] `GET /users/` devuelve `Page[UserOut]` y acepta `page`/`size` con los límites de HU-11.
+- [x] `?role=` filtra por rol; un rol inexistente da 422.
+- [x] `?is_active=` filtra activos o desactivados.
+- [x] `?q=` busca de forma parcial y sin distinguir mayúsculas en nombre o email.
+- [x] `?q=` no distingue acentos y admite como máximo 100 caracteres (más → 422). Añadido tras la revisión de Manon.
+- [x] Los filtros se combinan entre sí y con `include_deleted`; `total` refleja el filtro.
+- [x] El orden es estable por `id` ascendente entre páginas.
+- [x] Tests nuevos en verde, tests de HU-32 adaptados, lint limpio y `docs/api.md` actualizado.
 
 ## Out of Scope
 
@@ -117,3 +118,15 @@ criterios de aceptación; esta spec los fija.
 - **Decisión**: fijo por `id` ascendente.
 - **Por qué**: es el orden actual, estable entre páginas y sin parámetros nuevos.
 - **Alternativas rechazadas**: alfabético por `name`; `?sort=` configurable.
+
+### Revisión de Manon tras integrar la PR #126 (15/10/2026)
+- **Acentos**: `q` no encontraba "José" con `jose`, ni "ÁNGELA" con `ángela` (el `lower()`
+  de SQLite y el de Postgres con la configuración del CI no pasan a minúsculas las letras
+  acentuadas). **Decisión**: `translate()` a letras sin acento antes de `lower()`
+  (`app/core/text_search.py`); Postgres lo trae de serie y en SQLite se registra una
+  función igual al conectar. Sin migración. **Rechazado**: extensión `unaccent` (migración,
+  `CREATE EXTENSION` en Neon y no existe en SQLite).
+- **Longitud de `q`**: máximo 100 caracteres; más → 422.
+- **`skip`/`limit` ignorados**: se mantiene el contrato. Comprobado que nadie más llama a
+  `/users` (frontend y `scripts/`); la PR #126 lleva la etiqueta `breaking-api`.
+  **Rechazado**: devolver 422 si llegan (código para un caso que hoy no existe).
