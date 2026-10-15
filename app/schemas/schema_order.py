@@ -24,6 +24,7 @@ class OrderItemOut(BaseModel):
     served_quantity: int = 0
     prepared: bool = False
     served: bool = False
+    station: str = "kitchen"
 
     class Config:
         from_attributes = True

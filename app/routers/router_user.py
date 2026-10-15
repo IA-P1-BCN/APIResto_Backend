@@ -26,6 +26,8 @@ router = APIRouter(
 me_router = APIRouter(prefix="/users", tags=["users"])
 
 DbSession = Annotated[Session, Depends(get_db)]
+SEARCH_MAX_LENGTH = 100
+
 IncludeDeleted = Annotated[
     bool, Query(description="Incluir también los usuarios borrados (soft delete)")
 ]
@@ -58,8 +60,12 @@ def list_users(
     q: Annotated[
         str | None,
         Query(
-            description="Búsqueda parcial, sin distinguir mayúsculas, en nombre o email.",
-            examples=["ana"],
+            max_length=SEARCH_MAX_LENGTH,
+            description=(
+                "Búsqueda parcial en nombre o email, sin distinguir mayúsculas ni acentos. "
+                f"Máximo {SEARCH_MAX_LENGTH} caracteres."
+            ),
+            examples=["jose"],
         ),
     ] = None,
     include_deleted: IncludeDeleted = False,
