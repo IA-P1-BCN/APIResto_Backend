@@ -1,13 +1,14 @@
 # Colección Bruno de RestoAPI (HU-27)
 
 Colección de pruebas de la API REST de RestoAPI para [Bruno](https://www.usebruno.com/).
-Cubre **los 43 endpoints HTTP** de `app/routers/*.py` (más `/` y `/health` de `app/main.py`) con
-**130 requests**: el flujo completo de punta a punta y los casos de error y seguridad
+Cubre **42 de los 46 endpoints HTTP** de `app/routers/*.py` (más `/` y `/health` de `app/main.py`)
+con **130 requests**: el flujo completo de punta a punta y los casos de error y seguridad
 (401, 403, 404, 409 y 422).
 
-> 43 endpoints HTTP en app/routers/*.py, más / y /health en
-> main.py, más el WebSocket de cocina. La colección cubre los 43
-> HTTP (POST /auth/register se añadirá en HU-22).
+> Quedan fuera 4 endpoints, que se añadirán en la PR de su HU (ver sección 9):
+> `POST /auth/register` (HU-22), `POST /auth/social/{provider}` (HU-38),
+> `DELETE /users/{user_id}` y `POST /users/{user_id}/restore` (HU-32).
+> El WebSocket de cocina (`/ws/kitchen`) tampoco está en el runner (sección 8).
 
 - Documentación de la API: [`docs/api.md`](../docs/api.md)
 - Swagger: <https://restoapi-47sp.onrender.com/docs> (en local: <http://localhost:8000/docs>)
@@ -197,13 +198,16 @@ La verificación automática real del WebSocket vive en pytest:
 
 ## 9. Comportamiento actual que conviene saber
 
-- **`POST /auth/register` ya existe** en `app/routers/auth.py`, pero queda fuera de esta colección:
-  sus requests se añadirán en la PR de HU-22.
+- **Existen pero quedan fuera de esta colección** (sus requests se añadirán en la PR de su HU):
+  - `POST /auth/register` (HU-22).
+  - `POST /auth/social/{provider}` (HU-38, login con Google o GitHub): necesita un `code` OAuth real
+    del proveedor, así que no se puede automatizar en el runner tal cual.
+  - `DELETE /users/{user_id}` (soft delete) y `POST /users/{user_id}/restore` (HU-32).
 - **No existen todavía:** `/auth/refresh` y `/auth/logout` (HU-30),
   `/users/me` y el cambio de contraseña (HU-25), filtros y búsqueda en `GET /users` (HU-24) ni el
   filtro por estación de barra (HU-40). La colección solo documenta lo que existe hoy; cada HU añadirá
-  sus requests en su PR. Los usuarios se crean con `POST /users/` (admin) y la baja es
-  `PATCH /users/{id}/deactivate` (no hay `DELETE`).
+  sus requests en su PR. Los usuarios se crean con `POST /users/` (admin) y la colección los da de
+  baja con `PATCH /users/{id}/deactivate` (carpeta `11-cleanup`).
 - **Login:** es OAuth2 Password Flow, con body `application/x-www-form-urlencoded` y el email en el
   campo `username`. No acepta JSON.
 - **Reservas (HU-43):** hoy un customer **sí** puede crear reservas a su nombre (201). El 403 solo
@@ -275,3 +279,12 @@ La verificación automática real del WebSocket vive en pytest:
 | `PATCH` | `/reservations/{reservation_id}` | 3 | `06-reservations/04-update-admin.bru`<br>`06-reservations/07-update-cliente-notas.bru`<br>`06-reservations/10-error-403-cliente-cambia-estado.bru` |
 | `PATCH` | `/reservations/{reservation_id}/cancel` | 2 | `06-reservations/16-cancel-cliente.bru`<br>`06-reservations/17-error-409-cancelar-ya-cancelada.bru` |
 | `DELETE` | `/reservations/{reservation_id}` | 1 | `06-reservations/18-delete-cliente.bru` |
+
+Sin cobertura en esta colección (se añadirán en la PR de su HU):
+
+| Método | Path | HU |
+|---|---|---|
+| `POST` | `/auth/register` | HU-22 |
+| `POST` | `/auth/social/{provider}` | HU-38 |
+| `DELETE` | `/users/{user_id}` | HU-32 |
+| `POST` | `/users/{user_id}/restore` | HU-32 |
