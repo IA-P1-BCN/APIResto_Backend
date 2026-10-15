@@ -10,12 +10,14 @@ from app.core.exceptions import (
     ForbiddenError,
     UnprocessableError,
 )
+from app.core.pagination import Page, PageParams, paginate
 from app.core.security import hash_password, verify_password
 from app.models.model_user import Role, User
 from app.repositories import user_repository
 from app.schemas.schema_user import (
     PasswordChange,
     UserCreate,
+    UserOut,
     UserProfileUpdate,
     UserRegister,
     UserUpdate,
@@ -37,9 +39,19 @@ def get_user(db: Session, user_id: int, include_deleted: bool = False) -> User:
 
 
 def list_users(
-    db: Session, skip: int = 0, limit: int = 100, include_deleted: bool = False
-) -> list[User]:
-    return user_repository.list_users(db, skip=skip, limit=limit, include_deleted=include_deleted)
+    db: Session,
+    params: PageParams,
+    role: Role | None = None,
+    is_active: bool | None = None,
+    q: str | None = None,
+    include_deleted: bool = False,
+) -> Page[UserOut]:
+    """Listado paginado con filtros combinables (HU-24). `q` vacío no filtra."""
+    search = q.strip() if q else None
+    stmt = user_repository.filtered_query(
+        role=role, is_active=is_active, search=search, include_deleted=include_deleted
+    )
+    return paginate(db, stmt, params, UserOut)
 
 
 def create_user(db: Session, data: UserCreate, actor: User | None = None) -> User:

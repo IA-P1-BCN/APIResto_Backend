@@ -76,6 +76,20 @@ Copia este bloque en la sección de tu HU:
 - **Decisiones humanas:** big-pickle por defecto para todo el equipo aunque yo uso mi propio proveedor (lo cambio con `/models`); documentar OpenCode en el README (Anna).
 - **Lección:** para consultas que no deben tocar ficheros, usar `--agent plan`, y adjuntar con `-f` todo lo que la pregunta necesita (por ejemplo, el modelo además de la migración).
 
+### HU-24 · Filtros admin de usuarios
+
+#### 2026-10-15 · Spec, filtros, búsqueda y paginación de GET /users · @arita-pereira
+
+- **Herramienta y modelo:** Claude (claude.ai, no Claude Code) · Opus 5.5
+- **Issue y reglas:** #67 · R-11 (`include_deleted` de HU-32)
+- **Prompt clave:** "empezamos el HU-24", con el estado del proyecto adjunto; la issue solo tenía la historia, sin criterios de aceptación
+- **Resultado:** aceptado. Spec en `specs/HU-24-filtros-admin.md` y `GET /users/` con `Page[UserOut]`, `role`, `is_active` y `q`. 589 tests en verde con SQLite y Postgres 16.
+- **Errores o alucinaciones:** en la cabecera de la spec puso "Aprueba: Levi (PO)", copiado de `specs/HU-TEMPLATE.md`. Causa raíz: la plantilla y la DoD de `AGENTS.md` aún dicen que aprueba Levi, pero el equipo ya no depende de él. Corregido a "Revisa y aprueba: Manon". Además, no preparó los comentarios de cada paso para el issue hasta que lo eché en falta.
+- **Trabajo descartado:** nada
+- **Mi prompt o la spec:** la issue no tenía criterios de aceptación; los fijó la spec con cuatro preguntas (formato, filtros, búsqueda y orden).
+- **Decisiones humanas:** `Page[UserOut]` aunque sea breaking-api, filtros `role` + `is_active`, un solo `q` en nombre o email, orden fijo por `id` (Rita).
+- **Lección:** leer `AGENTS.md` y `dev` antes de empezar funcionó otra vez: detectó que la PR #110 había vuelto a exigir spec por HU, y que HU-32 ya fijaba `include_deleted`.
+
  ### HU-25 · Cambio de contraseña y edición del propio perfil                                                                                                                     
                                                                                                                                                                                    
   #### 2026-10-15 · Perfil propio y cambio de contraseña con un equipo de agentes · @levifvy                                                                                       
@@ -117,4 +131,3 @@ Copia este bloque en la sección de tu HU:
 - **Mi prompt o la spec:** no le dije que `AGENTS.md` ya definía el registro de IA ni que no hay spec por HU; lo descubrió al leer `dev`.
 - **Decisiones humanas:** separar HU-21 en HU-21 (OpenCode, Anna) y HU-53 (bitácora, Rita), decidido por mí.
 - **Lección:** antes de pedir una propuesta, pedir al agente que lea `AGENTS.md` y el estado de `dev`.
-

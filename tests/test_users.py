@@ -48,13 +48,13 @@ def test_create_user_invalid_data(admin):
 def test_list_users_only_admin(admin):
     r = admin.get("/users/")
     assert r.status_code == 200
-    assert [u["email"] for u in r.json()] == ["admin@test.com"]
+    assert [u["email"] for u in r.json()["items"]] == ["admin@test.com"]
 
 def test_list_users_with_data(admin):
     admin.post("/users/", json=user_data())
     r = admin.get("/users/")
     assert r.status_code == 200
-    assert len(r.json()) == 2
+    assert len(r.json()["items"]) == 2
 
 def test_get_user_by_id(admin):
     user_id = admin.post("/users/", json=user_data()).json()["id"]
@@ -141,14 +141,14 @@ def test_delete_user_soft_deletes(admin):
 def test_deleted_user_hidden_from_list_and_get(admin):
     user = _create(admin)
     admin.delete(f"/users/{user['id']}")
-    assert user["email"] not in [u["email"] for u in admin.get("/users/").json()]
+    assert user["email"] not in [u["email"] for u in admin.get("/users/").json()["items"]]
     assert admin.get(f"/users/{user['id']}").status_code == 404
 
 
 def test_include_deleted_shows_deleted_users(admin):
     user = _create(admin)
     admin.delete(f"/users/{user['id']}")
-    listed = admin.get("/users/", params={"include_deleted": True}).json()
+    listed = admin.get("/users/", params={"include_deleted": True}).json()["items"]
     assert user["email"] in [u["email"] for u in listed]
     r = admin.get(f"/users/{user['id']}", params={"include_deleted": True})
     assert r.status_code == 200
@@ -177,7 +177,7 @@ def test_restore_user(admin):
     assert r.status_code == 200
     assert r.json()["deleted_at"] is None
     assert r.json()["is_active"] is True
-    assert user["email"] in [u["email"] for u in admin.get("/users/").json()]
+    assert user["email"] in [u["email"] for u in admin.get("/users/").json()["items"]]
 
 
 def test_restore_user_not_deleted_is_409(admin):

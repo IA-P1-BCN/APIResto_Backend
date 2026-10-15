@@ -231,7 +231,7 @@ así que no retrasa la respuesta. Con `EMAIL_ENABLED=false` solo se escribe en e
 | 422 | `party_size_exceeds_capacity` | `party_size` supera la capacidad de la mesa |
 | 422 | `validation_error` | Validación de Pydantic (campos que faltan, `party_size <= 0`, campos desconocidos…) |
 
-## Usuarios (`/users`) · HU-32
+## Usuarios (`/users`) · HU-32, HU-24
 
 Todos los endpoints son solo `admin` (otro rol → `403`), salvo los del propio perfil
 (`PATCH /users/me` y `POST /users/me/password`), abiertos a cualquier rol autenticado: ver
@@ -240,7 +240,7 @@ Todos los endpoints son solo `admin` (otro rol → `403`), salvo los del propio 
 | Endpoint | Descripción |
 |---|---|
 | `POST /users/` | Crea un usuario; guarda `created_by` y `updated_by` (el admin que lo crea) |
-| `GET /users/` | Lista los usuarios no borrados. `?include_deleted=true` incluye los borrados |
+| `GET /users/` | Lista paginada (`Page[UserOut]`) de los usuarios no borrados. `?include_deleted=true` incluye los borrados. Filtros y búsqueda: ver abajo (HU-24) |
 | `GET /users/{id}` | Un borrado → `404`, salvo con `?include_deleted=true` |
 | `PUT /users/{id}` | Edita; actualiza `updated_by` y `updated_at` |
 | `PATCH /users/{id}/deactivate` | `is_active=false`: suspensión temporal, sigue en los listados y no puede iniciar sesión |
@@ -254,6 +254,21 @@ Todos los endpoints son solo `admin` (otro rol → `403`), salvo los del propio 
 | `403` | Un admin intenta borrarse o desactivarse a sí mismo |
 | `404` | Usuario inexistente o ya borrado |
 | `409` | Email ya registrado; `restore` sobre un usuario no borrado |
+
+### Filtrar, buscar y paginar (`GET /users/`) · HU-24
+
+**Breaking-api**: la respuesta pasa de una lista a `{"items", "total", "page", "size"}` y se quitan `skip`/`limit`.
+
+| Parámetro | Tipo | Efecto |
+|---|---|---|
+| `page` | int ≥ 1 (por defecto 1) | Página |
+| `size` | int 1-100 (por defecto 20) | Elementos por página |
+| `role` | `admin`, `waiter`, `kitchen`, `bartender`, `customer` | Solo ese rol. Otro valor → `422` |
+| `is_active` | bool | `true` solo activos, `false` solo desactivados. Sin valor: todos |
+| `q` | texto | Búsqueda parcial, sin distinguir mayúsculas, en `name` o `email`. Vacío o solo espacios: no filtra. `%` y `_` cuentan como texto |
+| `include_deleted` | bool (por defecto `false`) | Incluye los borrados (HU-32) |
+
+Los parámetros se combinan entre sí; `total` cuenta los usuarios que cumplen todos los filtros. Orden fijo por `id` ascendente. Ejemplo: `GET /users/?role=waiter&q=ana&page=1&size=20`.
 
 ## Perfil propio (`/users/me`) · HU-25
 
