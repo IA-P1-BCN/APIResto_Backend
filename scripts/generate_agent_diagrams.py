@@ -115,7 +115,7 @@ def diagram_1():
 
     level(16.3, "NIVEL 0-1")
     ontology = box(ax, 3.2, 16.3, 4.2, 1.1, "specs/ontology.md",
-                   "vocabulario · roles · R-01…R-13", GREEN)
+                   "vocabulario · roles · R-01…R-14", GREEN)
     briefing = box(ax, 8, 16.3, 4.2, 1.1, "docs/Briefing del Proyecto.md",
                    "encargo · requisitos · niveles", GREY)
     plan = box(ax, 12.8, 16.3, 4.2, 1.1, "docs/Plan v3.pdf",
@@ -124,8 +124,8 @@ def diagram_1():
         arrow(ax, agents, child)
 
     level(14.0, "NIVEL 2")
-    spec = box(ax, 8, 14.0, 7, 1.3, "specs/HU-27-agents-ontologia.md",
-               "Issue #70 · 130 requests esperados · Swagger fuera de alcance",
+    spec = box(ax, 8, 14.0, 7, 1.3, "specs/HU-27-coleccion-bruno.md",
+               "Issue #70 · 132 requests esperados · Swagger fuera de alcance",
                BLUE)
     for parent in (ontology, briefing, plan):
         arrow(ax, parent, spec)
@@ -153,7 +153,7 @@ def diagram_1():
     level(5.6, "NIVEL 4")
     bruno = box(ax, 8, 5.6, 14.5, 4.2, "", "", PINK)
     ax.text(8, 7.25, "bruno/", ha="center", fontsize=13, fontweight="bold")
-    ax.text(8, 6.65, "130 requests · 12 carpetas de dominio", ha="center",
+    ax.text(8, 6.65, "132 requests · 12 carpetas de dominio", ha="center",
             fontsize=10)
     folders = [
         "bruno.json", "README.md", "environments/", "00-health/",
@@ -217,7 +217,7 @@ TREE = [
     ("├── specs/", None),
     ("│   ├── ontology.md", 1),
     ("│   ├── HU-20-agents-ontologia.md", 1),
-    ("│   ├── HU-27-agents-ontologia.md", 2),
+    ("│   ├── HU-27-coleccion-bruno.md", 2),
     ("│   └── agents/", None),
     ("│       └── HU-27/", None),
     ("│           ├── lead.md", 3),

@@ -8,12 +8,12 @@ Tu trabajo es **orquestar, verificar y consolidar**. No escribes archivos
 ## Antes de empezar
 1. Lee `AGENTS.md`.
 2. Lee `specs/ontology.md`.
-3. Lee `specs/HU-27-agents-ontologia.md` (esta misma HU).
+3. Lee `specs/HU-27-coleccion-bruno.md` (esta misma HU).
 4. Lee este archivo completo.
 
 ## Tareas
 1. Crea el equipo de agentes especialistas según la tabla de
-   `specs/HU-27-agents-ontologia.md`.
+   `specs/HU-27-coleccion-bruno.md`.
 2. Asigna a cada especialista la tarea definida en su archivo
    `specs/agents/HU-27/agent-*.md`.
 3. Verifica que cada especialista trabaja solo en las carpetas asignadas.

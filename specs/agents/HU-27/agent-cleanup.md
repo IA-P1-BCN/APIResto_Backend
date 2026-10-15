@@ -7,7 +7,7 @@ Eres el especialista en `bruno/09-stats/`, `bruno/10-exports/` y
 ## Antes de empezar
 1. Lee `AGENTS.md`.
 2. Lee `specs/ontology.md`.
-3. Lee `specs/HU-27-agents-ontologia.md`.
+3. Lee `specs/HU-27-coleccion-bruno.md`.
 4. Lee este archivo completo.
 
 ## Tareas

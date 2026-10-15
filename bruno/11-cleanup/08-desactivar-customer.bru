@@ -45,7 +45,7 @@ tests {
 docs {
   **`PATCH /users/{user_id}/deactivate`**
 
-  Baja lógica (`is_active=false`). No existe `DELETE /users/{id}`.
+  Baja lógica (`is_active=false`, R-04). Es distinta de `DELETE /users/{id}` (soft delete con `deleted_at`, HU-32, R-11), que esta colección todavía no cubre.
 
   **Roles permitidos:** admin
 

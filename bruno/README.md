@@ -1,13 +1,13 @@
 # Colección Bruno de RestoAPI (HU-27)
 
 Colección de pruebas de la API REST de RestoAPI para [Bruno](https://www.usebruno.com/).
-Cubre **42 de los 46 endpoints HTTP** de `app/routers/*.py` (más `/` y `/health` de `app/main.py`)
-con **130 requests**: el flujo completo de punta a punta y los casos de error y seguridad
+Cubre **42 de los 48 endpoints HTTP** de `app/routers/*.py` (más `/` y `/health` de `app/main.py`)
+con **132 requests**: el flujo completo de punta a punta y los casos de error y seguridad
 (401, 403, 404, 409 y 422).
 
-> Quedan fuera 4 endpoints, que se añadirán en la PR de su HU (ver sección 9):
-> `POST /auth/register` (HU-22), `POST /auth/social/{provider}` (HU-38),
-> `DELETE /users/{user_id}` y `POST /users/{user_id}/restore` (HU-32).
+> Quedan fuera 6 endpoints (ver sección 9): `POST /auth/register` (HU-22),
+> `POST /auth/social/{provider}` (HU-38), `DELETE /users/{user_id}` y
+> `POST /users/{user_id}/restore` (HU-32), `PATCH /users/me` y `POST /users/me/password` (HU-25).
 > El WebSocket de cocina (`/ws/kitchen`) tampoco está en el runner (sección 8).
 
 - Documentación de la API: [`docs/api.md`](../docs/api.md)
@@ -102,12 +102,12 @@ crean sus datos, fallará.
 |---|---|---|
 | `00-health` | `GET /` y `GET /health` | 2 |
 | `01-auth` | Login admin (guarda `token`), `/auth/me` y errores 401/422 | 6 |
-| `02-users` | Crea un usuario waiter, kitchen, bartender y customer, login con cada uno (guarda `tokenWaiter`, `tokenKitchen`, `tokenBartender`, `tokenCustomer`), lista, ve y edita. Errores 401/403/404/409/422 | 16 |
-| `03-categories` | CRUD, incluido el borrado de una categoría temporal. Errores 401/403/404/409 | 10 |
-| `04-dishes` | CRUD, listado paginado con filtros y borrado de un plato temporal. Errores 403/404/422 | 11 |
+| `02-users` | Crea un usuario waiter, kitchen, bartender y customer, login con cada uno (guarda `tokenWaiter`, `tokenKitchen`, `tokenBartender`, `tokenCustomer`), lista (paginado, `Page[UserOut]`), ve y edita. Errores 401/403/404/409/422 | 16 |
+| `03-categories` | CRUD, incluido el borrado de una categoría temporal, y una categoría de barra (`station: "bar"`). Errores 401/403/404/409 | 11 |
+| `04-dishes` | CRUD, listado paginado con filtros, borrado de un plato temporal y un plato de barra. Errores 403/404/422 | 12 |
 | `05-tables` | CRUD, mesas disponibles, cambio de estado como waiter. Errores 403/404/409/422 | 14 |
 | `06-reservations` | Reserva del admin para el customer, reserva del propio customer, edición, cancelación y borrado. Errores 401/403/404/409/422 | 18 |
-| `07-orders` | Pedido del waiter → `in_kitchen` (kitchen) → línea preparada (kitchen) → línea servida (waiter) → `served`. Errores 401/403/404/409/422 | 18 |
+| `07-orders` | Pedido del waiter con una línea de cocina y otra de barra; kitchen y bartender solo ven la suya (R-14) → `in_kitchen` (kitchen) → línea preparada (kitchen) → línea servida (waiter) → `served`. Errores 401/403/404/409/422 | 18 |
 | `08-invoices` | Factura del pedido servido, listado, detalle, pedido → `paid`. Errores 403/404/409/422 | 13 |
 | `09-stats` | Ventas y platos más vendidos. Errores 403/422 | 6 |
 | `10-exports` | CSV de facturas y pedidos. Errores 403/422 | 5 |
@@ -127,7 +127,7 @@ token de un usuario desactivado = 401** (equivale al logout, que todavía no exi
 | `token` | `01-auth/01-login-admin` | Bearer del admin |
 | `tokenWaiter`, `tokenKitchen`, `tokenBartender`, `tokenCustomer` | `02-users/05..08-login-*` | Casos por rol (403) |
 | `adminId`, `waiterId`, `kitchenId`, `bartenderId`, `customerId` y sus `*Email` | `01-auth/02-me`, `02-users/01..04-create-*` | Path params y bodies |
-| `categoryId`, `dishId`, `unavailableDishId`, `tableId`, `reservationId`, `customerReservationId`, `orderId`, `orderItemId`, `orderTotal`, `pendingOrderId`, `invoiceId` | Requests de alta | Encadenar el flujo |
+| `categoryId`, `barCategoryId`, `dishId`, `barDishId`, `unavailableDishId`, `tableId`, `reservationId`, `customerReservationId`, `orderId`, `orderItemId` (línea de cocina), `orderBarItemId` (línea de barra), `orderTotal`, `pendingOrderId`, `invoiceId` | Requests de alta | Encadenar el flujo |
 
 Ningún `.bru` contiene credenciales ni tokens: los tokens salen del login y los usuarios de prueba
 usan una contraseña aleatoria generada en cada ejecución (`testPassword = "Bp-" + uuid v4`), que no
@@ -151,11 +151,11 @@ npx @usebruno/cli run -r --env Local --env-var adminEmail=TU_EMAIL_ADMIN --env-v
 ```
 
 - `-r` ejecuta todas las carpetas de forma recursiva.
-- Para guardar un informe: añade `--output reports/resultado.json` (`reports/` está en el `.gitignore`).
+- Para guardar un informe: añade `--output reports/resultado.json` (la carpeta `reports/` ya existe con un `.gitkeep` y su contenido está en el `.gitignore`).
 - Para no dejar la contraseña en el historial de la shell, usa variables de tu terminal:
   `--env-var adminPassword="$RESTO_ADMIN_PASSWORD"` (bash) o `--env-var adminPassword=$env:RESTO_ADMIN_PASSWORD` (PowerShell).
 
-**Resultado esperado:** los 130 requests en verde, con todas sus aserciones pasando. Los casos de
+**Resultado esperado:** los 132 requests en verde, con todas sus aserciones pasando. Los casos de
 error **también salen en verde**, porque sus tests comprueban que la API devuelve el código de error
 esperado. Cada ejecución crea datos nuevos (sufijo `runId`), así que se puede repetir sin limpiar la BD.
 
@@ -168,15 +168,16 @@ esperado. Cada ejecución crea datos nuevos (sufijo `runId`), así que se puede 
 - **Errores:** el formato común `{"detail": str, "code": str}` y el `code` concreto (`unauthorized`,
   `forbidden`, `not_found`, `conflict`, `reservation_conflict`, `invoice_already_exists`,
   `table_in_use`, `validation_error`…).
-- **Reglas de negocio:** total del pedido (2 × 13,00 = 26,00), base + IVA = total de la factura,
-  transiciones de estado, que un customer solo ve sus reservas, etc.
+- **Reglas de negocio:** total del pedido (2 × 13,00 + 1 × 3,00 = 29,00), base + IVA = total de la
+  factura, transiciones de estado, que kitchen y bartender solo ven las líneas de su estación con el
+  total del pedido completo (R-14), que un customer solo ve sus reservas, etc.
 
 Cada request tiene en la pestaña **Docs** su endpoint, los roles permitidos, el token que usa y las
 respuestas posibles.
 
 ## 8. WebSocket (cocina/barra)
 
-`/ws/kitchen` no es HTTP: no tiene `.bru` y no forma parte del runner (los 130 requests son HTTP).
+`/ws/kitchen` no es HTTP: no tiene `.bru` y no forma parte del runner (los 132 requests son HTTP).
 Lo usan la cocina y la barra. Para probarlo a mano:
 
 1. Ejecuta `01-auth/01-login-admin` (o `02-users/06-login-kitchen` / `02-users/07-login-bartender`)
@@ -201,16 +202,19 @@ La verificación automática real del WebSocket vive en pytest:
 
 ## 9. Comportamiento actual que conviene saber
 
-- **Existen pero quedan fuera de esta colección** (sus requests se añadirán en la PR de su HU):
+- **Existen pero quedan fuera de esta colección:**
   - `POST /auth/register` (HU-22).
   - `POST /auth/social/{provider}` (HU-38, login con Google o GitHub): necesita un `code` OAuth real
     del proveedor, así que no se puede automatizar en el runner tal cual.
   - `DELETE /users/{user_id}` (soft delete) y `POST /users/{user_id}/restore` (HU-32).
-- **No existen todavía:** `/auth/refresh` y `/auth/logout` (HU-30),
-  `/users/me` y el cambio de contraseña (HU-25), filtros y búsqueda en `GET /users` (HU-24) ni el
-  filtro por estación de barra (HU-40). La colección solo documenta lo que existe hoy; cada HU añadirá
-  sus requests en su PR. Los usuarios se crean con `POST /users/` (admin) y la colección los da de
-  baja con `PATCH /users/{id}/deactivate` (carpeta `11-cleanup`).
+  - `PATCH /users/me` y `POST /users/me/password` (HU-25): llegaron a `dev` después de la
+    verificación del 15/10 y todavía no tienen request.
+- **Ya en `dev` y cubiertos:** la paginación `Page` de `GET /users` (HU-24; los filtros `role`,
+  `is_active` y `q` no se prueban) y el filtro por estación de HU-40 (`07-orders/02-list-kitchen` y
+  `07-orders/03-get-bartender`).
+- **No existen todavía:** `/auth/refresh` y `/auth/logout` (HU-30). Los usuarios se crean con
+  `POST /users/` (admin) y la colección los da de baja con `PATCH /users/{id}/deactivate` (carpeta
+  `11-cleanup`).
 - **Login:** es OAuth2 Password Flow, con body `application/x-www-form-urlencoded` y el email en el
   campo `username`. No acepta JSON.
 - **Reservas (HU-43):** hoy un customer **sí** puede crear reservas a su nombre (201). El 403 solo
@@ -247,12 +251,12 @@ La verificación automática real del WebSocket vive en pytest:
 | `GET` | `/users/{user_id}` | 2 | `02-users/10-get-user.bru`<br>`02-users/14-error-404-usuario-inexistente.bru` |
 | `PUT` | `/users/{user_id}` | 1 | `02-users/11-update-user.bru` |
 | `PATCH` | `/users/{user_id}/deactivate` | 5 | `11-cleanup/05-desactivar-waiter.bru`<br>`11-cleanup/06-desactivar-kitchen.bru`<br>`11-cleanup/07-desactivar-bartender.bru`<br>`11-cleanup/08-desactivar-customer.bru`<br>`11-cleanup/09-error-404-desactivar-inexistente.bru` |
-| `POST` | `/categories/` | 4 | `03-categories/01-create.bru`<br>`03-categories/05-create-temporal.bru`<br>`03-categories/08-error-409-nombre-duplicado.bru`<br>`03-categories/09-error-403-crear-como-customer.bru` |
+| `POST` | `/categories/` | 5 | `03-categories/01-create.bru`<br>`03-categories/05-create-temporal.bru`<br>`03-categories/08-error-409-nombre-duplicado.bru`<br>`03-categories/09-error-403-crear-como-customer.bru`<br>`03-categories/11-create-barra.bru` |
 | `GET` | `/categories/` | 2 | `03-categories/02-list.bru`<br>`03-categories/10-error-401-listar-sin-token.bru` |
 | `GET` | `/categories/{category_id}` | 2 | `03-categories/03-get.bru`<br>`03-categories/07-error-404-categoria-borrada.bru` |
 | `PUT` | `/categories/{category_id}` | 1 | `03-categories/04-update.bru` |
 | `DELETE` | `/categories/{category_id}` | 2 | `03-categories/06-delete-temporal.bru`<br>`11-cleanup/03-error-409-borrar-categoria-con-platos.bru` |
-| `POST` | `/dishes/` | 5 | `04-dishes/01-create.bru`<br>`04-dishes/02-create-no-disponible.bru`<br>`04-dishes/03-create-temporal.bru`<br>`04-dishes/10-error-403-crear-como-waiter.bru`<br>`04-dishes/11-error-422-precio-negativo.bru` |
+| `POST` | `/dishes/` | 6 | `04-dishes/01-create.bru`<br>`04-dishes/02-create-no-disponible.bru`<br>`04-dishes/03-create-temporal.bru`<br>`04-dishes/10-error-403-crear-como-waiter.bru`<br>`04-dishes/11-error-422-precio-negativo.bru`<br>`04-dishes/12-create-plato-barra.bru` |
 | `GET` | `/dishes/` | 2 | `04-dishes/05-list-filtro-categoria.bru`<br>`04-dishes/06-list-disponibles.bru` |
 | `GET` | `/dishes/{dish_id}` | 2 | `04-dishes/07-get.bru`<br>`04-dishes/09-error-404-plato-borrado.bru` |
 | `PUT` | `/dishes/{dish_id}` | 1 | `04-dishes/08-update.bru` |
@@ -283,7 +287,7 @@ La verificación automática real del WebSocket vive en pytest:
 | `PATCH` | `/reservations/{reservation_id}/cancel` | 2 | `06-reservations/16-cancel-cliente.bru`<br>`06-reservations/17-error-409-cancelar-ya-cancelada.bru` |
 | `DELETE` | `/reservations/{reservation_id}` | 1 | `06-reservations/18-delete-cliente.bru` |
 
-Sin cobertura en esta colección (se añadirán en la PR de su HU):
+Sin cobertura en esta colección:
 
 | Método | Path | HU |
 |---|---|---|
@@ -291,3 +295,5 @@ Sin cobertura en esta colección (se añadirán en la PR de su HU):
 | `POST` | `/auth/social/{provider}` | HU-38 |
 | `DELETE` | `/users/{user_id}` | HU-32 |
 | `POST` | `/users/{user_id}/restore` | HU-32 |
+| `PATCH` | `/users/me` | HU-25 |
+| `POST` | `/users/me/password` | HU-25 |
