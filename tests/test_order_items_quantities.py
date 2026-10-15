@@ -67,7 +67,9 @@ def test_cada_rol_solo_cuenta_lo_suyo(client, auth_headers, order, role, body):
     assert r.status_code == 403
 
 
-def test_barra_cuenta_unidades_preparadas(client, auth_headers, order):
+def test_barra_cuenta_unidades_preparadas(client, db, auth_headers):
+    table_id, dish_id = create_test_data(db, station="bar")
+    order = order_with_two_lines(client, auth_headers(Role.waiter), table_id, dish_id)
     r = client.patch(item_url(order, 1), headers=auth_headers(Role.bartender), json={"prepared_quantity": 1})
     assert r.status_code == 200
     assert line(r, 1)["prepared"] is True

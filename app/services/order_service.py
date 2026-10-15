@@ -1,9 +1,11 @@
 from fastapi import BackgroundTasks, HTTPException
 from sqlalchemy.orm import Session
 
+from app.core.exceptions import ForbiddenError
+from app.models.model_category import Station
 from app.models.model_order import Order
 from app.repositories import dining_table_repository, dish_repository, order_repository
-from app.schemas.schema_order import OrderCreate
+from app.schemas.schema_order import OrderCreate, OrderOut
 from app.websocket.kitchen import kitchen_manager
 
 VALID_TRANSITIONS = {
@@ -15,6 +17,29 @@ VALID_TRANSITIONS = {
 }
 
 CLOSED_STATUSES = {"paid", "cancelled"}
+
+
+def _view(order: Order, station: Station | None) -> OrderOut:
+    """Pedido tal como lo ve la estación (R-14); sin estación, completo.
+
+    Se filtra el schema y no `order.items`: quitar líneas del modelo las borraría (delete-orphan).
+    """
+    view = OrderOut.model_validate(order)
+    if station:
+        view.items = [item for item in view.items if item.station == station.value]
+    return view
+
+
+def _event_order(order: Order, table_number: int | None, **extra) -> dict:
+    return {
+        "id": order.id,
+        "table_id": order.table_id,
+        "table_number": table_number,
+        "status": order.status,
+        "total": str(order.total),
+        "stations": sorted({item.station for item in order.items}),
+        **extra,
+    }
 
 
 def create_order(
@@ -53,25 +78,23 @@ def create_order(
     )
 
     background_tasks.add_task(
-        kitchen_manager.broadcast,
+        kitchen_manager.broadcast_to_stations,
         {
             "event": "order_created",
-            "order": {
-                "id": order.id,
-                "table_id": order.table_id,
-                "table_number": table.number,
-                "waiter_id": order.waiter_id,
-                "status": order.status,
-                "total": str(order.total),
-                "items": [
+            "order": _event_order(
+                order,
+                table.number,
+                waiter_id=order.waiter_id,
+                items=[
                     {
                         "dish_id": item.dish_id,
                         "quantity": item.quantity,
                         "unit_price": str(item.unit_price),
+                        "station": item.station,
                     }
                     for item in order.items
                 ],
-            },
+            ),
         },
     )
 
@@ -86,24 +109,36 @@ def list_orders(
     date_to: str | None = None,
     skip: int = 0,
     limit: int = 100,
-) -> list[Order]:
-    return order_repository.list_orders(db, status, table_id, date_from, date_to, skip, limit)
+    station: Station | None = None,
+) -> list[OrderOut]:
+    orders = order_repository.list_orders(
+        db, status, table_id, date_from, date_to, skip, limit, station
+    )
+    return [_view(order, station) for order in orders]
 
 
-def get_order(db: Session, order_id: int) -> Order:
-    order = order_repository.get_by_id(db, order_id)
+def get_order(db: Session, order_id: int, station: Station | None = None) -> Order:
+    order = order_repository.get_by_id(db, order_id, station)
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
     return order
 
 
+def get_order_view(db: Session, order_id: int, station: Station | None = None) -> OrderOut:
+    return _view(get_order(db, order_id, station), station)
+
+
 def update_order_status(
-    db: Session, order_id: int, new_status: str, background_tasks: BackgroundTasks
-) -> Order:
-    order = get_order(db, order_id)
+    db: Session,
+    order_id: int,
+    new_status: str,
+    background_tasks: BackgroundTasks,
+    station: Station | None = None,
+) -> OrderOut:
+    order = get_order(db, order_id, station)
 
     if new_status == order.status:
-        return order
+        return _view(order, station)
 
     allowed = VALID_TRANSITIONS.get(order.status, set())
     if new_status not in allowed:
@@ -117,27 +152,29 @@ def update_order_status(
 
     table = dining_table_repository.get_by_id(db, order.table_id)
     background_tasks.add_task(
-        kitchen_manager.broadcast,
+        kitchen_manager.broadcast_to_stations,
         {
             "event": "order_status_changed",
-            "order": {
-                "id": order.id,
-                "table_id": order.table_id,
-                "table_number": table.number if table else None,
-                "status": order.status,
-                "total": str(order.total),
-            },
+            "order": _event_order(order, table.number if table else None),
         },
     )
 
-    return order
+    return _view(order, station)
 
 
-def update_item(db: Session, order_id: int, item_id: int, changes: dict[str, bool | int]) -> Order:
-    order = get_order(db, order_id)
+def update_item(
+    db: Session,
+    order_id: int,
+    item_id: int,
+    changes: dict[str, bool | int],
+    station: Station | None = None,
+) -> OrderOut:
+    order = get_order(db, order_id, station)
     item = next((i for i in order.items if i.id == item_id), None)
     if item is None:
         raise HTTPException(status_code=404, detail="Order item not found")
+    if station and item.station != station.value:
+        raise ForbiddenError(f"This line belongs to the '{item.station}' station")
     if order.status in CLOSED_STATUSES:
         raise HTTPException(
             status_code=409,
@@ -156,4 +193,4 @@ def update_item(db: Session, order_id: int, item_id: int, changes: dict[str, boo
                 detail=f"{field} cannot be greater than the quantity of the line ({item.quantity})",
             )
         setattr(item, field, value)
-    return order_repository.save(db, order)
+    return _view(order_repository.save(db, order), station)

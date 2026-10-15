@@ -273,15 +273,15 @@ Los parámetros se combinan entre sí; `total` cuenta los usuarios que cumplen t
 | Endpoint | Roles |
 |---|---|
 | `POST /orders/` | `admin`, `waiter`. El pedido guarda en `waiter_id` el usuario que lo crea |
-| `GET /orders/`, `GET /orders/{id}` | `admin`, `waiter`, `kitchen`, `bartender` |
-| `PATCH /orders/{id}/status` | `admin`, `waiter`, `kitchen`, `bartender` |
-| `PATCH /orders/{id}/items/{item_id}` | Marca cuántas unidades de una línea están preparadas o servidas: `{"prepared_quantity": 1}` (de 0 a `quantity`; si es mayor, 422). `{"prepared": true}` marca todas y `false`, ninguna. `prepared` / `prepared_quantity`: `admin`, `kitchen`, `bartender`. `served` / `served_quantity`: `admin`, `waiter`. La respuesta trae `prepared_quantity`, `served_quantity` y `prepared` / `served` (true si están todas) |
+| `GET /orders/`, `GET /orders/{id}` | `admin`, `waiter`, `kitchen`, `bartender`. Cada línea trae `station` (`kitchen` / `bar`, la de la categoría de su plato). `kitchen` y `bartender` solo reciben las líneas de su estación y no ven los pedidos que no tienen ninguna (`404` en `GET /orders/{id}`); `total` es el del pedido completo (R-14) |
+| `PATCH /orders/{id}/status` | `admin`, `waiter`, `kitchen`, `bartender`. `kitchen` y `bartender` solo sobre pedidos con líneas de su estación (si no, `404`); la respuesta trae solo esas líneas |
+| `PATCH /orders/{id}/items/{item_id}` | Marca cuántas unidades de una línea están preparadas o servidas: `{"prepared_quantity": 1}` (de 0 a `quantity`; si es mayor, 422). `{"prepared": true}` marca todas y `false`, ninguna. `prepared` / `prepared_quantity`: `admin`, `kitchen`, `bartender`. `served` / `served_quantity`: `admin`, `waiter`. `kitchen` y `bartender` solo sobre líneas de su estación; otra estación → `403`. La respuesta trae `prepared_quantity`, `served_quantity` y `prepared` / `served` (true si están todas) |
 
 Sin token → `401`. `customer` en cualquier endpoint, `kitchen` o `bartender` creando un pedido o marcando `served`, o `waiter` marcando `prepared` → `403`.
 
 Cada línea de `items` lleva `prepared` (cocina o barra la tiene lista) y `served` (sala la ha llevado a la mesa), las dos `false` al crear el pedido. Marcar una línea de otro pedido o que no existe → `404`; de un pedido `paid` o `cancelled` → `409`; sin `prepared` ni `served` en el cuerpo → `422`.
 
-El WebSocket de cocina (`/ws/kitchen`) admite `admin`, `kitchen` y `bartender`.
+El WebSocket de cocina (`/ws/kitchen`) admite `admin`, `kitchen` y `bartender`. Cada evento (`order_created`, `order_status_changed`) trae `order.stations` y, en `order_created`, `items` con su `station`; `kitchen` y `bartender` solo reciben los pedidos con líneas de su estación y con esas líneas, `admin` recibe todo.
 
 ## Facturas y exportación CSV · HU-14
 

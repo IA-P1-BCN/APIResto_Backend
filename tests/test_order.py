@@ -7,9 +7,9 @@ from app.models.model_dish import Dish
 from app.models.model_user import Role
 
 
-def create_test_data(db):
+def create_test_data(db, station="kitchen"):
     table = DiningTable(number=1, capacity=4, location="terrace")
-    category = Category(name="Principales")
+    category = Category(name="Principales", station=station)
     db.add(category)
     db.flush()
     dish = Dish(name="Pasta", price=10.50, is_available=True, category_id=category.id)

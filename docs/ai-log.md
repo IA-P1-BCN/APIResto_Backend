@@ -76,6 +76,55 @@ Copia este bloque en la sección de tu HU:
 - **Decisiones humanas:** big-pickle por defecto para todo el equipo aunque yo uso mi propio proveedor (lo cambio con `/models`); documentar OpenCode en el README (Anna).
 - **Lección:** para consultas que no deben tocar ficheros, usar `--agent plan`, y adjuntar con `-f` todo lo que la pregunta necesita (por ejemplo, el modelo además de la migración).
 
+### HU-40 · Estación de barra en los pedidos
+
+#### 2026-10-15 · HU-40_Estación de barra en los pedidos  · @ManonChab
+
+- **Herramienta y modelo:** Claude Code with Sonnet 5.5
+- **Issue y reglas:** #83
+- **Prompt clave:**  "Read the necessary doc, the repo back and front, the kanban and let's start the new       H-40U,starting by spec definition"
+- **Resultado:** aceptado 
+- **Errores o alucinaciones:**
+  - The one-line issue: I found the real gap by reading the code, and invented nothing.
+  - The empty WebSocket assertion I wrote and then replaced.
+  - The lazy="joined" draft I changed.
+  - The two old tests that R-14 broke. I changed their data and didn't weaken them.
+- **Trabajo descartado:** //
+- **Mi prompt o la spec:**
+    · ¿Qué entrega el backend en HU-40? Hoy el filtro por estación solo existe en el frontend (StationBoard); el  backend manda todo a cocina y a barra. → Filtrar en el backend (Recomendado)
+    · El `status` del pedido es único (pending → in_kitchen → served) y hoy lo mueve cualquiera de cocina/barra. Con dos estaciones, ¿qué hacemos en esta HU? → Dejarlo como está (Recomendado)
+    · En el pedido filtrado que ve `kitchen`/`bartender`, ¿qué se devuelve en `total`? → El del pedido completo (Recomendado)
+    · Si el admin cambia la `station` de una categoría con pedidos abiertos, ¿qué pasa con las líneas ya creadas? → Se derivan en vivo (Recomendado)
+    · Producción (Neon): las categorías existentes quedaron `kitchen` por defecto. ¿Cómo pasan Bebidas y Postres a `bar`? → Migración de datos
+    · El enrutado por estación no está en la ontología (solo se cita como referencia externa). ¿Añadimos una regla R-14 a specs/ontology.md en el mismo PR? → Sí, R-14 (Recomendado)
+- **Decisiones humanas:**
+
+```text
+   Tema     │                            Decisión                            │
+├──────────────┼────────────────────────────────────────────────────────────────┤
+│              │ El backend filtra según el rol: kitchen ve y marca solo líneas │
+│ Alcance      │  kitchen, bartender solo bar, y admin/waiter ven todo. Esto    │
+│              │ vale para GET /orders, GET /orders/{id}, PATCH .../items/{id}  │
+│              │ y el WebSocket.                                                │
+├──────────────┼────────────────────────────────────────────────────────────────┤
+│ Contrato     │ Cada línea del pedido expone station. No hay parámetro         │
+│              │ ?station=. total sigue siendo el del pedido completo.          │
+├──────────────┼────────────────────────────────────────────────────────────────┤
+│ Estado del   │ Sin cambios. El estado por producto o estación es HU-45 de     │
+│ pedido       │ Rita, que toca el mismo router, así que hay que avisarla.      │
+├──────────────┼────────────────────────────────────────────────────────────────┤
+│ Estación de  │ Se deriva en vivo de la categoría actual del plato. No hay     │
+│ una línea    │ columna nueva.                                                 │
+├──────────────┼────────────────────────────────────────────────────────────────┤
+│ Datos de     │ Migración 0007 que marca Bebidas y Postres como bar. Elegí     │
+│ producción   │ esto frente a la opción recomendada, que era que el admin las  │
+│              │ marcara.                                                       │
+├──────────────┼────────────────────────────────────────────────────────────────┤
+│ Ontología    │ Se añade la regla R-14 a specs/ontology.md en el mismo PR.     │
+│              │ Necesita el visto bueno de Levi.
+```
+
+- **Lección:** //
 ### HU-24 · Filtros admin de usuarios
 
 #### 2026-10-15 · Spec, filtros, búsqueda y paginación de GET /users · @arita-pereira
