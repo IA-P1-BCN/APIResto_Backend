@@ -96,6 +96,20 @@ opencode run "tu pregunta" --agent plan             # una consulta que no toca f
 - **Proveedor propio** (por ejemplo, un router local con tus claves): elígelo con `/models` y déjalo en tu configuración personal (`~/.config/opencode/opencode.json`), nunca en el `opencode.json` del repo.
 - **Prueba de humo** (HU-20): `opencode run "¿Qué roles existen y qué no debes hacer?" --agent plan` debe responder con los 5 roles (`admin`, `waiter`, `kitchen`, `bartender`, `customer`) y las prohibiciones de `AGENTS.md`.
 
+### Comandos y subagentes del equipo (HU-35)
+
+En `.opencode/` hay comandos para tareas que se repiten en cada HU. Se usan escribiendo `/` en OpenCode, o desde la terminal con `opencode run "argumentos" --command nombre`.
+
+| Comando | Para qué | Qué toca |
+|---|---|---|
+| `/tests <endpoint o módulo>` | Genera tests de pytest con las fixtures de `conftest.py`: caso feliz, 401/403 por rol, 404/409/422 y el formato `{"detail", "code"}`. Los ejecuta con ruff | Escribe un fichero en `tests/` |
+| `/seguridad [rango de git]` | Revisa la seguridad de un cambio (por defecto, la rama frente a `dev`) con el subagente `seguridad`: secretos, contraseñas, JWT, permisos por rol, entrada, logs, CORS. Responde con una tabla de hallazgos por severidad y línea | Nada: el subagente no puede editar ni ejecutar otra cosa que `git diff`, `git log` y `git show` |
+| `/migracion [cambio de modelos]` | Sin argumentos, dice la última migración y el número libre. Con argumentos, genera la migración con ese número, la limpia, la prueba (subir, bajar y `alembic check`) y recuerda actualizar `docs/deploy.md` | Escribe en `migrations/versions/` |
+
+- El subagente `seguridad` (`.opencode/agents/seguridad.md`) también lo puede llamar el agente principal por su cuenta, o tú con `@seguridad`.
+- Desde scripts o desde otra herramienta, `opencode run` se queda esperando si la entrada estándar no se cierra: añade `< /dev/null`.
+- Los hallazgos de `/seguridad` y los tests de `/tests` se revisan a mano antes de aceptarlos (`AGENTS.md`, "Seguridad").
+
 ## Reglas
 
 - `.env` nunca se sube; solo `.env.example` sin valores reales.
