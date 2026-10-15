@@ -130,7 +130,8 @@ token de un usuario desactivado = 401** (equivale al logout, que todavía no exi
 | `categoryId`, `dishId`, `unavailableDishId`, `tableId`, `reservationId`, `customerReservationId`, `orderId`, `orderItemId`, `orderTotal`, `pendingOrderId`, `invoiceId` | Requests de alta | Encadenar el flujo |
 
 Ningún `.bru` contiene credenciales ni tokens: los tokens salen del login y los usuarios de prueba
-usan una contraseña generada en cada ejecución (`testPassword`).
+usan una contraseña aleatoria generada en cada ejecución (`testPassword = "Bp-" + uuid v4`), que no
+se puede deducir de su email.
 
 ## 7. Ejecutar toda la colección (Collection Runner)
 
