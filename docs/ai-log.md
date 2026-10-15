@@ -62,6 +62,20 @@ Copia este bloque en la sección de tu HU:
 
 <!-- Una sección por HU: "### HU-XX · Título de la HU", con sus entradas debajo. -->
 
+### HU-21 · Configuración de OpenCode con modelos gratuitos
+
+#### 2026-10-14 · Configurar OpenCode y elegir modelos gratuitos · @costanna
+
+- **Herramienta y modelo:** Claude Code para preparar la configuración y la documentación; OpenCode 1.18.34 para las pruebas · `opencode/big-pickle` (por defecto), `mimo-v2.6-flash-free`, `longcat-2.5-preview-free` y `nemotron-3-ultra-free` (comparación)
+- **Issue y reglas:** #63 · nada (HU de configuración)
+- **Prompt clave:** prueba de humo de la HU-20 ("¿Qué roles existen y qué no debes hacer?") con cinco modelos gratuitos, y revisión en modo `plan` de la migración 0006 de la PR #119 como prueba con una HU real
+- **Resultado:** aceptado. Los cuatro modelos que respondieron dieron los 5 roles y las prohibiciones de `AGENTS.md`; big-pickle fue el más rápido (16 s) y se dejó por defecto en `opencode.json`. La revisión de la migración fue correcta (cadena 0004 → 0005 → 0006, conversión segura y pérdida de recuentos parciales al bajar).
+- **Errores o alucinaciones:** `ling-3.1-flash-free` devolvió un error del servicio. En la revisión, big-pickle avisó de un caso con `quantity = 0` que no puede darse porque la BD exige `quantity > 0`: solo tenía la migración adjunta, no el modelo.
+- **Trabajo descartado:** `ling-3.1-flash-free` como opción
+- **Mi prompt o la spec:** en `opencode run`, la opción `-f` se tragó el texto de la pregunta como si fuera otro fichero; el mensaje tiene que ir antes de `-f`.
+- **Decisiones humanas:** big-pickle por defecto para todo el equipo aunque yo uso mi propio proveedor (lo cambio con `/models`); documentar OpenCode en el README (Anna).
+- **Lección:** para consultas que no deben tocar ficheros, usar `--agent plan`, y adjuntar con `-f` todo lo que la pregunta necesita (por ejemplo, el modelo además de la migración).
+
 ### HU-53 · Bitácora de IA
 
 #### 2026-10-14 · Creación de la bitácora · @arita-pereira

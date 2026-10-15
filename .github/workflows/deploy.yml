@@ -3,7 +3,7 @@ name: deploy
 # Push a main → tests (ci.yml) → deploy en Render (solo si los tests pasan) → espera a que /health sirva este commit.
 # Requiere:
 #   - Secret   RENDER_DEPLOY_HOOK_URL  (Render → Settings → Deploy Hook)
-#   - Variable RENDER_URL              (p. ej. https://restoapi.onrender.com)
+#   - Variable RENDER_URL              (p. ej. https://restoapi-47sp.onrender.com)
 #   - Secret   JWT_SECRET_KEY_TEST     (cualquier valor, solo para tests)
 #   - Variable COVERAGE_MIN (opcional) (cobertura mínima; 70 al final del proyecto)
 
