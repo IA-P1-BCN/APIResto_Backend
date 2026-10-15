@@ -1,11 +1,11 @@
 # HU-27 · Colección Bruno para pruebas de la API
 
-> > Issue: #70 · Prioridad Must · Nivel Entregable · Escribe: Levi ·
+> Issue: #70 · Prioridad Must · Nivel Entregable · Escribe: Levi ·
 > Revisa: quien la vea primero · Aprueba: Levi (PO). Vocabulario: `specs/ontology.md`.
 > Reglas del repo: `AGENTS.md`.
 
 ## Problem Statement
-La API de RestoAPI expone 43 endpoints HTTP sobre FastAPI, con roles
+La API de RestoAPI expone 46 endpoints HTTP sobre FastAPI, con roles
 (`admin`, `waiter`, `kitchen`, `bartender`, `customer`), JWT, refresh tokens,
 permisos por estación, facturación, stats y export CSV. No existe una forma
 **versionada, reproducible y compartida** de probar la API de punta a punta:
@@ -22,7 +22,8 @@ Sin una colección de pruebas común:
 Una **colección Bruno** versionada en `bruno/` (formato abierto, basado en
 archivos `.bru` de texto plano) que:
 
-1. Cubre **todos los endpoints HTTP** que hoy existen en `app/routers/*.py`.
+1. Cubre los endpoints HTTP que hoy existen en `app/routers/*.py` (42 de 46),
+   salvo los que quedan fuera según "Alcance acotado a lo existente".
 2. Documenta el flujo completo por roles: login admin → alta de usuarios por
    rol → login por rol → CRUD de menú/mesas/reservas/pedidos → factura →
    stats/export → limpieza → desactivación.
@@ -145,21 +146,28 @@ El agente líder debe:
   `password` / `password_hash` **no aparecen nunca** en las respuestas de
   usuario (`R-02` de `specs/ontology.md`).
 - **Alcance acotado a lo existente**:
-  - Quedan fuera (se añadirán en la PR de su HU):
-    `/auth/register` (HU-22), refresh/logout (HU-30), `/users/me` y cambio
-    de contraseña (HU-25), filtros de `GET /users` (HU-24), HU-40 (gestión
-    de estación de barra en pedidos).
+  - Existen en `app/routers/` pero quedan fuera (se añadirán en la PR de su
+    HU), decidido por Levi (PO) el 15/10/2026:
+    - `POST /auth/register` (HU-22).
+    - `POST /auth/social/{provider}` (HU-38): necesita un `code` OAuth real de
+      Google o GitHub y no se puede automatizar en el runner tal cual.
+    - `DELETE /users/{user_id}` (soft delete) y `POST /users/{user_id}/restore`
+      (HU-32).
+  - Aún no existen (se añadirán en la PR de su HU): refresh/logout (HU-30),
+    `/users/me` y cambio de contraseña (HU-25), filtros de `GET /users`
+    (HU-24), HU-40 (gestión de estación de barra en pedidos).
   - Comportamiento actual documentado, aunque no sea el ideal:
     - HU-43: un `customer` puede crear reservas para sí mismo (201); el 403
       solo salta si apunta a otro `user_id`.
     - HU-08: el 409 de factura es **por pedido** (`invoice_already_exists`,
       `order_not_served`), no por mesa.
-- **WebSocket**: `bruno/websocket/kitchen-ws.bru` se documenta como request
-  manual, fuera del runner. El README explica la alternativa CLI
-  (`websocat`) y enlaza a los tests de WS existentes.
-- **No toca nada fuera de `bruno/`**: ni `app/`, ni `tests/`, ni
-  `.github/workflows/`, ni `requirements.txt`, ni `Dockerfile`, ni
-  `render.yaml`, ni `.env`.
+- **WebSocket**: `/ws/kitchen` no tiene `.bru` y queda fuera del runner. La
+  sección 8 de `bruno/README.md` explica cómo probarlo a mano (`websocat`,
+  `wscat` o Bruno) y enlaza a los tests de WS existentes.
+- **No toca código ni configuración**: ni `app/`, ni `tests/`, ni
+  `migrations/`, ni `.github/workflows/`, ni `requirements.txt`, ni
+  `Dockerfile`, ni `render.yaml`, ni `.env`. Fuera de `bruno/` solo se
+  permiten los ficheros de la excepción de los criterios de aceptación.
 
 ## Testing Decisions
 - La colección **es el propio test**: su valor se mide por lo que se ejecuta,
@@ -168,6 +176,12 @@ El agente líder debe:
   (`npx @usebruno/cli run -r --env Local ...`).
 - **Criterio de verde**: 130/130 requests en local con la API levantada y el
   admin creado vía `python -m app.scripts.create_admin`.
+- **Orden de preparación en local**: primero levantar la API (`docker compose
+  up -d --build db api`) para que Alembic cree el esquema y después crear el
+  admin (`docker compose exec api python -m app.scripts.create_admin ...`).
+  `create_admin` llama a `Base.metadata.create_all`: si se ejecuta antes con la
+  BD vacía, crea las tablas sin `alembic_version` y el contenedor `api` cae
+  con `DuplicateTable` al arrancar.
 - No se ejecuta la colección en CI en esta HU (no hay GH Action que ejecute
   Bruno en este momento). Si en el futuro se añade, será en una PR aparte
   (HU-36 es de otro tipo).
@@ -176,13 +190,14 @@ El agente líder debe:
   verificación manual reproducible end-to-end.
 
 ## Criterios de aceptación
-- [ ] `bruno/bruno.json` válido y la colección se importa en Bruno sin errores.
-- [ ] Entornos `Local` y `Production` con `baseUrl` correcto.
-- [ ] Todos los endpoints HTTP actuales de `app/routers/*.py` cubiertos por
-      al menos un request.
-- [ ] Flujo `login admin → alta usuarios por rol → login por rol → CRUD →
+- [x] `bruno/bruno.json` válido y la colección se importa en Bruno sin errores.
+- [x] Entornos `Local` y `Production` con `baseUrl` correcto.
+- [x] Todos los endpoints HTTP actuales de `app/routers/*.py` cubiertos por
+      al menos un request, salvo los 4 excluidos en "Alcance acotado a lo
+      existente" (42 de 46).
+- [x] Flujo `login admin → alta usuarios por rol → login por rol → CRUD →
       factura → stats → cleanup → desactivación (401)` completo.
-- [ ] Casos de error 401, 403, 404, 409 y 422 presentes donde la API los
+- [x] Casos de error 401, 403, 404, 409 y 422 presentes donde la API los
       devuelva.
 - [ ] Tests en cada request: status, shape del schema y ausencia de
       `password` / `password_hash` en respuestas de usuario.
@@ -190,14 +205,20 @@ El agente líder debe:
       entorno, configurar `adminEmail`/`adminPassword` como secretos, orden
       de ejecución, Collection Runner (app y CLI), WebSocket manual y tabla
       de cobertura.
-- [ ] **130/130 requests en verde** en local con la API levantada y el admin
+- [x] **130/130 requests en verde** en local con la API levantada y el admin
       creado.
-- [ ] Ninguna credencial real ni token hardcodeado en el repo.
-- [ ] `git status` solo muestra cambios dentro de `bruno/`,
-      `docs/agents/HU-27/`, `scripts/generate_agent_diagrams.py`
-      y `specs/agents/HU-27/`.
+  > Verificado el 15/10/2026 con Docker Compose y la BD migrada con Alembic
+  > hasta `0006`: 130/130 requests y 332/332 tests, antes y después de
+  > integrar `dev` (HU-32, HU-38).
+- [x] Ninguna credencial real ni token hardcodeado en el repo.
+- [ ] El diff de la PR contra `dev` solo muestra cambios dentro de `bruno/`,
+      `docs/agents/HU-27/`, `scripts/generate_agent_diagrams.py`,
+      `specs/agents/HU-27/`, este fichero y la sección HU-27 de
+      `docs/ai-log.md`.
   > Excepción aprobada por Levi (PO) el 14/10/2026 para incluir
   > la documentación visual y las directrices de agentes de esta HU.
+  > `docs/ai-log.md` va en la misma PR porque lo exige `AGENTS.md`
+  > ("Registro de IA").
 - [ ] PR revisada por otra persona y aprobada por Levi (PO).
 - [ ] Los archivos `specs/agents/HU-27/*.md` existen y describen las tareas
       de cada agente de forma clara y sin solapamiento.
@@ -214,6 +235,11 @@ El agente líder debe:
 > Actualización 14/10: HU-06 mergeó station en categorías, así
 > que la colección Bruno lo cubre. HU-40 (estación de barra en
 > pedidos) sigue fuera de alcance.
+>
+> Actualización 15/10: al integrar `dev` llegan HU-32 (`DELETE
+> /users/{id}` y `POST /users/{id}/restore`) y HU-38 (`POST
+> /auth/social/{provider}`). Quedan fuera de HU-27 por decisión de
+> Levi (PO); la colección sigue en 130/130 sin cambios en los `.bru`.
 
 ## Further Notes
 - Referencias:
@@ -230,8 +256,8 @@ El agente líder debe:
 - Este fichero **no sustituye** a `AGENTS.md`: lo complementa para la HU-27.
   Cualquier agente que trabaje en esta rama debe leer primero `AGENTS.md` y
   luego este fichero.
-- Cuando una HU futura añada endpoints (HU-22, HU-24, HU-25, HU-30, HU-40,
-  etc.), su PR deberá:
+- Cuando una HU añada o ya tenga endpoints sin cubrir (HU-22, HU-24, HU-25,
+  HU-30, HU-32, HU-38, HU-40, etc.), su PR deberá:
   1. Añadir el `.bru` correspondiente en la carpeta del dominio.
   2. Actualizar la tabla de cobertura de `bruno/README.md`.
   3. Actualizar este fichero si la lista de "Out of Scope" cambia.
