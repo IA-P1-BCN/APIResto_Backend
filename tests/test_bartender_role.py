@@ -62,7 +62,7 @@ def test_camarero_sigue_sin_websocket(client, make_user):
 
 
 def test_barra_marca_platos_preparados_pero_no_servidos(client, db, auth_headers):
-    table_id, dish_id = create_test_data(db)
+    table_id, dish_id = create_test_data(db, station="bar")
     order = order_with_two_lines(client, auth_headers(Role.waiter), table_id, dish_id)
     bartender = auth_headers(Role.bartender)
     r = client.patch(item_url(order), headers=bartender, json={"prepared": True})
