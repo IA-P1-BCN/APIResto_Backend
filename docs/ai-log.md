@@ -76,6 +76,20 @@ Copia este bloque en la sección de tu HU:
 - **Decisiones humanas:** big-pickle por defecto para todo el equipo aunque yo uso mi propio proveedor (lo cambio con `/models`); documentar OpenCode en el README (Anna).
 - **Lección:** para consultas que no deben tocar ficheros, usar `--agent plan`, y adjuntar con `-f` todo lo que la pregunta necesita (por ejemplo, el modelo además de la migración).
 
+### HU-35 · Comandos y subagentes de OpenCode
+
+#### 2026-10-15 · Comandos /tests, /seguridad y /migracion · @costanna
+
+- **Herramienta y modelo:** Claude Code para escribir los comandos, el subagente y la documentación; OpenCode 1.18.34 con `opencode/big-pickle` para probarlos
+- **Issue y reglas:** #78 · R-02 (contraseñas), R-13 (vinculación social) en la revisión de seguridad
+- **Prompt clave:** `/seguridad c8f0ca1^..c8f0ca1` sobre el login social de la #116; `/tests` sobre `PATCH /orders/{order_id}/items/{item_id}` con unidades; `/migracion` sin argumentos para ver el número libre
+- **Resultado:** aceptado con cambios. `/seguridad` dio 3 hallazgos medios y 6 bajos sin tocar ficheros; comprobé cuatro (sin longitud máxima en `code` y `redirect_uri`, `get_by_id` sin comprobar en la línea 59, `downgrade` de la 0005 con `password_hash = ''` y `UserUpdate.password` sin mínimo) y son ciertos. `/tests` generó 24 tests que pasan con ruff limpio. `/migracion` respondió 0007, que es correcto.
+- **Errores o alucinaciones:** la primera versión de `/migracion` se inventó la variable `ALCHEMY_DATABASE_URL` (es `DATABASE_URL`), escribió mal el nombre de la 0006 y no se paró en el paso 3 sin argumentos; el prompt no decía qué variable usar ni prohibía describir los pasos siguientes. Una ejecución de `/tests` terminó vacía y la siguiente funcionó. `opencode run` se quedaba esperando cuando la entrada estándar no se cerraba.
+- **Trabajo descartado:** los 24 tests de `/tests`, que eran solo una prueba del comando; mis cambios no los necesitan.
+- **Mi prompt o la spec:** en `/migracion` faltaba decir que sin argumentos no se ejecuta ningún comando y que los nombres se copian de la lista; se añadió.
+- **Decisiones humanas:** el subagente de seguridad solo puede leer y usar `git diff`, `git log` y `git show`; los hallazgos de la #116 se pasan a Manon en lugar de arreglarlos, porque es su código (Anna).
+- **Lección:** en un comando, decir cuándo parar y qué variables y ficheros existen; y en scripts, lanzar `opencode run` con `< /dev/null`.
+
 ### HU-40 · Estación de barra en los pedidos
 
 #### 2026-10-15 · HU-40_Estación de barra en los pedidos  · @ManonChab
