@@ -62,8 +62,7 @@ docs {
 
   - `200`: `DishOut`
   - `401`: sin token
-  - `403`: escritura con un rol distinto de admin
-  - `404`: `Dish not found`
-  - `409`: plato usado en pedidos (al borrar)
+  - `403`: rol distinto de admin (`Not enough permissions`)
+  - `404`: `Dish not found` o `Category not found` (`category_id` inexistente)
   - `422`: datos no válidos
 }

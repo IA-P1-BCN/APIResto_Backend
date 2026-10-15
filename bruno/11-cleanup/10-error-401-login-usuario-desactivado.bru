@@ -28,6 +28,10 @@ tests {
     expect(res.body.detail).to.be.a("string");
     expect(res.body.code).to.equal("unauthorized");
   });
+
+  test("detail = Credenciales incorrectas", function() {
+    expect(res.body.detail).to.equal("Credenciales incorrectas");
+  });
 }
 
 docs {
@@ -42,6 +46,6 @@ docs {
   **Respuestas posibles:**
 
   - `200`: `{access_token, token_type: "bearer"}`
-  - `401`: credenciales incorrectas o usuario desactivado (`unauthorized`)
+  - `401`: credenciales incorrectas o usuario desactivado (`unauthorized`, `Credenciales incorrectas`)
   - `422`: faltan `username` o `password` (`validation_error`)
 }

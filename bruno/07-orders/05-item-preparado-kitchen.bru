@@ -62,9 +62,9 @@ docs {
   **Respuestas posibles:**
 
   - `200`: `OrderOut`
-  - `401`: sin token
-  - `403`: rol no permitido
-  - `404`: `Order not found` / `Table not found` / `Order item not found`
-  - `409`: transición no válida, plato no disponible o pedido cerrado
-  - `422`: datos no válidos
+  - `401`: sin token (`unauthorized`)
+  - `403`: el rol no puede marcar ese campo (`forbidden`)
+  - `404`: `Order not found` / `Order item not found` (`not_found`)
+  - `409`: `Cannot change items of an order in status 'paid'|'cancelled'` (`conflict`)
+  - `422`: sin `prepared` ni `served`, o campos extra (`validation_error`)
 }

@@ -49,9 +49,7 @@ docs {
   **Respuestas posibles:**
 
   - `200`: `Page[ReservationRead]`
-  - `401`: sin token
-  - `403`: rol sin acceso o reserva de otro usuario (`reservation_forbidden`)
-  - `404`: reserva, mesa o usuario inexistente (`reservation_not_found`, `table_not_found`, `user_not_found`)
-  - `409`: solapamiento (`reservation_conflict`) o no cancelable (`reservation_not_cancellable`)
-  - `422`: datos no válidos o `party_size` > capacidad (`party_size_exceeds_capacity`)
+  - `401`: sin token o token no válido (`unauthorized`)
+  - `403`: rol sin acceso, kitchen o bartender (`forbidden`); customer que filtra por el `user_id` de otro usuario (`reservation_forbidden`)
+  - `422`: query params no válidos, p. ej. `size` > 100 (`validation_error`)
 }

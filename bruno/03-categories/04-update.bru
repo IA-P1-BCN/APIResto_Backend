@@ -41,7 +41,7 @@ tests {
 docs {
   **`PUT /categories/{category_id}`**
 
-  Edición parcial (`name?`, `sort_order?`).
+  Edición parcial (`name?`, `sort_order?`, `station?`).
 
   **Roles permitidos:** admin
 
@@ -51,7 +51,8 @@ docs {
 
   - `200`: `CategoryOut`
   - `401`: sin token
-  - `403`: escritura con un rol distinto de admin
+  - `403`: rol distinto de admin (`Not enough permissions`)
   - `404`: `Category not found`
-  - `409`: nombre duplicado o categoría con platos
+  - `409`: `Category already exists` (nombre de otra categoría)
+  - `422`: datos no válidos
 }

@@ -45,7 +45,7 @@ docs {
   **Respuestas posibles:**
 
   - `200`: `list[TopDishOut]`
-  - `401`: sin token
+  - `401`: sin token (`Not authenticated`) o token inválido / de usuario desactivado (`Invalid or expired token`)
   - `403`: el rol no es admin
   - `422`: `from` posterior a `to` (`invalid_date_range`) o `limit` fuera de 1-50
 }

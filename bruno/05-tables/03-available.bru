@@ -54,6 +54,7 @@ docs {
   **Respuestas posibles:**
 
   - `200`: `DiningTablePage`
-  - `403`: rol no permitido
+  - `401`: sin token
+  - `403`: rol no permitido (solo admin, waiter)
   - `422`: faltan `reserved_at` o `party_size`, o no son válidos
 }

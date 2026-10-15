@@ -37,8 +37,7 @@ docs {
 
   - `204`: sin contenido
   - `401`: sin token
-  - `403`: escritura con un rol distinto de admin
+  - `403`: rol distinto de admin (`Not enough permissions`)
   - `404`: `Dish not found`
-  - `409`: plato usado en pedidos (al borrar)
-  - `422`: datos no válidos
+  - `409`: plato usado en pedidos (`Dish is used in orders and cannot be deleted...`)
 }

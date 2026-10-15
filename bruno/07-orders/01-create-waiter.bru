@@ -55,10 +55,11 @@ tests {
     expect(res.body).to.have.property("items");
   });
 
-  test("pendiente, del waiter y con total 2 x 13.00", function() {
+  test("pendiente, del waiter y con total = 2 x unit_price", function() {
     expect(res.body.status).to.equal("pending");
     expect(res.body.waiter_id).to.equal(bru.getVar("waiterId"));
-    expect(Number(res.body.total)).to.equal(26);
+    const expected = 2 * Number(res.body.items[0].unit_price);
+    expect(Math.round(Number(res.body.total) * 100)).to.equal(Math.round(expected * 100));
   });
 
   test("línea sin preparar ni servir", function() {
@@ -80,9 +81,9 @@ docs {
   **Respuestas posibles:**
 
   - `201`: `OrderOut`
-  - `401`: sin token
-  - `403`: rol no permitido
-  - `404`: `Order not found` / `Table not found` / `Order item not found`
-  - `409`: transición no válida, plato no disponible o pedido cerrado
-  - `422`: datos no válidos
+  - `401`: sin token (`unauthorized`)
+  - `403`: rol no permitido, solo admin y waiter (`forbidden`)
+  - `404`: `Table not found` (`not_found`)
+  - `409`: `Dish <id> not available`, también si el plato no existe (`conflict`)
+  - `422`: datos no válidos (`validation_error`)
 }

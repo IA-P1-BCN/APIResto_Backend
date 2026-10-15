@@ -57,6 +57,8 @@ docs {
 
   Edición parcial. Si cambian mesa, hora, duración o personas se revalidan la capacidad (422) y el solapamiento (409). `status` solo lo pueden cambiar admin y waiter.
 
+  `party_size: 5` cabe porque `05-tables/05-update` deja la mesa `{{tableId}}` con `capacity` 6.
+
   **Roles permitidos:** admin, waiter y el dueño
 
   **Auth en este request:** Bearer `{{token}}` (admin)
@@ -64,9 +66,9 @@ docs {
   **Respuestas posibles:**
 
   - `200`: `ReservationRead`
-  - `401`: sin token
-  - `403`: rol sin acceso o reserva de otro usuario (`reservation_forbidden`)
-  - `404`: reserva, mesa o usuario inexistente (`reservation_not_found`, `table_not_found`, `user_not_found`)
-  - `409`: solapamiento (`reservation_conflict`) o no cancelable (`reservation_not_cancellable`)
-  - `422`: datos no válidos o `party_size` > capacidad (`party_size_exceeds_capacity`)
+  - `401`: sin token o token no válido (`unauthorized`)
+  - `403`: rol sin acceso o reserva de otro usuario (`forbidden`); customer que cambia `status` (`reservation_forbidden`)
+  - `404`: reserva inexistente (`reservation_not_found`); mesa nueva inexistente (`table_not_found`)
+  - `409`: solapamiento con otra reserva activa de la mesa (`reservation_conflict`)
+  - `422`: datos no válidos, p. ej. campo extra o `null` en un campo distinto de `notes` (`validation_error`); `party_size` > capacidad de la mesa (`party_size_exceeds_capacity`)
 }

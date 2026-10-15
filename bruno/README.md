@@ -1,9 +1,13 @@
 # Colección Bruno de RestoAPI (HU-27)
 
 Colección de pruebas de la API REST de RestoAPI para [Bruno](https://www.usebruno.com/).
-Cubre **los 44 endpoints HTTP** de `app/routers/*.py` (más `/` y `/health` de `app/main.py`) con
+Cubre **los 43 endpoints HTTP** de `app/routers/*.py` (más `/` y `/health` de `app/main.py`) con
 **130 requests**: el flujo completo de punta a punta y los casos de error y seguridad
 (401, 403, 404, 409 y 422).
+
+> 43 endpoints HTTP en app/routers/*.py, más / y /health en
+> main.py, más el WebSocket de cocina. La colección cubre los 43
+> HTTP (POST /auth/register se añadirá en HU-22).
 
 - Documentación de la API: [`docs/api.md`](../docs/api.md)
 - Swagger: <https://restoapi-47sp.onrender.com/docs> (en local: <http://localhost:8000/docs>)
@@ -51,6 +55,10 @@ Encaja con nuestro flujo: la colección vive en `bruno/`, se versiona con la API
    ```
 
    Si el email ya existe, el script lo convierte en admin.
+
+   Usa un email con dominio normal (p. ej. `@example.com`). Los dominios reservados (`.test`,
+   `.local`, `.localhost`…) no pasan la validación `EmailStr`: `GET /auth/me` del admin daría 500 y
+   el alta de usuarios, 422. Por eso los usuarios de prueba usan `@restoapi.example.com`.
 
 3. **Guardar las credenciales del admin en Bruno**, nunca en un `.bru` commiteado. En la app:
    selector de entorno (arriba a la derecha) → **Configure** → entorno **Local** → rellena
@@ -162,14 +170,18 @@ esperado. Cada ejecución crea datos nuevos (sufijo `runId`), así que se puede 
 Cada request tiene en la pestaña **Docs** su endpoint, los roles permitidos, el token que usa y las
 respuestas posibles.
 
-## 8. WebSocket de cocina (manual, fuera del runner)
+## 8. WebSocket (cocina/barra)
 
-`/ws/kitchen` no es HTTP y no forma parte del runner. Para probarlo a mano:
+`/ws/kitchen` no es HTTP: no tiene `.bru` y no forma parte del runner (los 130 requests son HTTP).
+Lo usan la cocina y la barra. Para probarlo a mano:
 
-1. Ejecuta `01-auth/01-login-admin` (o el login de kitchen o bartender) y copia el valor de `token`.
-2. Conéctate con un cliente WebSocket. En versiones recientes de Bruno: **New Request → WebSocket**.
-   También vale `npx wscat -c "ws://localhost:8000/ws/kitchen?token=<TOKEN>"`. En Production:
-   `wss://restoapi-47sp.onrender.com/ws/kitchen?token=<TOKEN>`.
+1. Ejecuta `01-auth/01-login-admin` (o `02-users/06-login-kitchen` / `02-users/07-login-bartender`)
+   y copia el valor de `token` (o `tokenKitchen` / `tokenBartender`) desde las variables de ejecución.
+2. Conéctate con un cliente WebSocket:
+   - **websocat:** `websocat "ws://localhost:8000/ws/kitchen?token=<TOKEN>"`
+   - **wscat:** `npx wscat -c "ws://localhost:8000/ws/kitchen?token=<TOKEN>"`
+   - **Bruno** (versiones recientes): **New Request → WebSocket** con la misma URL.
+   - En Production: `wss://restoapi-47sp.onrender.com/ws/kitchen?token=<TOKEN>`.
 3. Lanza `07-orders/01-create-waiter` o `07-orders/04-status-in-kitchen` y verás los eventos:
 
    ```json
@@ -180,9 +192,14 @@ respuestas posibles.
 Solo pueden conectarse usuarios activos con rol `admin`, `kitchen` o `bartender`. Sin token, con un
 token inválido o con otro rol, el servidor cierra la conexión con el código **1008**.
 
+La verificación automática real del WebSocket vive en pytest:
+[`tests/integration/test_kitchen_websocket.py`](../tests/integration/test_kitchen_websocket.py).
+
 ## 9. Comportamiento actual que conviene saber
 
-- **No existen todavía:** `/auth/register` (HU-22), `/auth/refresh` y `/auth/logout` (HU-30),
+- **`POST /auth/register` ya existe** en `app/routers/auth.py`, pero queda fuera de esta colección:
+  sus requests se añadirán en la PR de HU-22.
+- **No existen todavía:** `/auth/refresh` y `/auth/logout` (HU-30),
   `/users/me` y el cambio de contraseña (HU-25), filtros y búsqueda en `GET /users` (HU-24) ni el
   filtro por estación de barra (HU-40). La colección solo documenta lo que existe hoy; cada HU añadirá
   sus requests en su PR. Los usuarios se crean con `POST /users/` (admin) y la baja es

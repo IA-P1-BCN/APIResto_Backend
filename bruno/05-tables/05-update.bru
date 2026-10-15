@@ -63,8 +63,8 @@ docs {
 
   - `200`: `DiningTableRead`
   - `401`: sin token
-  - `403`: rol no permitido
+  - `403`: rol distinto de admin (`Not enough permissions`)
   - `404`: `Table <id> not found`
-  - `409`: número de mesa duplicado o mesa con pedidos/reservas
-  - `422`: datos no válidos o campos extra (`extra=forbid`)
+  - `409`: `Table number <n> already exists` (número de otra mesa)
+  - `422`: datos no válidos, campos que faltan o campos extra (`extra=forbid`)
 }

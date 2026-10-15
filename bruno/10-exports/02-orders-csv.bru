@@ -26,7 +26,19 @@ tests {
   test("devuelve un CSV descargable", function() {
     expect(res.headers["content-type"]).to.include("text/csv");
     expect(res.headers["content-disposition"]).to.include("attachment");
+    expect(res.headers["content-disposition"]).to.match(/filename="orders.*\.csv"/);
     expect(res.body).to.be.a("string").that.is.not.empty;
+  });
+
+  test("primera línea (sin BOM) = cabecera exacta", function() {
+    const lines = String(res.body).replace(/^\ufeff/, "").split(/\r?\n/);
+    expect(lines[0]).to.equal("id,created_at,table_id,waiter_id,status,items,total,invoice_number");
+  });
+
+  test("al menos un pedido y todas las filas en status paid", function() {
+    const rows = String(res.body).replace(/^\ufeff/, "").split(/\r?\n/).slice(1).filter(l => l.length > 0);
+    expect(rows.length).to.be.at.least(1);
+    rows.forEach(r => expect(r.split(",")[4]).to.equal("paid"));
   });
 }
 
@@ -41,8 +53,8 @@ docs {
 
   **Respuestas posibles:**
 
-  - `200`: `text/csv`
-  - `401`: sin token
+  - `200`: `text/csv; charset=utf-8` (UTF-8 con BOM) con `Content-Disposition: attachment; filename="orders.csv"` (con fechas: `orders_<date_from>_<date_to>.csv`)
+  - `401`: sin token (`Not authenticated`) o token inválido / de usuario desactivado (`Invalid or expired token`)
   - `403`: el rol no es admin
-  - `422`: `invalid_date_range` o `status` no válido
+  - `422`: `date_from` posterior a `date_to` (`invalid_date_range`) o `status` no válido (`validation_error`)
 }

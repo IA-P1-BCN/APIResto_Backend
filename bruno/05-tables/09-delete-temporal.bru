@@ -37,8 +37,7 @@ docs {
 
   - `204`: sin contenido
   - `401`: sin token
-  - `403`: rol no permitido
+  - `403`: rol distinto de admin (`Not enough permissions`)
   - `404`: `Table <id> not found`
-  - `409`: número de mesa duplicado o mesa con pedidos/reservas
-  - `422`: datos no válidos o campos extra (`extra=forbid`)
+  - `409`: mesa con pedidos o reservas (code `table_in_use`)
 }

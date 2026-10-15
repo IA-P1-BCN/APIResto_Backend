@@ -6,5 +6,7 @@ meta {
 docs {
   CRUD de usuarios (solo admin). Crea un usuario de cada rol y hace login con cada uno para obtener `tokenWaiter`, `tokenKitchen`, `tokenBartender` y `tokenCustomer`.
 
-  No existe `/auth/register` (HU-22) ni `DELETE /users/{id}`: la baja es `PATCH /users/{id}/deactivate` (ver carpeta 11-cleanup).
+  `POST /auth/register` (HU-22) existe en `app/routers/auth.py` pero queda fuera de esta colección: se añadirá en la PR de su HU. No existe `DELETE /users/{id}`: la baja es `PATCH /users/{id}/deactivate` (ver carpeta 11-cleanup).
+
+  Los emails de prueba usan `@restoapi.example.com`: `EmailStr` (email-validator) rechaza dominios reservados como `.test` con 422.
 }

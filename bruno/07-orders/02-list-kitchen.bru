@@ -48,9 +48,7 @@ docs {
   **Respuestas posibles:**
 
   - `200`: `list[OrderOut]`
-  - `401`: sin token
-  - `403`: rol no permitido
-  - `404`: `Order not found` / `Table not found` / `Order item not found`
-  - `409`: transición no válida, plato no disponible o pedido cerrado
-  - `422`: datos no válidos
+  - `401`: sin token (`unauthorized`)
+  - `403`: rol no permitido (`forbidden`)
+  - `422`: query param no válido (`validation_error`)
 }

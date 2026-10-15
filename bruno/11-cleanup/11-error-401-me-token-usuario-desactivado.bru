@@ -23,6 +23,10 @@ tests {
     expect(res.body.detail).to.be.a("string");
     expect(res.body.code).to.equal("unauthorized");
   });
+
+  test("detail = Invalid or expired token", function() {
+    expect(res.body.detail).to.equal("Invalid or expired token");
+  });
 }
 
 docs {
@@ -36,5 +40,5 @@ docs {
 
   **Respuestas posibles:**
 
-  - `401`: `Invalid or expired token`
+  - `401`: `unauthorized` (`Invalid or expired token`)
 }

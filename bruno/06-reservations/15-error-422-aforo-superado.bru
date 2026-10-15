@@ -40,7 +40,7 @@ tests {
 docs {
   **`POST /reservations`**
 
-  La mesa admite 6 personas.
+  `party_size` (50) mayor que la `capacity` de la mesa `{{tableId}}`. La capacidad se comprueba antes que el solapamiento.
 
   **Roles permitidos:** admin, waiter, customer
 
