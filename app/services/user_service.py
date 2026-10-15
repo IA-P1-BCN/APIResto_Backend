@@ -7,7 +7,17 @@ from app.core.pagination import Page, PageParams, paginate
 from app.core.security import hash_password, verify_password
 from app.models.model_user import Role, User
 from app.repositories import user_repository
+<<<<<<< HEAD
+from app.schemas.schema_user import (
+    PasswordChange,
+    UserCreate,
+    UserProfileUpdate,
+    UserRegister,
+    UserUpdate,
+)
+=======
 from app.schemas.schema_user import UserCreate, UserOut, UserRegister, UserUpdate
+>>>>>>> b9868d1a95205261bd0b63fb70a058354aa0ff45
 
 
 def normalize_email(email: str) -> str:
@@ -87,6 +97,30 @@ def update_user(db: Session, user_id: int, data: UserUpdate, actor: User) -> Use
             setattr(user, field, value)
 
     user.updated_by = actor.id
+    return user_repository.save(db, user)
+
+
+def update_profile(db: Session, user: User, data: UserProfileUpdate) -> User:
+    fields = data.model_dump(mode="json", exclude_unset=True)
+
+    if "email" in fields:
+        fields["email"] = normalize_email(fields["email"])
+        if fields["email"] != user.email and user_repository.get_by_email(db, fields["email"]):
+            raise HTTPException(status_code=409, detail="Email already registered")
+
+    for field, value in fields.items():
+        setattr(user, field, value)
+
+    user.updated_by = user.id
+    return user_repository.save(db, user)
+
+
+def change_password(db: Session, user: User, data: PasswordChange) -> User:
+    if not user.password_hash or not verify_password(data.current_password, user.password_hash):
+        raise HTTPException(status_code=400, detail="Current password is incorrect")
+
+    user.password_hash = hash_password(data.new_password)
+    user.updated_by = user.id
     return user_repository.save(db, user)
 
 
