@@ -35,6 +35,18 @@ class UserUpdate(BaseModel):
     password: str | None = None
     role: Role | None = None
 
+class UserProfileUpdate(BaseModel):
+    name: str | None = None
+    email: EmailStr | None = None
+    phone: str | None = None
+
+class PasswordChange(BaseModel):
+    current_password: str
+    new_password: str = Field(
+        min_length=MIN_PASSWORD_LENGTH,
+        description=f"Contraseña nueva, mínimo {MIN_PASSWORD_LENGTH} caracteres (R-02).",
+    )
+
 class UserOut(UserBase):
     model_config = ConfigDict(from_attributes=True)
 
