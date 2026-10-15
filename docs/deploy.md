@@ -40,8 +40,9 @@ Pasos (por si hay que recrearlo):
    | Variable | Valor |
    |---|---|
    | `DATABASE_URL` | Neon, rama `main` (pooled), empezando por `postgresql+psycopg://` (no `postgresql://`: ver paso 3 de Neon) |
-   | `ALLOWED_ORIGINS` | URL de producción de Vercel, exacta y sin `/` final (p. ej. `https://restoapi.vercel.app`). Varias, separadas por comas |
+   | `ALLOWED_ORIGINS` | URLs de producción de Vercel, exactas, sin `/` final y separadas por comas sin espacios. Ahora: `https://resto-api-f5.vercel.app,https://apiresto-f5.vercel.app` |
    | `BREVO_API_KEY`, `MAIL_FROM` | Vacías hasta HU-19 (D7) |
+   | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET` | Login social (HU-38). Vacías = ese proveedor responde `503`. Se crean en Google Cloud Console y en GitHub (OAuth App) con la callback `<URL de Vercel>/auth/callback`; los secretos solo en Render |
 
    `JWT_SECRET_KEY` la genera Render automáticamente.
 3. **Settings → Deploy Hook** → copiar la URL.
@@ -211,7 +212,7 @@ docker compose down -v           # parar y BORRAR los datos de la BD
 
 ## 8. Migraciones con Alembic (HU-23)
 
-Los cambios en el modelo de datos se hacen con migraciones de Alembic (`migrations/versions/`), nunca a mano en la BD. La primera migración (`0001_esquema_inicial`) crea las 8 tablas tal como están en P2; la `0002_platos_preparados_y_servidos` añade las columnas `prepared` y `served` a `order_items`.
+Los cambios en el modelo de datos se hacen con migraciones de Alembic (`migrations/versions/`), nunca a mano en la BD. La primera migración (`0001_esquema_inicial`) crea las 8 tablas tal como están en P2; después, la `0002` añade `prepared` y `served` a `order_items`, la `0003` añade `station` (`kitchen` o `bar`) a `categories`, la `0004` el soft delete y la auditoría de usuarios, la `0005` las cuentas de login social, y la `0006` cambia `prepared` y `served` por el número de unidades preparadas y servidas de cada línea.
 
 ```bash
 alembic upgrade head        # aplicar las migraciones pendientes
@@ -233,7 +234,7 @@ Las BD creadas con `create_all` ya tienen las tablas: en ellas **no** se ejecuta
 
 | BD | Qué hacer (una vez) |
 |---|---|
-| Neon `main` (producción) | `alembic stamp 0001` **antes** de desplegar la versión con Alembic (si no, el arranque intenta crear tablas que ya existen y falla); el arranque de Render aplica después la `0002` |
+| Neon `main` (producción) | `alembic stamp 0001` **antes** de desplegar la versión con Alembic (si no, el arranque intenta crear tablas que ya existen y falla); el arranque de Render aplica después las siguientes |
 | Neon `dev` | Está vacía: `alembic upgrade head` |
 | BD local (SQLite) creada antes de Alembic | `alembic stamp 0001` y `alembic upgrade head` |
 | Volumen de Docker creado antes de Alembic | `docker compose exec api alembic stamp 0001` y `docker compose exec api alembic upgrade head`, o `docker compose down -v` |

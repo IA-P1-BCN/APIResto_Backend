@@ -56,9 +56,13 @@ def update_order_status(
     return order_service.update_order_status(db, order_id, body.status, background_tasks)
 
 
+PREPARE_ROLES = {role.value for role in (*KITCHEN, *BARTENDER)}
+SERVE_ROLES = {role.value for role in ORDERS}
 ITEM_FIELD_ROLES = {
-    "prepared": {role.value for role in (*KITCHEN, *BARTENDER)},
-    "served": {role.value for role in ORDERS},
+    "prepared": PREPARE_ROLES,
+    "prepared_quantity": PREPARE_ROLES,
+    "served": SERVE_ROLES,
+    "served_quantity": SERVE_ROLES,
 }
 
 
@@ -70,9 +74,12 @@ def update_order_item(
     user: Annotated[User, Depends(require_role(*ORDERS, *KITCHEN, *BARTENDER))],
     db: Session = Depends(get_db),  # noqa: B008
 ):
-    """Marca una línea como preparada (cocina) o servida en la mesa (sala), o las desmarca.
+    """Marca cuántas unidades de una línea están preparadas (cocina) o servidas (sala).
 
-    `prepared`: admin, kitchen, bartender. `served`: admin, waiter.
+    `prepared_quantity` y `served_quantity` van de 0 a la cantidad de la línea.
+    `prepared` y `served` (true/false) marcan o desmarcan todas las unidades.
+    `prepared` / `prepared_quantity`: admin, kitchen, bartender.
+    `served` / `served_quantity`: admin, waiter.
     """
     changes = body.model_dump(exclude_none=True)
     for field in changes:

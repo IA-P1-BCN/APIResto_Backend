@@ -133,7 +133,7 @@ def update_order_status(
     return order
 
 
-def update_item(db: Session, order_id: int, item_id: int, changes: dict[str, bool]) -> Order:
+def update_item(db: Session, order_id: int, item_id: int, changes: dict[str, bool | int]) -> Order:
     order = get_order(db, order_id)
     item = next((i for i in order.items if i.id == item_id), None)
     if item is None:
@@ -143,6 +143,17 @@ def update_item(db: Session, order_id: int, item_id: int, changes: dict[str, boo
             status_code=409,
             detail=f"Cannot change items of an order in status '{order.status}'",
         )
-    for field, value in changes.items():
+    quantities = {
+        f"{field}_quantity": item.quantity if value else 0
+        for field, value in changes.items()
+        if field in ("prepared", "served")
+    }
+    quantities |= {field: value for field, value in changes.items() if field.endswith("_quantity")}
+    for field, value in quantities.items():
+        if value > item.quantity:
+            raise HTTPException(
+                status_code=422,
+                detail=f"{field} cannot be greater than the quantity of the line ({item.quantity})",
+            )
         setattr(item, field, value)
     return order_repository.save(db, order)

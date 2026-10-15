@@ -77,6 +77,25 @@ class UnprocessableError(AppError):
     default_code = UNPROCESSABLE_CODE
  
  
+class UnauthorizedError(AppError):
+    status_code = status.HTTP_401_UNAUTHORIZED
+    default_code = UNAUTHORIZED_CODE
+
+
+class BadGatewayError(AppError):
+    """An external provider failed or answered something unusable (502)."""
+
+    status_code = status.HTTP_502_BAD_GATEWAY
+    default_code = "bad_gateway"
+
+
+class ServiceUnavailableError(AppError):
+    """A feature is not configured on this server (503)."""
+
+    status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+    default_code = "service_unavailable"
+
+
 class ReservationConflict(ConflictError):
     """The reservation overlaps another active reservation of the same table."""
  

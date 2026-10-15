@@ -20,6 +20,7 @@ Closes #
 - [ ] Sin secretos ni credenciales en el código (`.env` fuera del repo)
 - [ ] Documentación actualizada si cambia el contrato (Swagger / `docs/api.md`)
 - [ ] Migración de Alembic incluida si cambia el modelo (solo backend)
+- [ ] Entrada en `docs/ai-log.md` si se ha usado un agente de IA (plantilla en el propio archivo)
 - [ ] Reviewer asignado según la pareja de revisión del sprint
 
 ## Capturas / notas para el reviewer
