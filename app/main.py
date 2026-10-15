@@ -1,4 +1,6 @@
 import os
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -31,11 +33,21 @@ from app.routers import (
     tables,
     websocket_kitchen,
 )
+from app.services.keep_awake import keep_awake_configured, start_keep_awake
 
 setup_logging()
 Base.metadata.create_all(bind=engine)
 
-app = FastAPI(title="Resto API", version="1.0.0")
+
+@asynccontextmanager
+async def lifespan(_: FastAPI) -> AsyncIterator[None]:
+    # Keep-awake estilo woke-dyno (solo si KEEP_AWAKE_ENABLED + KEEP_AWAKE_URL).
+    if keep_awake_configured(settings.KEEP_AWAKE_ENABLED, settings.KEEP_AWAKE_URL):
+        start_keep_awake(settings.KEEP_AWAKE_URL, settings.KEEP_AWAKE_MINUTES)
+    yield
+
+
+app = FastAPI(title="Resto API", version="1.0.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -49,6 +61,7 @@ app.add_middleware(
 register_exception_handlers(app)
 
 app.include_router(auth.router)
+app.include_router(router_user.me_router)
 app.include_router(router_user.router)
 app.include_router(router_category.router)
 app.include_router(router_dish.router)
