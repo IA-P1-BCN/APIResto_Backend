@@ -104,125 +104,6 @@ Copia este bloque en la sección de tu HU:
 - **Decisiones humanas:** big-pickle por defecto para todo el equipo aunque yo uso mi propio proveedor (lo cambio con `/models`); documentar OpenCode en el README (Anna).
 - **Lección:** para consultas que no deben tocar ficheros, usar `--agent plan`, y adjuntar con `-f` todo lo que la pregunta necesita (por ejemplo, el modelo además de la migración).
 
-### HU-35 · Comandos y subagentes de OpenCode
-
-#### 2026-10-15 · Comandos /tests, /seguridad y /migracion · @costanna
-
-- **Herramienta y modelo:** Claude Code para escribir los comandos, el subagente y la documentación; OpenCode 1.18.34 con `opencode/big-pickle` para probarlos
-- **Issue y reglas:** #78 · R-02 (contraseñas), R-13 (vinculación social) en la revisión de seguridad
-- **Prompt clave:** `/seguridad c8f0ca1^..c8f0ca1` sobre el login social de la #116; `/tests` sobre `PATCH /orders/{order_id}/items/{item_id}` con unidades; `/migracion` sin argumentos para ver el número libre
-- **Resultado:** aceptado con cambios. `/seguridad` dio 3 hallazgos medios y 6 bajos sin tocar ficheros; comprobé cuatro (sin longitud máxima en `code` y `redirect_uri`, `get_by_id` sin comprobar en la línea 59, `downgrade` de la 0005 con `password_hash = ''` y `UserUpdate.password` sin mínimo) y son ciertos. `/tests` generó 24 tests que pasan con ruff limpio. `/migracion` respondió 0007, que es correcto.
-- **Errores o alucinaciones:** la primera versión de `/migracion` se inventó la variable `ALCHEMY_DATABASE_URL` (es `DATABASE_URL`), escribió mal el nombre de la 0006 y no se paró en el paso 3 sin argumentos; el prompt no decía qué variable usar ni prohibía describir los pasos siguientes. Una ejecución de `/tests` terminó vacía y la siguiente funcionó. `opencode run` se quedaba esperando cuando la entrada estándar no se cerraba.
-- **Trabajo descartado:** los 24 tests de `/tests`, que eran solo una prueba del comando; mis cambios no los necesitan.
-- **Mi prompt o la spec:** en `/migracion` faltaba decir que sin argumentos no se ejecuta ningún comando y que los nombres se copian de la lista; se añadió.
-- **Decisiones humanas:** el subagente de seguridad solo puede leer y usar `git diff`, `git log` y `git show`; los hallazgos de la #116 se pasan a Manon en lugar de arreglarlos, porque es su código (Anna).
-- **Lección:** en un comando, decir cuándo parar y qué variables y ficheros existen; y en scripts, lanzar `opencode run` con `< /dev/null`.
-
-### HU-41 · Pantalla de barra en tiempo real
-
-#### 2026-10-14 · Pantalla de barra (Frontend #37) · @costanna
-
-- **Herramienta y modelo:** Claude Code · Opus 5.5
-- **Issue y reglas:** #85 · nada
-- **Prompt clave:** empezar la HU-41: pantalla de barra en tiempo real como la de cocina
-- **Resultado:** aceptado con cambios. Cocina y Barra comparten pantalla y cada plato va a una según el campo `station` de su categoría.
-- **Errores o alucinaciones:** la primera versión daba por hecho que `station` llegaría con la HU-40; llegó antes con la #99 y encajó. Faltaba que el admin pudiera elegir la estación: en producción todas las categorías quedarían en cocina y Barra vacía. Se añadió el selector en Gestionar categorías.
-- **Trabajo descartado:** nada
-- **Mi prompt o la spec:** no pensé en cómo se rellenaría `station` en una BD que ya existe.
-- **Decisiones humanas:** el estado del pedido lo lleva cocina salvo en los pedidos solo de barra (Anna).
-- **Lección:** comprobar cómo queda una función nueva con los datos que ya hay en producción.
-
-### HU-46 · Estilo de la vista de pedidos del camarero
-
-#### 2026-10-14 · Carta sin viñetas y aviso al repetir un plato (Frontend #34) · @costanna
-
-- **Herramienta y modelo:** Claude Code · Opus 5.5
-- **Issue y reglas:** Frontend #26 · nada
-- **Prompt clave:** quitar las viñetas al hacer un pedido y avisar al añadir otra vez el mismo producto
-- **Resultado:** aceptado. Carta en rejilla y aviso dentro de la app al repetir un plato; los botones + y − no preguntan.
-- **Errores o alucinaciones:** nada
-- **Trabajo descartado:** nada
-- **Mi prompt o la spec:** la HU-47 (#27) pide quitar una de las dos formas de añadir platos; este cambio solo avisa.
-- **Decisiones humanas:** aviso en lugar de quitar una forma de añadir (Anna).
-- **Lección:** nada
-
-### HU-48 · Paleta de restaurante con modo noche/día
-
-#### 2026-10-14 · Colores, modo claro y oscuro, accesibilidad y botones táctiles (Frontend #36) · @costanna
-
-- **Herramienta y modelo:** Claude Code · Opus 5.5
-- **Issue y reglas:** Frontend #28 · nada
-- **Prompt clave:** colores de restaurante con modo oscuro, que pasen el filtro para personas con discapacidad visual y botones pensados para pantalla táctil
-- **Resultado:** aceptado con cambios. Primero se hizo en crema y burdeos y el cliente pidió azules y verdes; se cambió.
-- **Errores o alucinaciones:** simulando deuteranopia, los fondos de los estados verde y rojo casi no se distinguían; se añadió un símbolo a cada estado y bordes distintos en las mesas. Los textos se comprobaron con un script de contraste (AAA, 7:1) y de daltonismo.
-- **Trabajo descartado:** la primera paleta en crema y burdeos.
-- **Mi prompt o la spec:** no sabía los colores que quería el cliente hasta ver la primera versión.
-- **Decisiones humanas:** azules y verdes en los dos modos (Anna, a petición del cliente).
-- **Lección:** medir el contraste y simular el daltonismo con un script en vez de mirarlo a ojo.
-
-### HU-49 · Pop-ups en lugar de menús desplegables para editar
-
-#### 2026-10-14 · Formularios en ventana modal (Frontend #35) · @costanna
-
-- **Herramienta y modelo:** Claude Code · Opus 5.5
-- **Issue y reglas:** Frontend #29 · nada
-- **Prompt clave:** usar modales en el frontend
-- **Resultado:** aceptado. Pedido, reservas, platos, categorías y mesas se editan en un modal con el foco dentro y Escape para cerrar.
-- **Errores o alucinaciones:** un test pulsaba Nuevo plato antes de que se cargaran las categorías (el botón estaba desactivado). Al juntar ramas, colores y modales chocaban en `index.css` porque las dos añadían estilos al final; se movieron junto a sus reglas.
-- **Trabajo descartado:** nada
-- **Mi prompt o la spec:** "usa los modales" podía ser solo para los avisos; se aclaró que eran los formularios.
-- **Decisiones humanas:** nada
-- **Lección:** no añadir estilos al final de un CSS que tocan varias ramas a la vez.
-
-### HU-40 · Estación de barra en los pedidos
-
-#### 2026-10-15 · HU-40_Estación de barra en los pedidos  · @ManonChab
-
-- **Herramienta y modelo:** Claude Code with Sonnet 5.5
-- **Issue y reglas:** #83
-- **Prompt clave:**  "Read the necessary doc, the repo back and front, the kanban and let's start the new       H-40U,starting by spec definition"
-- **Resultado:** aceptado 
-- **Errores o alucinaciones:**
-  - The one-line issue: I found the real gap by reading the code, and invented nothing.
-  - The empty WebSocket assertion I wrote and then replaced.
-  - The lazy="joined" draft I changed.
-  - The two old tests that R-14 broke. I changed their data and didn't weaken them.
-- **Trabajo descartado:** //
-- **Mi prompt o la spec:**
-    · ¿Qué entrega el backend en HU-40? Hoy el filtro por estación solo existe en el frontend (StationBoard); el  backend manda todo a cocina y a barra. → Filtrar en el backend (Recomendado)
-    · El `status` del pedido es único (pending → in_kitchen → served) y hoy lo mueve cualquiera de cocina/barra. Con dos estaciones, ¿qué hacemos en esta HU? → Dejarlo como está (Recomendado)
-    · En el pedido filtrado que ve `kitchen`/`bartender`, ¿qué se devuelve en `total`? → El del pedido completo (Recomendado)
-    · Si el admin cambia la `station` de una categoría con pedidos abiertos, ¿qué pasa con las líneas ya creadas? → Se derivan en vivo (Recomendado)
-    · Producción (Neon): las categorías existentes quedaron `kitchen` por defecto. ¿Cómo pasan Bebidas y Postres a `bar`? → Migración de datos
-    · El enrutado por estación no está en la ontología (solo se cita como referencia externa). ¿Añadimos una regla R-14 a specs/ontology.md en el mismo PR? → Sí, R-14 (Recomendado)
-- **Decisiones humanas:**
-
-```text
-   Tema     │                            Decisión                            │
-├──────────────┼────────────────────────────────────────────────────────────────┤
-│              │ El backend filtra según el rol: kitchen ve y marca solo líneas │
-│ Alcance      │  kitchen, bartender solo bar, y admin/waiter ven todo. Esto    │
-│              │ vale para GET /orders, GET /orders/{id}, PATCH .../items/{id}  │
-│              │ y el WebSocket.                                                │
-├──────────────┼────────────────────────────────────────────────────────────────┤
-│ Contrato     │ Cada línea del pedido expone station. No hay parámetro         │
-│              │ ?station=. total sigue siendo el del pedido completo.          │
-├──────────────┼────────────────────────────────────────────────────────────────┤
-│ Estado del   │ Sin cambios. El estado por producto o estación es HU-45 de     │
-│ pedido       │ Rita, que toca el mismo router, así que hay que avisarla.      │
-├──────────────┼────────────────────────────────────────────────────────────────┤
-│ Estación de  │ Se deriva en vivo de la categoría actual del plato. No hay     │
-│ una línea    │ columna nueva.                                                 │
-├──────────────┼────────────────────────────────────────────────────────────────┤
-│ Datos de     │ Migración 0007 que marca Bebidas y Postres como bar. Elegí     │
-│ producción   │ esto frente a la opción recomendada, que era que el admin las  │
-│              │ marcara.                                                       │
-├──────────────┼────────────────────────────────────────────────────────────────┤
-│ Ontología    │ Se añade la regla R-14 a specs/ontology.md en el mismo PR.     │
-│              │ Necesita el visto bueno de Levi.
-```
-
-- **Lección:** //
 ### HU-24 · Filtros admin de usuarios
 
 #### 2026-10-15 · Spec, filtros, búsqueda y paginación de GET /users · @arita-pereira
@@ -279,6 +160,126 @@ agente, la revisé y la commiteé primero.
   - **Después del trabajo:** mientras trabajábamos se aceptó en `dev` la HU-24, que tocaba los mismos archivos. El agente unió los cambios de las dos historias sin perder nada y
   volvió a pasar todos los tests. También dejé documentado cómo trabajó cada ayudante en `docs/agents/HU-25/`.
   - **Lección:** comprobar el estado de `dev` antes de dar contexto al agente, y escribir la spec primero aunque la historia parezca pequeña.
+
+### HU-35 · Comandos y subagentes de OpenCode
+
+#### 2026-10-15 · Comandos /tests, /seguridad y /migracion · @costanna
+
+- **Herramienta y modelo:** Claude Code para escribir los comandos, el subagente y la documentación; OpenCode 1.18.34 con `opencode/big-pickle` para probarlos
+- **Issue y reglas:** #78 · R-02 (contraseñas), R-13 (vinculación social) en la revisión de seguridad
+- **Prompt clave:** `/seguridad c8f0ca1^..c8f0ca1` sobre el login social de la #116; `/tests` sobre `PATCH /orders/{order_id}/items/{item_id}` con unidades; `/migracion` sin argumentos para ver el número libre
+- **Resultado:** aceptado con cambios. `/seguridad` dio 3 hallazgos medios y 6 bajos sin tocar ficheros; comprobé cuatro (sin longitud máxima en `code` y `redirect_uri`, `get_by_id` sin comprobar en la línea 59, `downgrade` de la 0005 con `password_hash = ''` y `UserUpdate.password` sin mínimo) y son ciertos. `/tests` generó 24 tests que pasan con ruff limpio. `/migracion` respondió 0007, que es correcto.
+- **Errores o alucinaciones:** la primera versión de `/migracion` se inventó la variable `ALCHEMY_DATABASE_URL` (es `DATABASE_URL`), escribió mal el nombre de la 0006 y no se paró en el paso 3 sin argumentos; el prompt no decía qué variable usar ni prohibía describir los pasos siguientes. Una ejecución de `/tests` terminó vacía y la siguiente funcionó. `opencode run` se quedaba esperando cuando la entrada estándar no se cerraba.
+- **Trabajo descartado:** los 24 tests de `/tests`, que eran solo una prueba del comando; mis cambios no los necesitan.
+- **Mi prompt o la spec:** en `/migracion` faltaba decir que sin argumentos no se ejecuta ningún comando y que los nombres se copian de la lista; se añadió.
+- **Decisiones humanas:** el subagente de seguridad solo puede leer y usar `git diff`, `git log` y `git show`; los hallazgos de la #116 se pasan a Manon en lugar de arreglarlos, porque es su código (Anna).
+- **Lección:** en un comando, decir cuándo parar y qué variables y ficheros existen; y en scripts, lanzar `opencode run` con `< /dev/null`.
+
+### HU-40 · Estación de barra en los pedidos
+
+#### 2026-10-15 · HU-40_Estación de barra en los pedidos  · @ManonChab
+
+- **Herramienta y modelo:** Claude Code with Sonnet 5.5
+- **Issue y reglas:** #83
+- **Prompt clave:**  "Read the necessary doc, the repo back and front, the kanban and let's start the new       H-40U,starting by spec definition"
+- **Resultado:** aceptado 
+- **Errores o alucinaciones:**
+  - The one-line issue: I found the real gap by reading the code, and invented nothing.
+  - The empty WebSocket assertion I wrote and then replaced.
+  - The lazy="joined" draft I changed.
+  - The two old tests that R-14 broke. I changed their data and didn't weaken them.
+- **Trabajo descartado:** //
+- **Mi prompt o la spec:**
+    · ¿Qué entrega el backend en HU-40? Hoy el filtro por estación solo existe en el frontend (StationBoard); el  backend manda todo a cocina y a barra. → Filtrar en el backend (Recomendado)
+    · El `status` del pedido es único (pending → in_kitchen → served) y hoy lo mueve cualquiera de cocina/barra. Con dos estaciones, ¿qué hacemos en esta HU? → Dejarlo como está (Recomendado)
+    · En el pedido filtrado que ve `kitchen`/`bartender`, ¿qué se devuelve en `total`? → El del pedido completo (Recomendado)
+    · Si el admin cambia la `station` de una categoría con pedidos abiertos, ¿qué pasa con las líneas ya creadas? → Se derivan en vivo (Recomendado)
+    · Producción (Neon): las categorías existentes quedaron `kitchen` por defecto. ¿Cómo pasan Bebidas y Postres a `bar`? → Migración de datos
+    · El enrutado por estación no está en la ontología (solo se cita como referencia externa). ¿Añadimos una regla R-14 a specs/ontology.md en el mismo PR? → Sí, R-14 (Recomendado)
+- **Decisiones humanas:**
+
+```text
+   Tema     │                            Decisión                            │
+├──────────────┼────────────────────────────────────────────────────────────────┤
+│              │ El backend filtra según el rol: kitchen ve y marca solo líneas │
+│ Alcance      │  kitchen, bartender solo bar, y admin/waiter ven todo. Esto    │
+│              │ vale para GET /orders, GET /orders/{id}, PATCH .../items/{id}  │
+│              │ y el WebSocket.                                                │
+├──────────────┼────────────────────────────────────────────────────────────────┤
+│ Contrato     │ Cada línea del pedido expone station. No hay parámetro         │
+│              │ ?station=. total sigue siendo el del pedido completo.          │
+├──────────────┼────────────────────────────────────────────────────────────────┤
+│ Estado del   │ Sin cambios. El estado por producto o estación es HU-45 de     │
+│ pedido       │ Rita, que toca el mismo router, así que hay que avisarla.      │
+├──────────────┼────────────────────────────────────────────────────────────────┤
+│ Estación de  │ Se deriva en vivo de la categoría actual del plato. No hay     │
+│ una línea    │ columna nueva.                                                 │
+├──────────────┼────────────────────────────────────────────────────────────────┤
+│ Datos de     │ Migración 0007 que marca Bebidas y Postres como bar. Elegí     │
+│ producción   │ esto frente a la opción recomendada, que era que el admin las  │
+│              │ marcara.                                                       │
+├──────────────┼────────────────────────────────────────────────────────────────┤
+│ Ontología    │ Se añade la regla R-14 a specs/ontology.md en el mismo PR.     │
+│              │ Necesita el visto bueno de Levi.
+```
+
+- **Lección:** //
+
+### HU-41 · Pantalla de barra en tiempo real
+
+#### 2026-10-14 · Pantalla de barra (Frontend #37) · @costanna
+
+- **Herramienta y modelo:** Claude Code · Opus 5.5
+- **Issue y reglas:** #85 · nada
+- **Prompt clave:** empezar la HU-41: pantalla de barra en tiempo real como la de cocina
+- **Resultado:** aceptado con cambios. Cocina y Barra comparten pantalla y cada plato va a una según el campo `station` de su categoría.
+- **Errores o alucinaciones:** la primera versión daba por hecho que `station` llegaría con la HU-40; llegó antes con la #99 y encajó. Faltaba que el admin pudiera elegir la estación: en producción todas las categorías quedarían en cocina y Barra vacía. Se añadió el selector en Gestionar categorías.
+- **Trabajo descartado:** nada
+- **Mi prompt o la spec:** no pensé en cómo se rellenaría `station` en una BD que ya existe.
+- **Decisiones humanas:** el estado del pedido lo lleva cocina salvo en los pedidos solo de barra (Anna).
+- **Lección:** comprobar cómo queda una función nueva con los datos que ya hay en producción.
+
+### HU-46 · Estilo de la vista de pedidos del camarero
+
+#### 2026-10-14 · Carta sin viñetas y aviso al repetir un plato (Frontend #34) · @costanna
+
+- **Herramienta y modelo:** Claude Code · Opus 5.5
+- **Issue y reglas:** Frontend #26 · nada
+- **Prompt clave:** quitar las viñetas al hacer un pedido y avisar al añadir otra vez el mismo producto
+- **Resultado:** aceptado. Carta en rejilla y aviso dentro de la app al repetir un plato; los botones + y − no preguntan.
+- **Errores o alucinaciones:** nada
+- **Trabajo descartado:** nada
+- **Mi prompt o la spec:** la HU-47 (#27) pide quitar una de las dos formas de añadir platos; este cambio solo avisa.
+- **Decisiones humanas:** aviso en lugar de quitar una forma de añadir (Anna).
+- **Lección:** nada
+
+### HU-48 · Paleta de restaurante con modo noche/día
+
+#### 2026-10-14 · Colores, modo claro y oscuro, accesibilidad y botones táctiles (Frontend #36) · @costanna
+
+- **Herramienta y modelo:** Claude Code · Opus 5.5
+- **Issue y reglas:** Frontend #28 · nada
+- **Prompt clave:** colores de restaurante con modo oscuro, que pasen el filtro para personas con discapacidad visual y botones pensados para pantalla táctil
+- **Resultado:** aceptado con cambios. Primero se hizo en crema y burdeos y el cliente pidió azules y verdes; se cambió.
+- **Errores o alucinaciones:** simulando deuteranopia, los fondos de los estados verde y rojo casi no se distinguían; se añadió un símbolo a cada estado y bordes distintos en las mesas. Los textos se comprobaron con un script de contraste (AAA, 7:1) y de daltonismo.
+- **Trabajo descartado:** la primera paleta en crema y burdeos.
+- **Mi prompt o la spec:** no sabía los colores que quería el cliente hasta ver la primera versión.
+- **Decisiones humanas:** azules y verdes en los dos modos (Anna, a petición del cliente).
+- **Lección:** medir el contraste y simular el daltonismo con un script en vez de mirarlo a ojo.
+
+### HU-49 · Pop-ups en lugar de menús desplegables para editar
+
+#### 2026-10-14 · Formularios en ventana modal (Frontend #35) · @costanna
+
+- **Herramienta y modelo:** Claude Code · Opus 5.5
+- **Issue y reglas:** Frontend #29 · nada
+- **Prompt clave:** usar modales en el frontend
+- **Resultado:** aceptado. Pedido, reservas, platos, categorías y mesas se editan en un modal con el foco dentro y Escape para cerrar.
+- **Errores o alucinaciones:** un test pulsaba Nuevo plato antes de que se cargaran las categorías (el botón estaba desactivado). Al juntar ramas, colores y modales chocaban en `index.css` porque las dos añadían estilos al final; se movieron junto a sus reglas.
+- **Trabajo descartado:** nada
+- **Mi prompt o la spec:** "usa los modales" podía ser solo para los avisos; se aclaró que eran los formularios.
+- **Decisiones humanas:** nada
+- **Lección:** no añadir estilos al final de un CSS que tocan varias ramas a la vez.
 
 ### HU-53 · Bitácora de IA
 
