@@ -76,21 +76,6 @@ Copia este bloque en la sección de tu HU:
 - **Decisiones humanas:** big-pickle por defecto para todo el equipo aunque yo uso mi propio proveedor (lo cambio con `/models`); documentar OpenCode en el README (Anna).
 - **Lección:** para consultas que no deben tocar ficheros, usar `--agent plan`, y adjuntar con `-f` todo lo que la pregunta necesita (por ejemplo, el modelo además de la migración).
 
-### HU-53 · Bitácora de IA
-
-#### 2026-10-14 · Creación de la bitácora · @arita-pereira
-
-- **Herramienta y modelo:** Claude (claude.ai, no Claude Code) · Opus 5.5
-- **Issue y reglas:** #111 · nada (HU de documentación)
-- **Prompt clave:** crear la bitácora usando como base la skill de retro de Manon
-- **Resultado:** aceptado con cambios. El archivo final sigue la sección "Registro de IA" de `AGENTS.md` y añade ideas de la skill de Manon (causa raíz, trabajo descartado, autocrítica del prompt, lección).
-- **Errores o alucinaciones:** la primera propuesta del agente llevaba un campo "Spec" (`specs/HU-XX.md`) y una skill para que el agente redactara la entrada. Causa raíz: la propuso antes de leer el repo; en `dev` ya estaba `AGENTS.md`, que dice que la entrada la escribe la persona, y el equipo decidió el 13/10 no hacer spec por HU. Se corrigió al revisar `dev`.
-- **Trabajo descartado:** el campo "Spec" y el paso 3 (la skill).
-- **Mi prompt o la spec:** no le dije que `AGENTS.md` ya definía el registro de IA ni que no hay spec por HU; lo descubrió al leer `dev`.
-- **Decisiones humanas:** separar HU-21 en HU-21 (OpenCode, Anna) y HU-53 (bitácora, Rita), decidido por mí.
-- **Lección:** antes de pedir una propuesta, pedir al agente que lea `AGENTS.md` y el estado de `dev`.
-
-
 ### HU-24 · Filtros admin de usuarios
 
 #### 2026-10-15 · Spec, filtros, búsqueda y paginación de GET /users · @arita-pereira
@@ -104,3 +89,17 @@ Copia este bloque en la sección de tu HU:
 - **Mi prompt o la spec:** la issue no tenía criterios de aceptación; los fijó la spec con cuatro preguntas (formato, filtros, búsqueda y orden).
 - **Decisiones humanas:** `Page[UserOut]` aunque sea breaking-api, filtros `role` + `is_active`, un solo `q` en nombre o email, orden fijo por `id` (Rita).
 - **Lección:** leer `AGENTS.md` y `dev` antes de empezar funcionó otra vez: detectó que la PR #110 había vuelto a exigir spec por HU, y que HU-32 ya fijaba `include_deleted`.
+
+### HU-53 · Bitácora de IA
+
+#### 2026-10-14 · Creación de la bitácora · @arita-pereira
+
+- **Herramienta y modelo:** Claude (claude.ai, no Claude Code) · Opus 5.5
+- **Issue y reglas:** #111 · nada (HU de documentación)
+- **Prompt clave:** crear la bitácora usando como base la skill de retro de Manon
+- **Resultado:** aceptado con cambios. El archivo final sigue la sección "Registro de IA" de `AGENTS.md` y añade ideas de la skill de Manon (causa raíz, trabajo descartado, autocrítica del prompt, lección).
+- **Errores o alucinaciones:** la primera propuesta del agente llevaba un campo "Spec" (`specs/HU-XX.md`) y una skill para que el agente redactara la entrada. Causa raíz: la propuso antes de leer el repo; en `dev` ya estaba `AGENTS.md`, que dice que la entrada la escribe la persona, y el equipo decidió el 13/10 no hacer spec por HU. Se corrigió al revisar `dev`.
+- **Trabajo descartado:** el campo "Spec" y el paso 3 (la skill).
+- **Mi prompt o la spec:** no le dije que `AGENTS.md` ya definía el registro de IA ni que no hay spec por HU; lo descubrió al leer `dev`.
+- **Decisiones humanas:** separar HU-21 en HU-21 (OpenCode, Anna) y HU-53 (bitácora, Rita), decidido por mí.
+- **Lección:** antes de pedir una propuesta, pedir al agente que lea `AGENTS.md` y el estado de `dev`.
