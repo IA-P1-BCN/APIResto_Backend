@@ -10,7 +10,7 @@ Los permisos (quién puede tocar qué reserva) se comprueban en el router.
 """
 
 import logging
-from datetime import date, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from html import escape
 
 from sqlalchemy import Select
@@ -31,9 +31,15 @@ from app.repositories import (
     user_repository,
 )
 from app.repositories.reservation_repository import find_overlapping
-from app.schemas.reservation import ReservationCreate, ReservationUpdate
+from app.schemas.reservation import (
+    MAX_CUSTOMER_PARTY_SIZE,
+    ReservationCreate,
+    ReservationUpdate,
+)
 
 logger = logging.getLogger(__name__)
+
+CANDIDATE_TABLES_LIMIT = 100
 
 
 def get_reservation(db: Session, reservation_id: int) -> Reservation:
@@ -111,6 +117,57 @@ def _ensure_no_overlap(
         )
 
 
+def _ensure_customer_party_size(party_size: int) -> None:
+    if party_size > MAX_CUSTOMER_PARTY_SIZE:
+        raise UnprocessableError(
+            f"Para reservas de más de {MAX_CUSTOMER_PARTY_SIZE} personas, "
+            "llama al restaurante",
+            code="party_size_too_large",
+        )
+
+
+def _ensure_not_in_past(reserved_at: datetime) -> None:
+    if reserved_at < datetime.now(UTC).replace(tzinfo=None):
+        raise UnprocessableError(
+            "No se puede reservar en una fecha pasada", code="reservation_in_past"
+        )
+
+
+def _assign_table(db: Session, data: ReservationCreate) -> DiningTable:
+    """Bloquea y devuelve la mesa libre más pequeña con sitio para la reserva.
+
+    Si otra petición ocupa una candidata entre medias se prueba la siguiente.
+    """
+    candidates, _ = dining_table_repository.list_available_page(
+        db,
+        starts_at=data.reserved_at,
+        ends_at=data.reserved_at + timedelta(minutes=data.duration_min),
+        party_size=data.party_size,
+        skip=0,
+        limit=CANDIDATE_TABLES_LIMIT,
+    )
+    for candidate in candidates:
+        table = _get_table_for_update(db, candidate.id)
+        try:
+            _ensure_no_overlap(
+                db,
+                table_id=table.id,
+                reserved_at=data.reserved_at,
+                duration_min=data.duration_min,
+            )
+        except ReservationConflict:
+            continue
+        return table
+    logger.info(
+        "Sin mesa libre para %s personas el %s", data.party_size, data.reserved_at
+    )
+    raise ConflictError(
+        f"No hay mesa libre para {data.party_size} personas el "
+        f"{data.reserved_at:%d/%m/%Y} a las {data.reserved_at:%H:%M}",
+        code="no_table_available",
+    )
+
+
 def ensure_user_exists(db: Session, user_id: int) -> User:
     user = user_repository.get_by_id(db, user_id)
     if user is None:
@@ -119,20 +176,34 @@ def ensure_user_exists(db: Session, user_id: int) -> User:
 
 
 def create_reservation(
-    db: Session, data: ReservationCreate, user_id: int
+    db: Session, data: ReservationCreate, user_id: int, *, is_customer: bool = False
 ) -> Reservation:
-    """Crea una reserva confirmada para `user_id` validando aforo y solapamiento."""
+    """Crea una reserva confirmada para `user_id` validando aforo y solapamiento.
+
+    Sin `table_id` asigna la mesa libre más pequeña con sitio. Un customer no puede
+    reservar para más de MAX_CUSTOMER_PARTY_SIZE personas.
+    """
+    if is_customer:
+        _ensure_customer_party_size(data.party_size)
     try:
-        table = _get_table_for_update(db, data.table_id)
-        _ensure_capacity(table, data.party_size)
-        _ensure_no_overlap(
-            db,
-            table_id=table.id,
-            reserved_at=data.reserved_at,
-            duration_min=data.duration_min,
-        )
+        if data.table_id is None:
+            _ensure_not_in_past(data.reserved_at)
+            table = _assign_table(db, data)
+            _ensure_capacity(table, data.party_size)
+        else:
+            table = _get_table_for_update(db, data.table_id)
+            _ensure_capacity(table, data.party_size)
+            _ensure_no_overlap(
+                db,
+                table_id=table.id,
+                reserved_at=data.reserved_at,
+                duration_min=data.duration_min,
+            )
         reservation = Reservation(
-            **data.model_dump(exclude={"user_id"}), user_id=user_id, status=CONFIRMED
+            **data.model_dump(exclude={"user_id", "table_id"}),
+            table_id=table.id,
+            user_id=user_id,
+            status=CONFIRMED,
         )
         reservation_repository.add(db, reservation)
         db.commit()
@@ -150,10 +221,16 @@ def create_reservation(
 
 
 def update_reservation(
-    db: Session, reservation: Reservation, data: ReservationUpdate
+    db: Session,
+    reservation: Reservation,
+    data: ReservationUpdate,
+    *,
+    is_customer: bool = False,
 ) -> Reservation:
     """Aplica una edición parcial y revalida aforo y solapamiento si hace falta."""
     changes = data.model_dump(exclude_unset=True)
+    if is_customer and "party_size" in changes:
+        _ensure_customer_party_size(changes["party_size"])
     try:
         table_id = changes.get("table_id", reservation.table_id)
         party_size = changes.get("party_size", reservation.party_size)
