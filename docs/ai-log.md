@@ -201,6 +201,54 @@ agente, la revisé y la commiteé primero.
 - **Decisiones humanas:** el subagente de seguridad solo puede leer y usar `git diff`, `git log` y `git show`; los hallazgos de la #116 se pasan a Manon en lugar de arreglarlos, porque es su código (Anna).
 - **Lección:** en un comando, decir cuándo parar y qué variables y ficheros existen; y en scripts, lanzar `opencode run` con `< /dev/null`.
 
+### HU-38 · Inicio de sesión con Google y GitHub
+
+#### 2026-10-14 · Spec e implementación del login social · @ManonChab
+
+- **Herramienta y modelo:** Claude Code · Sonnet 5.5
+- **Issue y reglas:** #81 (GitHub), #123 (Google) · R-13, R-01
+- **Prompt clave:** "let's start HU-38" (14/10, 10:58). La spec y la implementación
+  salieron de ahí, en dos PRs: #114 (spec) y #116 (código).
+- **Resultado:** aceptado. Fusionado el 14/10. No se ha probado contra Google ni GitHub
+  reales: hace falta una prueba de extremo a extremo cuando existan las apps (#115).
+- **Errores o alucinaciones:** nada confirmado del agente. Un hueco que se cerró en la
+  spec: un usuario creado por proveedor no tiene contraseña, y `/auth/login` habría dado
+  500; ahora responde 401.
+- **Trabajo descartado:** nada
+- **Mi prompt o la spec:** el prompt era una sola línea y no citaba R-13 ni decía qué
+  número de migración usar. La migración `0005` chocó con la de unidades de Anna y se
+  renumeró a `0006` en #119. Causa raíz: la spec no reservaba número.
+- **Decisiones humanas:** al investigar apareció configuración de despliegue (registrar
+  las apps OAuth y cargar secretos en Render). Se pasó a Anna, responsable de DevOps
+  (#115): ella registró la app de GitHub vinculada a la organización del equipo. Google
+  necesita una cuenta de Gmail, que creará Manon. HU-38 es solo backend: la UI va en
+  `Resto-API_Frontend#31`.
+- **Lección:** antes de crear una migración de Alembic, mirar el número más alto en
+  `origin/dev` y avisar al equipo; y citar en el prompt las reglas R-xx que afectan a
+  la HU.
+
+#### 2026-10-16 · Preparar el registro de la app de Google · @ManonChab
+
+- **Herramienta y modelo:** Claude Code · Sonnet 5.5
+- **Issue y reglas:** #123 (Google), #115 (apps OAuth y secretos) · nada (no hay código)
+- **Prompt clave:** "let's start the next task HU-38, pull all current repo, read Kanban
+  and necessary info", con la captura de la guía de Render y proveedores.
+- **Resultado:** aceptado. No hay cambios de código: el agente comprobó que la HU-38 ya
+  estaba fusionada (#114, #116, frontend #43) y que solo faltaba registrar el cliente de
+  Google y cargar las variables en Render. Tradujo la guía al inglés. Sigue sin probarse
+  contra Google real.
+- **Errores o alucinaciones:** la guía de la captura usaba `restoapi.vercel.app`, que no
+  es nuestra URL; el agente lo detectó comparando con `docs/deploy.md` y la issue #40 y
+  propuso `apiresto-f5.vercel.app`. Además, el clon del backend estaba en una rama cuyo
+  remoto se había borrado; se pasó a `dev` antes de leer nada.
+- **Trabajo descartado:** nada
+- **Mi prompt o la spec:** el prompt no decía que la HU ya estaba fusionada ni que la
+  parte pendiente era externa al código; lo dedujo del Kanban.
+- **Decisiones humanas:** los datos para registrar el cliente de Google se pasaron a Anna
+  (DevOps y acceso a Render); sustituye lo anotado el 14/10 de que lo crearía Manon.
+- **Lección:** comparar las URLs de una guía externa con `docs/deploy.md` antes de
+  registrarlas como callback, y hacer `git branch -vv` para ver si la rama tiene remoto.
+
 ### HU-40 · Estación de barra en los pedidos
 
 #### 2026-10-15 · HU-40_Estación de barra en los pedidos  · @ManonChab
