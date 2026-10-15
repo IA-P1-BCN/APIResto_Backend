@@ -79,17 +79,17 @@ a mano como hasta ahora.
   a ocupada; la carrera real con dos conexiones no se prueba.
 
 ## Criterios de aceptación
-- [ ] Un `customer` crea una reserva con `reserved_at`, `party_size` y `notes`, sin
+- [x] Un `customer` crea una reserva con `reserved_at`, `party_size` y `notes`, sin
   `table_id`, y recibe 201 con la mesa asignada.
-- [ ] La mesa asignada es la más pequeña con sitio que está libre en ese hueco.
-- [ ] Sin mesa libre → 409 `no_table_available`.
-- [ ] Un `customer` con más de 8 personas → 422 `party_size_too_large` con el mensaje
+- [x] La mesa asignada es la más pequeña con sitio que está libre en ese hueco.
+- [x] Sin mesa libre → 409 `no_table_available`.
+- [x] Un `customer` con más de 8 personas → 422 `party_size_too_large` con el mensaje
   "Para reservas de más de 8 personas, llama al restaurante".
-- [ ] Sin `table_id` y con fecha pasada → 422 `reservation_in_past`.
-- [ ] Los errores usan el formato estándar `{"detail", "code"}`.
-- [ ] Las reservas con `table_id` funcionan igual que antes y los tests de HU-10 pasan.
-- [ ] `/tables/available` sigue cerrado al `customer`.
-- [ ] `docs/api.md` documenta el `table_id` opcional, el límite de 8 y los tres errores
+- [x] Sin `table_id` y con fecha pasada → 422 `reservation_in_past`.
+- [x] Los errores usan el formato estándar `{"detail", "code"}`.
+- [x] Las reservas con `table_id` funcionan igual que antes y los tests de HU-10 pasan.
+- [x] `/tables/available` sigue cerrado al `customer`.
+- [x] `docs/api.md` documenta el `table_id` opcional, el límite de 8 y los tres errores
   nuevos.
 
 ## Out of Scope
