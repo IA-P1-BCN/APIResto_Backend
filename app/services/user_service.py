@@ -1,12 +1,27 @@
+import logging
 from datetime import UTC, datetime
 
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
+from app.core.exceptions import (
+    AppError,
+    ConflictError,
+    ForbiddenError,
+    UnprocessableError,
+)
 from app.core.security import hash_password, verify_password
 from app.models.model_user import Role, User
 from app.repositories import user_repository
-from app.schemas.schema_user import UserCreate, UserRegister, UserUpdate
+from app.schemas.schema_user import (
+    PasswordChange,
+    UserCreate,
+    UserProfileUpdate,
+    UserRegister,
+    UserUpdate,
+)
+
+logger = logging.getLogger(__name__)
 
 
 def normalize_email(email: str) -> str:
@@ -119,3 +134,51 @@ def authenticate(db: Session, email: str, password: str) -> User | None:
     if not verify_password(password, user.password_hash):
         return None
     return user
+
+
+def update_profile(db: Session, user: User, data: UserProfileUpdate) -> User:
+    """Edita el propio perfil con los campos enviados; el email debe ser único (R-01)."""
+    fields = data.model_dump(exclude_unset=True)
+
+    if "email" in fields:
+        fields["email"] = normalize_email(fields["email"])
+        if fields["email"] != user.email:
+            existing = user_repository.get_by_email(db, fields["email"])
+            if existing and existing.id != user.id:
+                logger.warning(
+                    "Profile update rejected",
+                    extra={"user_id": user.id, "code": "conflict"},
+                )
+                raise ConflictError("Email already registered")
+
+    for field, value in fields.items():
+        setattr(user, field, value)
+
+    user.updated_by = user.id
+    user = user_repository.save(db, user)
+    logger.info("Profile updated", extra={"user_id": user.id, "fields": sorted(fields)})
+    return user
+
+
+def change_password(db: Session, user: User, data: PasswordChange) -> None:
+    """Cambia la propia contraseña tras verificar la actual (R-02)."""
+    if not user.password_hash:
+        _reject_password_change(user, "password_not_set")
+        raise AppError("Password not set for this account", code="password_not_set")
+    if not verify_password(data.current_password, user.password_hash):
+        _reject_password_change(user, "invalid_current_password")
+        raise ForbiddenError("Current password is incorrect", code="invalid_current_password")
+    if verify_password(data.new_password, user.password_hash):
+        _reject_password_change(user, "same_password")
+        raise UnprocessableError(
+            "New password must be different from the current one", code="same_password"
+        )
+
+    user.password_hash = hash_password(data.new_password)
+    user.updated_by = user.id
+    user_repository.save(db, user)
+    logger.info("Password changed", extra={"user_id": user.id})
+
+
+def _reject_password_change(user: User, code: str) -> None:
+    logger.warning("Password change rejected", extra={"user_id": user.id, "code": code})
