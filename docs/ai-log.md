@@ -161,6 +161,20 @@ agente, la revisé y la commiteé primero.
   volvió a pasar todos los tests. También dejé documentado cómo trabajó cada ayudante en `docs/agents/HU-25/`.
   - **Lección:** comprobar el estado de `dev` antes de dar contexto al agente, y escribir la spec primero aunque la historia parezca pequeña.
 
+### HU-27 · Colección Bruno para pruebas de la API
+
+#### 2026-10-15 · Verificación end-to-end de la colección e integración de dev · @levifvy
+
+- **Herramienta y modelo:** Claude Code · Opus 5.5 (`claude-opus-5-5`); Bruno CLI (`npx @usebruno/cli`) para ejecutar la colección
+- **Issue y reglas:** #70 · R-02 (la colección comprueba que `password`/`password_hash` no salen), R-04 (baja lógica con `deactivate`)
+- **Prompt clave:** "Verificar HU-27 end-to-end y arreglar lo que impida el 130/130", con diagnóstico paso a paso (el agente propone un comando, yo lo ejecuto y le pego la salida) y sin tocar `app/`, `tests/` ni `migrations/`
+- **Resultado:** aceptado. La colección pasa 130/130 requests y 332/332 tests en local, antes y después de integrar `dev`. No hizo falta tocar código: el fallo era de entorno. Commits `a28054d` (colección), `1adc4f9` (spec), `a6dd5b0` (diagramas) y el merge de `dev` `88a3f20`.
+- **Errores o alucinaciones:** nada inventado por el agente en esta sesión. El 130/130 en rojo no era de la colección: el contenedor `api` salía con `Exited (1)` porque `alembic upgrade head` fallaba con `DuplicateTable: relation "categories" already exists`. Causa raíz: el volumen de Postgres tenía las tablas creadas por `Base.metadata.create_all` (lo llaman `app/main.py` y `create_admin`) sin `alembic_version`, y el `set -e` de `docker-entrypoint.sh` paraba el arranque. Se corrigió con `docker compose down -v`, levantando la API antes de crear el admin. Además, el README y `collection.bru` decían que la colección cubría "los 43 endpoints", cuando cubría 42 (`/auth/register` ya estaba fuera); con `dev` son 46 y se cubren 42.
+- **Trabajo descartado:** `alembic stamp head` sobre las tablas existentes, porque el esquema de `create_all` podía no coincidir con el de las migraciones y la BD local habría quedado distinta de CI y producción.
+- **Mi prompt o la spec:** la spec no decía en qué orden preparar el entorno local (API migrada antes que `create_admin`); se ha añadido en "Testing Decisions". Tampoco preveía qué hacer con endpoints que llegan de `dev` a mitad de la HU.
+- **Decisiones humanas:** borrar el volumen local en vez de hacer `stamp` (Levi); dejar fuera de la colección `POST /auth/social/{provider}` (HU-38), `DELETE /users/{id}` y `POST /users/{id}/restore` (HU-32), que se añadirán en la PR de su HU, y solo actualizar los textos (Levi); no subir `docs/Briefing del Proyecto.md` (Levi).
+- **Lección:** cuando el runner falla al 100 % en pocos milisegundos, revisar antes `docker compose ps -a` y los logs de `api` que la colección; y volver a ejecutar Bruno cada vez que se integra `dev`.
+
 ### HU-35 · Comandos y subagentes de OpenCode
 
 #### 2026-10-15 · Comandos /tests, /seguridad y /migracion · @costanna
