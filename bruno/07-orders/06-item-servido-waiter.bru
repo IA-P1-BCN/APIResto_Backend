@@ -35,7 +35,8 @@ tests {
   });
 
   test("línea servida", function() {
-    expect(res.body.items[0].served).to.equal(true);
+    const line = res.body.items.find(i => i.id === bru.getVar("orderItemId"));
+    expect(line.served).to.equal(true);
   });
 }
 

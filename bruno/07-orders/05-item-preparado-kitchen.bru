@@ -46,7 +46,8 @@ tests {
   });
 
   test("línea preparada", function() {
-    expect(res.body.items[0].prepared).to.equal(true);
+    const line = res.body.items.find(i => i.id === bru.getVar("orderItemId"));
+    expect(line.prepared).to.equal(true);
   });
 }
 

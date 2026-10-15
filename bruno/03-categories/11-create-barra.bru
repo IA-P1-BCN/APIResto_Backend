@@ -1,0 +1,64 @@
+meta {
+  name: Crear categoría de barra
+  type: http
+  seq: 11
+}
+
+post {
+  url: {{baseUrl}}/categories/
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "name": "Barra Bruno {{runId}}",
+    "sort_order": 98,
+    "station": "bar"
+  }
+}
+
+script:post-response {
+  if (res.status === 201) {
+    bru.setVar("barCategoryId", res.body.id);
+  }
+}
+
+tests {
+  test("status 201", function() {
+    expect(res.status).to.equal(201);
+  });
+
+  test("shape: id, name, sort_order, station", function() {
+    expect(res.body).to.have.property("id");
+    expect(res.body).to.have.property("name");
+    expect(res.body).to.have.property("sort_order");
+    expect(res.body.station).to.equal("bar");
+  });
+}
+
+docs {
+  **`POST /categories/`**
+
+  Crea una categoría con `station: "bar"`. Sus platos van a la barra: el pedido de `07-orders` lleva una línea de esta categoría para comprobar R-14 (el bartender solo ve las líneas `bar`). Guarda `barCategoryId`.
+
+  **Roles permitidos:** admin
+
+  **Auth en este request:** Bearer `{{token}}` (admin)
+
+  **Respuestas posibles:**
+
+  - `201`: `CategoryOut`
+  - `401`: sin token
+  - `403`: rol distinto de admin (`Not enough permissions`)
+  - `409`: `Category already exists`
+  - `422`: `name` > 50 caracteres o `station` distinta de `kitchen`/`bar`
+}
