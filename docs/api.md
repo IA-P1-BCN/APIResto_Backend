@@ -233,7 +233,9 @@ así que no retrasa la respuesta. Con `EMAIL_ENABLED=false` solo se escribe en e
 
 ## Usuarios (`/users`) · HU-32
 
-Todos los endpoints son solo `admin` (otro rol → `403`).
+Todos los endpoints son solo `admin` (otro rol → `403`), salvo los del propio perfil
+(`PATCH /users/me` y `POST /users/me/password`), abiertos a cualquier rol autenticado: ver
+[Perfil propio](#perfil-propio-usersme--hu-25).
 
 | Endpoint | Descripción |
 |---|---|
@@ -252,6 +254,67 @@ Todos los endpoints son solo `admin` (otro rol → `403`).
 | `403` | Un admin intenta borrarse o desactivarse a sí mismo |
 | `404` | Usuario inexistente o ya borrado |
 | `409` | Email ya registrado; `restore` sobre un usuario no borrado |
+
+## Perfil propio (`/users/me`) · HU-25
+
+Cualquier rol autenticado (`admin`, `waiter`, `kitchen`, `bartender`, `customer`) sobre sus
+propios datos. Requiere `Authorization: Bearer <token>`; sin token o con un token no
+válido → `401`. Para ver los datos se usa `GET /auth/me`.
+
+| Método | Ruta | Qué hace | Éxito |
+|---|---|---|---|
+| `PATCH` | `/users/me` | Edita el `name`, el `email` y el `phone` propios | `200` |
+| `POST` | `/users/me/password` | Cambia la propia contraseña indicando la actual | `204` |
+
+### Editar mi perfil (`PATCH /users/me`)
+
+Edición parcial: solo se aplican los campos enviados.
+
+```json
+{"name": "Ana López", "email": "Ana@Example.com", "phone": "600123456"}
+```
+
+- **Campos editables:** `name` (1..100 caracteres), `email` y `phone` (máx. 20 caracteres).
+  `{"phone": null}` borra el teléfono; `name` y `email` no admiten `null` (`422`).
+- **Nada más se puede cambiar:** cualquier otro campo (`role`, `is_active`, `password`…) →
+  `422` `validation_error`. El rol y la activación siguen siendo cosa de un admin (R-03, R-04).
+- **Email** guardado en minúsculas y único sin distinguir mayúsculas (R-01). Si ya es de
+  otro usuario, incluidos los borrados → `409`. Enviar el mismo email que ya tienes es válido.
+- Guarda `updated_by` con el propio id (R-11) y actualiza `updated_at`.
+
+Respuesta `200` (`UserOut`; nunca incluye `password_hash`):
+
+```json
+{"id": 7, "name": "Ana López", "email": "ana@example.com", "phone": "600123456",
+ "role": "customer", "is_active": true, "created_at": "2026-10-14T10:15:00",
+ "updated_at": "2026-10-15T09:30:00", "deleted_at": null, "created_by": null,
+ "updated_by": 7}
+```
+
+### Cambiar mi contraseña (`POST /users/me/password`)
+
+```json
+{"current_password": "OldPassw0rd", "new_password": "NewPassw0rd"}
+```
+
+Respuesta `204` sin cuerpo. La nueva contraseña debe tener al menos 8 caracteres (R-02) y
+se guarda hasheada con bcrypt; nunca se devuelve ni se escribe en el log. A partir de ese
+momento `POST /auth/login` funciona con la nueva y deja de funcionar con la anterior.
+
+> **Nota:** cambiar la contraseña no cierra las otras sesiones abiertas: los tokens ya
+> emitidos siguen siendo válidos hasta que caducan. Invalidarlos queda para la HU de
+> refresh/logout (R-06/R-07).
+
+### Códigos de error
+
+| HTTP | `code` | Cuándo |
+|---|---|---|
+| 400 | `password_not_set` | La cuenta no tiene contraseña (solo login social): `"Password not set for this account"` |
+| 401 | `unauthorized` | Sin token o token no válido o caducado |
+| 403 | `invalid_current_password` | `current_password` no es la contraseña actual: `"Current password is incorrect"` |
+| 409 | `conflict` | `PATCH /users/me`: el email ya pertenece a otro usuario: `"Email already registered"` (R-01) |
+| 422 | `validation_error` | Campos no editables o desconocidos (`role`, `is_active`…), `name` vacío, `null` en `name`/`email`, email con formato incorrecto o `new_password` < 8 caracteres |
+| 422 | `same_password` | `new_password` es igual a la actual: `"New password must be different from the current one"` |
 
 ## Pedidos (`/orders`) · HU-07, HU-05
 
