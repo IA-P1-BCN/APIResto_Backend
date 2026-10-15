@@ -227,6 +227,9 @@ El agente líder debe:
   > la documentación visual y las directrices de agentes de esta HU.
   > `docs/ai-log.md` va en la misma PR porque lo exige `AGENTS.md`
   > ("Registro de IA").
+  > Excepción pedida por Levi (PO) el 16/10/2026 tras la revisión de Ana:
+  > `.dockerignore` excluye `bruno/` y `scripts/generate_agent_diagrams.py`
+  > de la imagen Docker (solo añade dos líneas; no cambia el código que corre).
 - [ ] PR revisada por otra persona y aprobada por Levi (PO).
 - [ ] Los archivos `specs/agents/HU-27/*.md` existen y describen las tareas
       de cada agente de forma clara y sin solapamiento.
