@@ -116,7 +116,7 @@ Copia este bloque en la sección de tu HU:
 │ Estación de  │ Se deriva en vivo de la categoría actual del plato. No hay     │
 │ una línea    │ columna nueva.                                                 │
 ├──────────────┼────────────────────────────────────────────────────────────────┤
-│ Datos de     │ Migración 0007 que marca Bebidas y Postres como bar. Elegiste  │
+│ Datos de     │ Migración 0007 que marca Bebidas y Postres como bar. Elegí       │
 │ producción   │ esto frente a la opción recomendada, que era que el admin las  │
 │              │ marcara.                                                       │
 ├──────────────┼────────────────────────────────────────────────────────────────┤
