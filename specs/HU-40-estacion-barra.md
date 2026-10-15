@@ -54,6 +54,8 @@ actuales de `/categories` y `/dishes` usando categorías de estación `bar`.
     es siempre el del pedido completo. Sin parámetro `?station=`: el filtro depende del rol.
   - `PATCH /orders/{id}/items/{item_id}`: `kitchen`/`bartender` solo sobre líneas de su
     estación; otra estación → 403. `admin` sin restricción.
+  - `PATCH /orders/{id}/status`: `kitchen`/`bartender` solo sobre pedidos con líneas de su
+    estación (si no, 404) y la respuesta trae solo esas líneas. Las transiciones no cambian.
   - `OrderItemOut` añade `station` (`kitchen` | `bar`).
   - `/ws/kitchen`: cada conexión guarda el rol del usuario y el evento le llega con las
     líneas de su estación; si no tiene ninguna, no se le envía. `admin` recibe todo.

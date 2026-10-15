@@ -19,6 +19,7 @@
 | `PasswordResetToken` | token de recuperación | Un solo uso, permite fijar una contraseña nueva |
 | `SocialAccount` | cuenta social | Vínculo de un usuario con Google/GitHub |
 | `jti` | identificador de token | Id único dentro del JWT |
+| `Station` | estación | Valor (`kitchen` / `bar`) de `Category.station` que decide a qué rol llega cada línea de un pedido (R-14); no es una entidad |
 
 ## 2. Entidades
 
@@ -92,6 +93,7 @@ borra físicamente (R-04).
 | R-11 | S | Soft delete: `deleted_at` oculta al usuario de los listados; los cambios registran `updated_by`/`updated_at` |
 | R-12 | C | Con `totp_enabled`, el login exige además un código TOTP válido |
 | R-13 | C | El login social crea o vincula un `User` (rol `customer`) |
+| R-14 | M | La estación de una línea de pedido es la `station` de la categoría de su plato (se deriva en vivo). `kitchen` ve y marca solo líneas `kitchen`; `bartender`, solo `bar`; `admin` y `waiter`, todas. Marcar una línea de otra estación → 403; un pedido sin líneas de su estación no existe para `kitchen`/`bartender` (404). `total` es siempre el del pedido completo |
 
 ## 5. Pendientes
 Ninguno a nivel de ontología. Los parámetros numéricos (caducidad del refresh, límite del rate limiting) los fija la spec de su HU.

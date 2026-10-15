@@ -212,7 +212,7 @@ docker compose down -v           # parar y BORRAR los datos de la BD
 
 ## 8. Migraciones con Alembic (HU-23)
 
-Los cambios en el modelo de datos se hacen con migraciones de Alembic (`migrations/versions/`), nunca a mano en la BD. La primera migración (`0001_esquema_inicial`) crea las 8 tablas tal como están en P2; después, la `0002` añade `prepared` y `served` a `order_items`, la `0003` añade `station` (`kitchen` o `bar`) a `categories`, la `0004` el soft delete y la auditoría de usuarios, la `0005` las cuentas de login social, y la `0006` cambia `prepared` y `served` por el número de unidades preparadas y servidas de cada línea.
+Los cambios en el modelo de datos se hacen con migraciones de Alembic (`migrations/versions/`), nunca a mano en la BD. La primera migración (`0001_esquema_inicial`) crea las 8 tablas tal como están en P2; después, la `0002` añade `prepared` y `served` a `order_items`, la `0003` añade `station` (`kitchen` o `bar`) a `categories`, la `0004` el soft delete y la auditoría de usuarios, la `0005` las cuentas de login social, la `0006` cambia `prepared` y `served` por el número de unidades preparadas y servidas de cada línea, y la `0007` marca como `bar` las categorías `Bebidas` y `Postres` (por nombre, sin distinguir mayúsculas; si en la BD se llaman distinto, hay que ponerlas en `bar` con `PUT /categories/{id}`).
 
 ```bash
 alembic upgrade head        # aplicar las migraciones pendientes
