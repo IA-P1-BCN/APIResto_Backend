@@ -149,3 +149,36 @@ def test_total_counts_filtered_users_across_pages(admin, staff):
 def test_list_users_requires_admin(client, auth_headers):
     r = client.get("/users/", params={"q": "ana"}, headers=auth_headers("waiter"))
     assert r.status_code == 403
+
+
+@pytest.fixture
+def accented(admin):
+    """Usuarios con acentos, ñ y mayúsculas acentuadas (revisión de Manon, #126)."""
+    return {
+        "jose": _create(admin, "José Núñez", "jnunez@resto.com"),
+        "angela": _create(admin, "ÁNGELA Pérez", "apz@resto.com"),
+        "joao": _create(admin, "João Conceição", "jc@resto.com"),
+    }
+
+
+@pytest.mark.parametrize(
+    ("q", "email"),
+    [
+        ("jose", "jnunez@resto.com"),
+        ("José", "jnunez@resto.com"),
+        ("nunez", "jnunez@resto.com"),
+        ("NÚÑEZ", "jnunez@resto.com"),
+        ("angela", "apz@resto.com"),
+        ("ángela", "apz@resto.com"),
+        ("perez", "apz@resto.com"),
+        ("joao", "jc@resto.com"),
+        ("conceicao", "jc@resto.com"),
+    ],
+)
+def test_search_ignores_accents_and_case(admin, accented, q, email):
+    assert _emails(admin.get("/users/", params={"q": q})) == [email]
+
+
+def test_search_longer_than_100_chars_returns_422(admin):
+    assert admin.get("/users/", params={"q": "a" * 101}).status_code == 422
+    assert admin.get("/users/", params={"q": "a" * 100}).status_code == 200
