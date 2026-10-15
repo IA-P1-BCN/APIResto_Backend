@@ -8,12 +8,7 @@ from app.core.permissions import CurrentUser
 from app.core.security import create_access_token
 from app.database import get_db
 from app.schemas.schema_social import SocialLoginRequest, SocialProvider
-from app.schemas.schema_user import (
-    PasswordChange,
-    UserOut,
-    UserProfileUpdate,
-    UserRegister,
-)
+from app.schemas.schema_user import UserOut, UserRegister
 from app.services import social_auth_service, user_service
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -63,15 +58,3 @@ def social_login(provider: SocialProvider, data: SocialLoginRequest, db: DbSessi
 def get_me(current_user: CurrentUser):
     """Devuelve los datos del usuario autenticado."""
     return current_user
-
-
-@router.patch("/me", response_model=UserOut, summary="Editar mi perfil")
-def update_me(data: UserProfileUpdate, current_user: CurrentUser, db: DbSession):
-    """El usuario autenticado cambia su nombre, email o teléfono (nunca su rol)."""
-    return user_service.update_profile(db, current_user, data)
-
-
-@router.post("/me/password", response_model=UserOut, summary="Cambiar mi contraseña")
-def change_my_password(data: PasswordChange, current_user: CurrentUser, db: DbSession):
-    """Exige la contraseña actual; la nueva debe tener al menos 8 caracteres (R-02)."""
-    return user_service.change_password(db, current_user, data)
