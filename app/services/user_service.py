@@ -7,17 +7,14 @@ from app.core.pagination import Page, PageParams, paginate
 from app.core.security import hash_password, verify_password
 from app.models.model_user import Role, User
 from app.repositories import user_repository
-<<<<<<< HEAD
 from app.schemas.schema_user import (
     PasswordChange,
     UserCreate,
+    UserOut,
     UserProfileUpdate,
     UserRegister,
     UserUpdate,
 )
-=======
-from app.schemas.schema_user import UserCreate, UserOut, UserRegister, UserUpdate
->>>>>>> b9868d1a95205261bd0b63fb70a058354aa0ff45
 
 
 def normalize_email(email: str) -> str:
