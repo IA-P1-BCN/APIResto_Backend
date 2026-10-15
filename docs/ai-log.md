@@ -62,6 +62,34 @@ Copia este bloque en la sección de tu HU:
 
 <!-- Una sección por HU: "### HU-XX · Título de la HU", con sus entradas debajo. -->
 
+### HU-14 · Pantalla de facturas en el frontend
+
+#### 2026-10-14 · Facturas y CSV para Excel (Frontend #38) · @costanna
+
+- **Herramienta y modelo:** Claude Code · Opus 5.5
+- **Issue y reglas:** Frontend #32 · nada (UI sobre la API de la HU-14)
+- **Prompt clave:** hacer la pantalla de facturas que faltaba en el frontend con los endpoints de Rita; después, "el CSV pierde datos cuando lo abro en Excel"
+- **Resultado:** aceptado con cambios. Vista con pedidos por facturar, facturas emitidas con filtro de fechas y exportación CSV para el admin.
+- **Errores o alucinaciones:** el CSV de la API (comas y punto decimal) salía en una sola columna en Excel en catalán. Causa raíz: el agente no tuvo en cuenta la configuración regional de Excel. Se comprobó abriéndolo con Excel y se convierte al descargar: `;`, coma decimal, fecha local y BOM. Al escribir el BOM desde la terminal se coló el carácter literal y el lint falló; se cambió por `\uFEFF`.
+- **Trabajo descartado:** nada
+- **Mi prompt o la spec:** no dije que el CSV era para abrirlo en Excel con configuración española.
+- **Decisiones humanas:** no tocar el CSV de la API (es de Rita y sirve para contabilidad) y convertirlo solo en el frontend (Anna).
+- **Lección:** probar las exportaciones con el programa con el que se van a abrir.
+
+### HU-15 · Pantalla de estadísticas en el frontend
+
+#### 2026-10-14 · Estadísticas de ventas (Frontend #39) · @costanna
+
+- **Herramienta y modelo:** Claude Code · Opus 5.5
+- **Issue y reglas:** Frontend #33 · nada (UI sobre la API de la HU-15)
+- **Prompt clave:** añadir las estadísticas en el frontend
+- **Resultado:** aceptado. Total vendido, pedidos y ticket medio, ventas por día con su tabla, platos más vendidos y filtro de periodo.
+- **Errores o alucinaciones:** el color principal no pasaba el validador de color para gráficos (poca saturación) y se eligió `#00879e` / `#2fa3b0`. En la primera captura, las barras de 10, 8 y 7 unidades medían lo mismo por un `max-width`; se corrigió al ver la captura, los tests no lo detectaban. Las ventas de ejemplo del modo simulado incluían los pimientos y rompían el test de borrar un plato; se limitaron los platos del historial.
+- **Trabajo descartado:** nada
+- **Mi prompt o la spec:** nada
+- **Decisiones humanas:** nada
+- **Lección:** mirar una captura del gráfico además de pasar los tests.
+
 ### HU-21 · Configuración de OpenCode con modelos gratuitos
 
 #### 2026-10-14 · Configurar OpenCode y elegir modelos gratuitos · @costanna
@@ -89,6 +117,62 @@ Copia este bloque en la sección de tu HU:
 - **Mi prompt o la spec:** en `/migracion` faltaba decir que sin argumentos no se ejecuta ningún comando y que los nombres se copian de la lista; se añadió.
 - **Decisiones humanas:** el subagente de seguridad solo puede leer y usar `git diff`, `git log` y `git show`; los hallazgos de la #116 se pasan a Manon en lugar de arreglarlos, porque es su código (Anna).
 - **Lección:** en un comando, decir cuándo parar y qué variables y ficheros existen; y en scripts, lanzar `opencode run` con `< /dev/null`.
+
+### HU-41 · Pantalla de barra en tiempo real
+
+#### 2026-10-14 · Pantalla de barra (Frontend #37) · @costanna
+
+- **Herramienta y modelo:** Claude Code · Opus 5.5
+- **Issue y reglas:** #85 · nada
+- **Prompt clave:** empezar la HU-41: pantalla de barra en tiempo real como la de cocina
+- **Resultado:** aceptado con cambios. Cocina y Barra comparten pantalla y cada plato va a una según el campo `station` de su categoría.
+- **Errores o alucinaciones:** la primera versión daba por hecho que `station` llegaría con la HU-40; llegó antes con la #99 y encajó. Faltaba que el admin pudiera elegir la estación: en producción todas las categorías quedarían en cocina y Barra vacía. Se añadió el selector en Gestionar categorías.
+- **Trabajo descartado:** nada
+- **Mi prompt o la spec:** no pensé en cómo se rellenaría `station` en una BD que ya existe.
+- **Decisiones humanas:** el estado del pedido lo lleva cocina salvo en los pedidos solo de barra (Anna).
+- **Lección:** comprobar cómo queda una función nueva con los datos que ya hay en producción.
+
+### HU-46 · Estilo de la vista de pedidos del camarero
+
+#### 2026-10-14 · Carta sin viñetas y aviso al repetir un plato (Frontend #34) · @costanna
+
+- **Herramienta y modelo:** Claude Code · Opus 5.5
+- **Issue y reglas:** Frontend #26 · nada
+- **Prompt clave:** quitar las viñetas al hacer un pedido y avisar al añadir otra vez el mismo producto
+- **Resultado:** aceptado. Carta en rejilla y aviso dentro de la app al repetir un plato; los botones + y − no preguntan.
+- **Errores o alucinaciones:** nada
+- **Trabajo descartado:** nada
+- **Mi prompt o la spec:** la HU-47 (#27) pide quitar una de las dos formas de añadir platos; este cambio solo avisa.
+- **Decisiones humanas:** aviso en lugar de quitar una forma de añadir (Anna).
+- **Lección:** nada
+
+### HU-48 · Paleta de restaurante con modo noche/día
+
+#### 2026-10-14 · Colores, modo claro y oscuro, accesibilidad y botones táctiles (Frontend #36) · @costanna
+
+- **Herramienta y modelo:** Claude Code · Opus 5.5
+- **Issue y reglas:** Frontend #28 · nada
+- **Prompt clave:** colores de restaurante con modo oscuro, que pasen el filtro para personas con discapacidad visual y botones pensados para pantalla táctil
+- **Resultado:** aceptado con cambios. Primero se hizo en crema y burdeos y el cliente pidió azules y verdes; se cambió.
+- **Errores o alucinaciones:** simulando deuteranopia, los fondos de los estados verde y rojo casi no se distinguían; se añadió un símbolo a cada estado y bordes distintos en las mesas. Los textos se comprobaron con un script de contraste (AAA, 7:1) y de daltonismo.
+- **Trabajo descartado:** la primera paleta en crema y burdeos.
+- **Mi prompt o la spec:** no sabía los colores que quería el cliente hasta ver la primera versión.
+- **Decisiones humanas:** azules y verdes en los dos modos (Anna, a petición del cliente).
+- **Lección:** medir el contraste y simular el daltonismo con un script en vez de mirarlo a ojo.
+
+### HU-49 · Pop-ups en lugar de menús desplegables para editar
+
+#### 2026-10-14 · Formularios en ventana modal (Frontend #35) · @costanna
+
+- **Herramienta y modelo:** Claude Code · Opus 5.5
+- **Issue y reglas:** Frontend #29 · nada
+- **Prompt clave:** usar modales en el frontend
+- **Resultado:** aceptado. Pedido, reservas, platos, categorías y mesas se editan en un modal con el foco dentro y Escape para cerrar.
+- **Errores o alucinaciones:** un test pulsaba Nuevo plato antes de que se cargaran las categorías (el botón estaba desactivado). Al juntar ramas, colores y modales chocaban en `index.css` porque las dos añadían estilos al final; se movieron junto a sus reglas.
+- **Trabajo descartado:** nada
+- **Mi prompt o la spec:** "usa los modales" podía ser solo para los avisos; se aclaró que eran los formularios.
+- **Decisiones humanas:** nada
+- **Lección:** no añadir estilos al final de un CSS que tocan varias ramas a la vez.
 
 ### HU-40 · Estación de barra en los pedidos
 
@@ -209,3 +293,31 @@ agente, la revisé y la commiteé primero.
 - **Mi prompt o la spec:** no le dije que `AGENTS.md` ya definía el registro de IA ni que no hay spec por HU; lo descubrió al leer `dev`.
 - **Decisiones humanas:** separar HU-21 en HU-21 (OpenCode, Anna) y HU-53 (bitácora, Rita), decidido por mí.
 - **Lección:** antes de pedir una propuesta, pedir al agente que lea `AGENTS.md` y el estado de `dev`.
+
+### Tarea #117 · Unidades preparadas y servidas
+
+#### 2026-10-14 · Contar unidades (Backend #118 y #119, Frontend #42) · @costanna
+
+- **Herramienta y modelo:** Claude Code · Opus 5.5
+- **Issue y reglas:** #117 · relacionado con la HU-45 (#89)
+- **Prompt clave:** "si hay 2 paellas se marcan como entregadas las 2 de golpe, ¿estaría bien para un restaurante?"
+- **Resultado:** aceptado con cambios. `prepared_quantity` y `served_quantity` con migración que convierte los datos, compatible con `prepared` y `served`, y contador − 1/2 + en la web.
+- **Errores o alucinaciones:** la migración de unidades entró con el número 0005 a la vez que la de login social (#116): dos cabezas y el CI de `dev` en rojo. Causa raíz: no se comprobó qué números usaban las PRs abiertas. Se renumeró a 0006 en la #119. Antes, la #108 de Manon movió `update_item` a otro fichero y hubo conflicto; se mantuvieron sus líneas y solo se cambió el bucle, con permiso de Anna.
+- **Trabajo descartado:** la rama con la 0003 de `station`, que ya había entrado con la #109.
+- **Mi prompt o la spec:** nada
+- **Decisiones humanas:** contar unidades aunque solapa con la HU-45 de Rita; resolver el conflicto con el código de Manon sin tocar sus líneas (Anna).
+- **Lección:** antes de mergear una migración, mirar los números de las PRs abiertas (de aquí sale el comando `/migracion`).
+
+### Tarea #40 · Nombre APIResto y nueva URL
+
+#### 2026-10-14 · Nombre visible y URL de producción (Frontend #41, Backend #120) · @costanna
+
+- **Herramienta y modelo:** Claude Code · Opus 5.5
+- **Issue y reglas:** Frontend #40 · nada
+- **Prompt clave:** cambiar en la app la parte visible de RestoAPI a APIResto y la URL de Vercel
+- **Resultado:** aceptado. Título, cabecera y login con APIResto y enlaces a `apiresto-f5.vercel.app`.
+- **Errores o alucinaciones:** al cambiar la URL, `ALLOWED_ORIGINS` quedó mal escrito en Render y el backend rechazaba todos los orígenes, también los antiguos; se detectó probando el CORS desde la terminal y se dejó con las dos URLs separadas por comas. La guía de la HU-38 usaba `restoapi.vercel.app`, que no es nuestra: registrarla como callback habría dejado los códigos de login en manos de quien la registrara.
+- **Trabajo descartado:** nada
+- **Mi prompt o la spec:** nada
+- **Decisiones humanas:** mantener la URL antigua activa y aceptar las dos en `ALLOWED_ORIGINS` (Anna).
+- **Lección:** después de tocar variables en Render, probar el login desde las dos URLs.
