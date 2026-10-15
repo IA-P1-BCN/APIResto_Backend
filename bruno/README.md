@@ -67,11 +67,13 @@ Encaja con nuestro flujo: la colección vive en `bruno/`, se versiona con la API
    Bruno guarda su valor en tu equipo y en el archivo del entorno solo queda el nombre. Con el CLI se
    pasan con `--env-var` (ver sección 7).
 
-4. **Production:** los POST del flujo crean datos reales en la BD de Neon y pueden fallar según su
-   estado. Algunos (pedidos, facturas, usuarios desactivados) **no se pueden borrar**. Usa siempre
-   **Local** para el Collection Runner de punta a punta. En Production limítate a `00-health` y
-   `01-auth/01-login-admin` + `01-auth/02-me`. El primer request puede tardar unos 50 s si Render
-   está dormido (plan free).
+4. **Production es de solo lectura:** el flujo crearía datos reales en la BD de Neon y algunos
+   (mesas en uso, pedidos, facturas, usuarios desactivados) **no se pueden borrar**. Por eso el
+   pre-request de `collection.bru` cancela en Production cualquier request que no sea `GET` o
+   `POST /auth/login`, con el error `Production es de solo lectura: usa Local para el flujo completo.`
+   Usa siempre **Local** para el Collection Runner de punta a punta; en Production limítate a
+   `00-health` y `01-auth/01-login-admin` + `01-auth/02-me`. El primer request puede tardar unos
+   50 s si Render está dormido (plan free).
 
 ## 4. Abrir la colección
 
@@ -83,10 +85,10 @@ Encaja con nuestro flujo: la colección vive en `bruno/`, se versiona con la API
 
 En el selector de entorno elige:
 
-| Entorno | `baseUrl` |
-|---|---|
-| `Local` | `http://localhost:8000` |
-| `Production` | `https://restoapi-47sp.onrender.com` |
+| Entorno | `baseUrl` | Uso |
+|---|---|---|
+| `Local` | `http://localhost:8000` | Flujo completo (Collection Runner) |
+| `Production` | `https://restoapi-47sp.onrender.com` | Solo lectura: `GET` y `POST /auth/login`; el resto se cancela antes de enviarse |
 
 ## 6. Orden de ejecución (flujo de punta a punta)
 
