@@ -5,7 +5,7 @@
 > Reglas del repo: `AGENTS.md`.
 
 ## Problem Statement
-La API de RestoAPI expone 44 endpoints HTTP sobre FastAPI, con roles
+La API de RestoAPI expone 43 endpoints HTTP sobre FastAPI, con roles
 (`admin`, `waiter`, `kitchen`, `bartender`, `customer`), JWT, refresh tokens,
 permisos por estación, facturación, stats y export CSV. No existe una forma
 **versionada, reproducible y compartida** de probar la API de punta a punta:
@@ -147,8 +147,8 @@ El agente líder debe:
 - **Alcance acotado a lo existente**:
   - Quedan fuera (se añadirán en la PR de su HU):
     `/auth/register` (HU-22), refresh/logout (HU-30), `/users/me` y cambio
-    de contraseña (HU-25), filtros de `GET /users` (HU-24), estación de barra
-    en categorías/pedidos (HU-40).
+    de contraseña (HU-25), filtros de `GET /users` (HU-24), HU-40 (gestión
+    de estación de barra en pedidos).
   - Comportamiento actual documentado, aunque no sea el ideal:
     - HU-43: un `customer` puede crear reservas para sí mismo (201); el 403
       solo salta si apunta a otro `user_id`.
@@ -193,7 +193,11 @@ El agente líder debe:
 - [ ] **130/130 requests en verde** en local con la API levantada y el admin
       creado.
 - [ ] Ninguna credencial real ni token hardcodeado en el repo.
-- [ ] **`git status` solo muestra cambios dentro de `bruno/`** en la PR.
+- [ ] `git status` solo muestra cambios dentro de `bruno/`,
+      `docs/agents/HU-27/`, `scripts/generate_agent_diagrams.py`
+      y `specs/agents/HU-27/`.
+  > Excepción aprobada por Levi (PO) el 14/10/2026 para incluir
+  > la documentación visual y las directrices de agentes de esta HU.
 - [ ] PR revisada por otra persona y aprobada por Levi (PO).
 - [ ] Los archivos `specs/agents/HU-27/*.md` existen y describen las tareas
       de cada agente de forma clara y sin solapamiento.
@@ -206,6 +210,10 @@ El agente líder debe:
 - Integración de Bruno en GitHub Actions (queda para otra PR).
 - Pruebas de rendimiento o carga (fuera del alcance de HU-27).
 - Swagger enriquecido (tags, ejemplos, Authorize): es HU-26 (Rita), no HU-27.
+
+> Actualización 14/10: HU-06 mergeó station en categorías, así
+> que la colección Bruno lo cubre. HU-40 (estación de barra en
+> pedidos) sigue fuera de alcance.
 
 ## Further Notes
 - Referencias:
