@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
 from app.models.model_user import Role
 
@@ -36,15 +36,53 @@ class UserUpdate(BaseModel):
     role: Role | None = None
 
 class UserProfileUpdate(BaseModel):
-    name: str | None = None
-    email: EmailStr | None = None
-    phone: str | None = None
+    """Edición del propio perfil. Solo se aplican los campos enviados; `name` y `email` no admiten `null`."""
+
+    model_config = ConfigDict(
+        extra="forbid",
+        json_schema_extra={
+            "examples": [
+                {"name": "Ana López", "email": "ana@example.com", "phone": "600123456"},
+                {"phone": None},
+            ]
+        },
+    )
+
+    name: str | None = Field(default=None, min_length=1, max_length=100)
+    email: EmailStr | None = Field(
+        default=None,
+        description="Se guarda en minúsculas; debe ser único (R-01).",
+    )
+    phone: str | None = Field(
+        default=None,
+        max_length=20,
+        description="`null` borra el teléfono.",
+    )
+
+    @field_validator("name", "email")
+    @classmethod
+    def reject_null(cls, value):
+        """Rechaza `null` explícito en campos que no se pueden borrar."""
+        if value is None:
+            raise ValueError("Field cannot be null")
+        return value
 
 class PasswordChange(BaseModel):
-    current_password: str
+    """Cambio de la propia contraseña indicando la actual."""
+
+    model_config = ConfigDict(
+        extra="forbid",
+        json_schema_extra={
+            "examples": [
+                {"current_password": "OldPassw0rd", "new_password": "NewPassw0rd"},
+            ]
+        },
+    )
+
+    current_password: str = Field(min_length=1, description="Contraseña actual.")
     new_password: str = Field(
         min_length=MIN_PASSWORD_LENGTH,
-        description=f"Contraseña nueva, mínimo {MIN_PASSWORD_LENGTH} caracteres (R-02).",
+        description=f"Nueva contraseña, mínimo {MIN_PASSWORD_LENGTH} caracteres (R-02).",
     )
 
 class UserOut(UserBase):

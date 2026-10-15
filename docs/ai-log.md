@@ -165,6 +165,37 @@ Copia este bloque en la sección de tu HU:
 - **Decisiones humanas:** `translate()` sin migración; `skip`/`limit` sin 422, solo la etiqueta `breaking-api` (Rita).
 - **Lección:** antes de decir "probado en X", comprobar qué base de datos usan los tests de verdad.
 
+### HU-25 · Cambio de contraseña y edición del propio perfil                                                                                                                     
+                                                                                                                                                                                   
+#### 2026-10-15 · Perfil propio y cambio de contraseña con un equipo de agentes · @levifvy                                                                                       
+                                                                                                                                                                                   
+- **Herramienta y modelo:** Claude Code · Opus 5.5. Usé un agente líder que coordinaba a cinco ayudantes, cada uno con una parte del trabajo: los datos de entrada, las reglas,  
+los endpoints, los tests y la documentación.                                                                                                                                     
+- **Issue y reglas:** #68 · R-01, R-02, R-03, R-04, R-11                                                                                                                         
+- **Prompt clave:** le pedí que hiciera de líder del equipo para la HU-25 y que, antes de empezar, me confirmara qué campos del perfil se podían editar, cómo funcionaría el     
+cambio de contraseña y dónde irían los endpoints. Cada ayudante debía tocar solo sus archivos y esperar a que terminara el anterior.                                             
+- **Resultado:** aceptado. Ahora cualquier usuario puede editar su nombre, email y teléfono, y cambiar su contraseña indicando la actual. No hizo falta tocar la base de datos.  
+Al final todo pasaba los tests (620) y el lint estaba limpio. Commits principales: 95fc335 (spec), 97222c7 (código), be56010 (tests), f601792 (docs) y f01523b (merge con `dev`).
+- **Errores o alucinaciones:** el código salió bien a la primera. Lo que falló fue mi prompt, que no coincidía con el estado real del repo, y el agente me lo señaló al leerlo:  
+daba por borrada una carpeta antigua que aún tenía restos, mencionaba una spec y una colección Bruno que todavía no estaban en `dev`, y no tenía en cuenta que la sección        
+`/users` era solo para admins. Si se hubiera hecho tal cual, un cliente no habría podido editar su perfil; se resolvió con un router aparte. Además, el primer intento de commit 
+falló por un error de sintaxis en el comando, sin llegar a guardar nada, y se repitió bien.                                                                                      
+- **Trabajo descartado:** la colección Bruno, porque aún no se había subido al repositorio. Tampoco hizo falta migración.                                                        
+- **Mi prompt o la spec:** di por hecho cómo estaba `dev` sin comprobarlo (aún no se habían aceptado algunas pull requests) y no pensé en dos casos: usuarios que entran solo con
+Google o GitHub y no tienen contraseña, y alguien que "cambia" la contraseña por la misma. También olvidé que `AGENTS.md` pide escribir la spec antes del código; la redactó el  
+agente, la revisé y la commiteé primero.                                                                                                                                         
+- **Decisiones humanas:** las tomé yo y están en `specs/HU-25-cambio-password-perfil.md`:                                                                                        
+  - si la contraseña actual es incorrecta se devuelve 403 y no 401, para que no parezca que la sesión ha caducado;                                                               
+  - si alguien intenta cambiarse el rol o la activación desde su perfil, se rechaza con un error en vez de ignorarlo en silencio;
+  - una cuenta sin contraseña no puede usar este cambio (lo cubrirá la HU de recuperación);
+  - no se acepta como nueva la misma contraseña;
+  - los endpoints van en `/users/me`;
+  - equipo de cinco ayudantes, aunque el agente proponía tres;
+  - revisores de la spec: Ana, Carla, Manon y Rita.
+  - **Después del trabajo:** mientras trabajábamos se aceptó en `dev` la HU-24, que tocaba los mismos archivos. El agente unió los cambios de las dos historias sin perder nada y
+  volvió a pasar todos los tests. También dejé documentado cómo trabajó cada ayudante en `docs/agents/HU-25/`.
+  - **Lección:** comprobar el estado de `dev` antes de dar contexto al agente, y escribir la spec primero aunque la historia parezca pequeña.
+
 ### HU-53 · Bitácora de IA
 
 #### 2026-10-14 · Creación de la bitácora · @arita-pereira
