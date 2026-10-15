@@ -76,6 +76,34 @@ Copia este bloque en la sección de tu HU:
 - **Decisiones humanas:** big-pickle por defecto para todo el equipo aunque yo uso mi propio proveedor (lo cambio con `/models`); documentar OpenCode en el README (Anna).
 - **Lección:** para consultas que no deben tocar ficheros, usar `--agent plan`, y adjuntar con `-f` todo lo que la pregunta necesita (por ejemplo, el modelo además de la migración).
 
+ ### HU-25 · Cambio de contraseña y edición del propio perfil                                                                                                                     
+                                                                                                                                                                                   
+  #### 2026-10-15 · Perfil propio y cambio de contraseña con un equipo de agentes · @levifvy                                                                                       
+                                                                                                                                                                                   
+  - **Herramienta y modelo:** Claude Code · Opus 5.5 (agente líder y 5 subagentes: `agent-schema`, `agent-service`, `agent-router`, `agent-tests`, `agent-docs`)                   
+  - **Issue y reglas:** #68 · R-01, R-02, R-03, R-04, R-11                                                                                                                         
+  - **Prompt clave:** "Actúa como agente líder de un equipo de agentes para la HU-25 según el Plan v3, `AGENTS.md` y `specs/ontology.md`. Confirma conmigo los campos editables, el
+  contrato del cambio de contraseña y la ubicación de los endpoints antes de crear el equipo; cada especialista con una tarea y archivos exclusivos, respetando dependencias       
+  (schema → service → router → tests/docs)."                                                                                                                                       
+  - **Resultado:** aceptado. `PATCH /users/me` (200 `UserOut`) y `POST /users/me/password` (204) para cualquier rol autenticado, sin cambio de modelo ni migración. `ruff check .` 
+  limpio; `pytest` 599 passed (33 tests nuevos), cobertura 100 % en los tres archivos de HU-25. Commits 95fc335 (spec), 97222c7 (feat), be56010 (test), f601792 (docs).            
+  - **Errores o alucinaciones:** en el código, ninguno. El agente detectó tres cosas en las que mi prompt no coincidía con el repo: (1) `app/crud/` no estaba "eliminado", quedaban
+  restos de `__pycache__` sin seguimiento; (2) no existen `specs/HU-27-*.md` ni `bruno/` en `dev`; (3) el router `/users` exige `admin` a nivel de router, así que `/users/me`     
+  colgado de él habría dado 403 a un `customer`. Se resolvió con un `me_router` aparte registrado antes en `main.py`. En la ejecución: el primer intento de los commits falló por  
+  un error de sintaxis del shell (heredoc encadenado con `&&`) sin llegar a commitear nada, y se repitió bien.                                                                     
+  - **Trabajo descartado:** la colección Bruno aun se había subido al repositorio.                                                                                                                
+  - **Mi prompt o la spec:** decía que no había spec de HU-25 y que la guía eran la issue y el PDF, pero `AGENTS.md` exige una spec commiteada antes del código; la redactó el     
+  agente y yo lo commiteé. El prompt también daba por hecho el estado de `dev` (crud, HU-27, Bruno) sin comprobarlo (aún no se habian sido aceptadas sus pull request respectivas). No preveía las cuentas solo sociales (`password_hash`    
+  nulo) ni una nueva contraseña igual a la actual.                                                                                                                                 
+  - **Decisiones humanas:                                                                       
+    - contraseña actual incorrecta → 403 `invalid_current_password`, no 401;                                                                                                       
+    - `role`, `is_active` u otros campos en el body → 422 (`extra="forbid"`), en vez de ignorarlos;                                                                                
+    - cuenta sin contraseña → 400 `password_not_set`;                                                                                                                              
+    - nueva contraseña igual a la actual → 422 `same_password`;                                                                                                                    
+    - endpoints bajo `/users/me` (opción A);                                                                                                                                       
+    - equipo de 5 agentes; 
+    - revisores de la spec: Ana, Carla, Manon, Rita.   
+
 ### HU-53 · Bitácora de IA
 
 #### 2026-10-14 · Creación de la bitácora · @arita-pereira
