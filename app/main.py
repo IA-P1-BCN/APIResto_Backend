@@ -61,6 +61,7 @@ app.add_middleware(
 register_exception_handlers(app)
 
 app.include_router(auth.router)
+app.include_router(router_user.me_router)
 app.include_router(router_user.router)
 app.include_router(router_category.router)
 app.include_router(router_dish.router)
