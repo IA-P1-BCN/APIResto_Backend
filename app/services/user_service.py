@@ -130,6 +130,8 @@ def restore_user(db: Session, user_id: int, actor: User) -> User:
 def authenticate(db: Session, email: str, password: str) -> User | None:
     """Return the active user whose credentials match, or None."""
     user = user_repository.get_by_email(db, email)
-    if not user or not user.is_active or not verify_password(password, user.password_hash):
+    if not user or not user.is_active or not user.password_hash:
+        return None
+    if not verify_password(password, user.password_hash):
         return None
     return user

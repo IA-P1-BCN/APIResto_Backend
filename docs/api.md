@@ -17,12 +17,13 @@ contrato por módulo. Formatos comunes:
 
 <!-- TODO(Rita, R-08): completar el resto de módulos. -->
 
-## Autenticación (`/auth`) · HU-04, HU-22
+## Autenticación (`/auth`) · HU-04, HU-22, HU-38
 
 | Método | Ruta | Qué hace | Éxito |
 |---|---|---|---|
 | `POST` | `/auth/register` | Auto-registro público de un `customer` | `201` |
 | `POST` | `/auth/login` | Inicia sesión y devuelve un `AccessToken` | `200` |
+| `POST` | `/auth/social/{provider}` | Login con Google o GitHub (`provider` = `google` \| `github`) | `200` |
 | `GET` | `/auth/me` | Datos del usuario autenticado | `200` |
 
 ### Auto-registro (`POST /auth/register`)
@@ -51,6 +52,28 @@ Respuesta `201` (`UserOut`; nunca incluye `password_hash` ni el token):
 `application/x-www-form-urlencoded` con `username` (el email) y `password`. Devuelve
 `{"access_token": "...", "token_type": "bearer"}` (`200`). Credenciales incorrectas o
 usuario desactivado → `401`.
+
+### Login social (`POST /auth/social/{provider}`) · HU-38
+
+Público. El frontend redirige al proveedor, recibe `?code` en su página de callback y lo envía:
+`{"code": str, "redirect_uri": str}`. `redirect_uri` debe ser de un origen de `ALLOWED_ORIGINS`.
+Devuelve `{"access_token", "token_type"}`, igual que `/auth/login`.
+
+- Cuenta social ya vinculada → inicia sesión.
+- Si no, hace falta un email **verificado** por el proveedor (Google: `email_verified`; GitHub:
+  el email primario verificado). Si ya existe un usuario con ese email se vincula (conserva su
+  rol); si no, se crea un `customer` sin contraseña.
+- Un usuario inactivo o borrado no entra. Un usuario sin contraseña no puede usar `/auth/login`.
+- Variables: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`.
+
+| HTTP | `code` | Cuándo |
+|---|---|---|
+| 401 | `invalid_code` | `code` inválido o caducado |
+| 401 | `email_not_verified` | El proveedor no da un email verificado |
+| 401 | `inactive_account` | Usuario inactivo o borrado |
+| 422 | `redirect_uri_not_allowed` | `redirect_uri` fuera de los orígenes permitidos (un `provider` desconocido → `validation_error`) |
+| 502 | `provider_unavailable` | Google o GitHub no responden |
+| 503 | `provider_not_configured` | Faltan el client id o el secreto del proveedor |
 
 ### Usuario autenticado (`GET /auth/me`)
 
@@ -237,7 +260,7 @@ Todos los endpoints son solo `admin` (otro rol → `403`).
 | `POST /orders/` | `admin`, `waiter`. El pedido guarda en `waiter_id` el usuario que lo crea |
 | `GET /orders/`, `GET /orders/{id}` | `admin`, `waiter`, `kitchen`, `bartender` |
 | `PATCH /orders/{id}/status` | `admin`, `waiter`, `kitchen`, `bartender` |
-| `PATCH /orders/{id}/items/{item_id}` | Marca una línea como preparada o servida (o la desmarca). `{"prepared": bool}`: `admin`, `kitchen`, `bartender`. `{"served": bool}`: `admin`, `waiter` |
+| `PATCH /orders/{id}/items/{item_id}` | Marca cuántas unidades de una línea están preparadas o servidas: `{"prepared_quantity": 1}` (de 0 a `quantity`; si es mayor, 422). `{"prepared": true}` marca todas y `false`, ninguna. `prepared` / `prepared_quantity`: `admin`, `kitchen`, `bartender`. `served` / `served_quantity`: `admin`, `waiter`. La respuesta trae `prepared_quantity`, `served_quantity` y `prepared` / `served` (true si están todas) |
 
 Sin token → `401`. `customer` en cualquier endpoint, `kitchen` o `bartender` creando un pedido o marcando `served`, o `waiter` marcando `prepared` → `403`.
 

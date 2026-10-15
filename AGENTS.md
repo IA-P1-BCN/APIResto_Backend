@@ -6,7 +6,7 @@ use en este repo. Prosa en español, identificadores en inglés.
 ## Qué es esto
 API REST de gestión de un restaurante (FastAPI + PostgreSQL). La "parte 2" (P3) añade
 gestión de usuarios y autenticación sobre este mismo código: login JWT, refresh,
-roles, etc. Producción: https://restoapi.onrender.com (`/docs`, `/health`).
+roles, etc. Producción: restoapi-47sp.onrender.com (`/docs`, `/health`).
 
 ## Antes de escribir código (obligatorio)
 1. Lee `specs/ontology.md`: es el vocabulario. Usa esos nombres exactos

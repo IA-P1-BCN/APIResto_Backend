@@ -2,9 +2,9 @@
 
 API REST para la gestión de un restaurante: usuarios y roles, mesas, reservas, menú, pedidos, cocina en tiempo real, facturación, estadísticas y notificaciones por email.
 
-> 🌐 **App en producción:** [resto-api-f5.vercel.app](https://resto-api-f5.vercel.app) · API: [restoapi-47sp.onrender.com](https://restoapi-47sp.onrender.com) ([Swagger](https://restoapi-47sp.onrender.com/docs))
+> 🌐 **App en producción:** [apiresto-f5.vercel.app](https://apiresto-f5.vercel.app) · API: [restoapi-47sp.onrender.com](https://restoapi-47sp.onrender.com) ([Swagger](https://restoapi-47sp.onrender.com/docs))
 
-> Frontend: [IA-P1-BCN/Resto-API_Frontend](https://github.com/IA-P1-BCN/Resto-API_Frontend) · Despliegue: [docs/deploy.md](docs/deploy.md) (solo Anna despliega) · Modelo de datos: [docs/er.md](docs/er.md) ([imagen](docs/er-diagram.png))
+> Frontend: [IA-P1-BCN/Resto-API_Frontend](https://github.com/IA-P1-BCN/Resto-API_Frontend) · Despliegue: [docs/deploy.md](docs/deploy.md) (solo Anna despliega) · Modelo de datos: [docs/er.md](docs/er.md) ([imagen](docs/er-diagram.png)) · Bitácora de IA: [docs/ai-log.md](docs/ai-log.md)
 
 ## Stack
 
@@ -73,8 +73,32 @@ git push -u origin feature/HU-07-crear-pedido
 **Commits** — [Conventional Commits](https://www.conventionalcommits.org/es/):
 `feat(pedidos): ...` · `fix(reservas): ...` · `test(auth): ...` · `docs(api): ...` · `ci: ...` · `chore(deps): ...`
 
+## Agente de código: OpenCode con modelos gratuitos (HU-21)
+
+El repo trae `opencode.json` con modelos gratuitos de OpenCode Zen, que funcionan sin cuenta ni clave. Al abrir una sesión, OpenCode lee `AGENTS.md`.
+
+```bash
+npm install -g opencode-ai                          # instalar (una vez)
+opencode                                            # abrir en la carpeta del repo
+opencode run "tu pregunta" --agent plan             # una consulta que no toca ficheros
+```
+
+| Uso | Modelo | Por qué |
+|---|---|---|
+| Por defecto (`model`) | `opencode/big-pickle` | El más rápido y completo en la prueba de humo (16 s) |
+| Tareas cortas, como títulos (`small_model`) | `opencode/mimo-v2.6-flash-free` | Rápido y correcto en la misma prueba |
+| Alternativas probadas | `opencode/longcat-2.5-preview-free`, `opencode/nemotron-3-ultra-free` | Se eligen con `/models` o con `-m` |
+
+- **Agentes:** `plan` solo lee y propone; `build` edita y ejecuta comandos. Empieza cada HU en `plan` y pasa a `build` cuando el plan esté claro.
+- **Push:** OpenCode pide confirmación antes de cualquier `git push` (`permission` en `opencode.json`). Aun así, nunca se hace push a `main` ni a `dev` (ver `AGENTS.md`).
+- **Privacidad:** con Big Pickle, mientras sea gratuito, el proveedor puede usar las conversaciones para mejorar el modelo; los Nemotron son de prueba. No pegues secretos, `.env` ni datos personales. LongCat 2.5 Preview Free usa un proveedor que no guarda los datos.
+- **Disponibilidad:** los modelos gratuitos cambian con el tiempo; la lista actual sale con `opencode models opencode`.
+- **Proveedor propio** (por ejemplo, un router local con tus claves): elígelo con `/models` y déjalo en tu configuración personal (`~/.config/opencode/opencode.json`), nunca en el `opencode.json` del repo.
+- **Prueba de humo** (HU-20): `opencode run "¿Qué roles existen y qué no debes hacer?" --agent plan` debe responder con los 5 roles (`admin`, `waiter`, `kitchen`, `bartender`, `customer`) y las prohibiciones de `AGENTS.md`.
+
 ## Reglas
 
 - `.env` nunca se sube; solo `.env.example` sin valores reales.
 - Una sola persona (Carla) mergea migraciones de Alembic en `dev`, de una en una.
 - PRs pequeños (idealmente < 400 líneas).
+- Si usas un agente de IA (Claude Code, OpenCode), añade tu entrada en [docs/ai-log.md](docs/ai-log.md) en la misma PR.

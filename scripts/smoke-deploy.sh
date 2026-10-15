@@ -1,7 +1,7 @@
 #!/bin/sh
 # Comprueba un despliegue completo (HU-01): API en Render, web en Vercel y CORS entre las dos.
 #
-#   sh scripts/smoke-deploy.sh https://restoapi.onrender.com https://restoapi.vercel.app
+#   sh scripts/smoke-deploy.sh https://restoapi-47sp.onrender.com https://apiresto-f5.vercel.app
 #
 # Sale con código 1 si falla alguna comprobación. La primera petición puede tardar
 # hasta un minuto si Render está dormido (cold start del plan free).
