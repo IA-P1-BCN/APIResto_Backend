@@ -9,6 +9,7 @@ from fastapi import (
     Request,
     status,
 )
+from fastapi.responses import JSONResponse
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
@@ -24,6 +25,7 @@ from app.services import email_verification_service, social_auth_service, user_s
 from app.services.auth_emails import verification_email
 from app.services.login_rate_limit_service import login_rate_limiter
 from app.services.notifications import send_email
+from app.services.totp_service import start_challenge
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -120,6 +122,8 @@ def login(
         )
 
     login_rate_limiter.reset(ip, form_data.username)
+    if user.totp_enabled:
+        return JSONResponse(start_challenge(user))
     return {"access_token": create_access_token(user.id), "token_type": "bearer"}
 
 
@@ -159,6 +163,8 @@ def social_login(
     Rol: público.
     """
     user = social_auth_service.login(db, provider, data)
+    if user.totp_enabled:
+        return JSONResponse(start_challenge(user))
     return {"access_token": create_access_token(user.id), "token_type": "bearer"}
 
 

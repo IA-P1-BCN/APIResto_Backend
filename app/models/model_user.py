@@ -38,3 +38,6 @@ class User(Base):
     deleted_at = Column(DateTime, nullable=True)
     created_by = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     updated_by = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    totp_secret = Column(String(255), nullable=True)
+    totp_enabled = Column(Boolean, nullable=False, default=False, server_default=false())
+    totp_recovery_codes = Column(String(600), nullable=True)

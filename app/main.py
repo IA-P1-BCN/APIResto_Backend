@@ -26,6 +26,7 @@ from app.models import (  # noqa: F401
 from app.routers import (
     auth,
     reservations,
+    router_2fa,
     router_category,
     router_dish,
     router_email_verification,
@@ -71,9 +72,11 @@ app.add_middleware(
 register_exception_handlers(app)
 
 app.include_router(auth.router)
+app.include_router(router_2fa.router)
 app.include_router(router_password.router)
 app.include_router(router_email_verification.router)
 app.include_router(router_password.invite_router)
+app.include_router(router_2fa.me_router)
 app.include_router(router_user.me_router)
 app.include_router(router_user.router)
 app.include_router(router_category.router)
