@@ -50,7 +50,10 @@ def _link(db: Session, user: User, provider: SocialProvider, profile: SocialProf
 
 
 def login(db: Session, provider: SocialProvider, data: SocialLoginRequest) -> User:
-    """Inicia sesión con Google o GitHub: entra, vincula o crea el usuario (R-13)."""
+    """Inicia sesión con Google o GitHub: entra, vincula o crea el usuario (R-13).
+
+    Al crear o vincular, el email queda verificado: lo verificó el proveedor (R-15, C, P1).
+    """
     _ensure_allowed_redirect(data.redirect_uri)
     profile = social_providers.fetch_profile(provider, data.code, data.redirect_uri)
 
@@ -65,6 +68,7 @@ def login(db: Session, provider: SocialProvider, data: SocialLoginRequest) -> Us
     user = user_repository.get_by_email(db, email)
     if user:
         _ensure_can_log_in(user)
+        user.email_verified = True
     else:
         user = user_repository.add(
             db,
@@ -73,6 +77,7 @@ def login(db: Session, provider: SocialProvider, data: SocialLoginRequest) -> Us
                 email=email,
                 password_hash=None,
                 role=Role.customer.value,
+                email_verified=True,
             ),
         )
     _link(db, user, provider, profile)
