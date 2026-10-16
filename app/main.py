@@ -8,6 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
 from app.core.exceptions import register_exception_handlers
 from app.core.logging import setup_logging
+from app.core.openapi import API_DESCRIPTION, OPENAPI_TAGS
 from app.database import Base, engine
 from app.models import (  # noqa: F401
     dining_table,
@@ -47,7 +48,13 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
     yield
 
 
-app = FastAPI(title="Resto API", version="1.0.0", lifespan=lifespan)
+app = FastAPI(
+    title="Resto API",
+    version="1.0.0",
+    description=API_DESCRIPTION,
+    openapi_tags=OPENAPI_TAGS,
+    lifespan=lifespan,
+)
 
 app.add_middleware(
     CORSMiddleware,
