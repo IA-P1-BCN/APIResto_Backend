@@ -1,10 +1,4 @@
-<<<<<<< HEAD
-# Bitácora de Uso de IA (AI Log)
 
-Este archivo registra el uso de asistentes de IA (Claude Code, OpenCode, etc.) en cada funcionalidad para la retrospectiva y actualización de `AGENTS.md`.
-
-## Entradas
-=======
 # Bitácora de IA (ai-log)
 
 Registro de cómo usa el equipo los agentes de IA (Claude Code, OpenCode) para desarrollar
