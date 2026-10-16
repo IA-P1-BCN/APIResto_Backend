@@ -1,0 +1,82 @@
+name: revision-automatica
+
+# HU-36: revisión automática de cada PR con OpenCode y un modelo gratuito.
+# El agente `revisor` (.opencode/agents/revisor.md) solo puede leer, y su configuración se
+# toma de la rama base para que una PR no pueda cambiarla. El resultado se publica como un
+# único comentario en la PR, que se actualiza en cada push.
+# Solo informa: nunca bloquea la PR ni pone la CI en rojo, aunque el modelo falle.
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    branches: [dev, main]
+
+concurrency:
+  group: revision-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  revision:
+    if: ${{ !github.event.pull_request.draft && github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      OPENCODE_VERSION: 1.18.34
+      MODEL: opencode/deepseek-v4.1-flash-free
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - name: Instalar OpenCode
+        run: npm install --global "opencode-ai@${OPENCODE_VERSION}"
+      - name: Revisión con el agente
+        id: agent
+        env:
+          BASE: ${{ github.event.pull_request.base.ref }}
+        run: |
+          set +e
+          base_files=".opencode/agents/revisor.md .opencode/commands/revision.md opencode.json scripts/comentar-revision.sh"
+          in_base=true
+          for file in $base_files; do
+            git cat-file -e "origin/${BASE}:${file}" 2> /dev/null || in_base=false
+          done
+          if [ "$in_base" = true ]; then
+            rm -rf .opencode
+            if ! git checkout "origin/${BASE}" -- .opencode opencode.json scripts/comentar-revision.sh; then
+              echo "No se ha podido tomar la configuración del agente de ${BASE}: no se revisa ni se comenta."
+              echo "trusted=false" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+          fi
+          git diff "origin/${BASE}...HEAD" -- . \
+            ':(exclude)package-lock.json' ':(exclude)*.png' ':(exclude)*.jpg' > pr.diff
+          if [ "$(wc -c < pr.diff)" -gt 120000 ]; then
+            head -c 120000 pr.diff > pr.cut && mv pr.cut pr.diff
+            printf '\n[Diff recortado a 120 KB: la PR es muy grande.]\n' >> pr.diff
+          fi
+          timeout 600 opencode run --command revision -m "$MODEL" "origin/${BASE}...HEAD" -f pr.diff \
+            < /dev/null > review.md 2> agent.log
+          status=$?
+          echo "status=${status}" >> "$GITHUB_OUTPUT"
+          if [ "$status" != 0 ]; then
+            echo "El agente terminó con el código ${status}. Final de su log:"
+            tail -n 40 agent.log
+          fi
+          exit 0
+      - name: Publicar o actualizar el comentario
+        if: ${{ steps.agent.outputs.trusted != 'false' }}
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR: ${{ github.event.pull_request.number }}
+          SHA: ${{ github.event.pull_request.head.sha }}
+          AGENT_STATUS: ${{ steps.agent.outputs.status }}
+        run: bash scripts/comentar-revision.sh

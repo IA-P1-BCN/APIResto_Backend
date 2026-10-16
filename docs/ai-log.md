@@ -332,12 +332,13 @@ agente, la revisé y la commiteé primero.
   - La spec de #124 aún tenía tres `[NEEDS CLARIFICATION]` (si el cliente puede enviar `table_id`, si se rechaza el pasado y la prioridad). `AGENTS.md` pide cerrarlas antes de programar, así que se cerraron primero.
   - La spec no decía cómo sabe el servicio que el usuario es cliente (el agente añadió `is_customer`) ni cuántas mesas candidatas probar (límite de 100).
   - La spec no mencionaba que `reservation_in_past` rompe las fechas de los tests de HU-10.
-  - Riesgo abierto: `reserved_at` se guarda sin zona horaria y se compara con la hora UTC actual. Si el frontend envía la hora local de España, una reserva cercana a "ahora" podría rechazarse por error (hasta 2 h). Sin comprobar: preguntar a Anna qué envía el frontend.
+  - `reserved_at` se guarda sin zona horaria y el agente lo comparó con la hora UTC actual, sin que la spec dijera nada de zonas horarias. Si el frontend enviaba hora local de España, una reserva cercana a "ahora" podía rechazarse por error (hasta 2 h). Anna confirmó el 16/10 que envía hora local sin zona y propuso comparar con la hora del restaurante; se corrigió con `RESTAURANT_TIMEZONE` (por defecto `Europe/Madrid`), `tzdata` en `requirements.txt` y 3 tests con el reloj congelado.
 - **Decisiones humanas:** (Manon)
   - El `customer` puede seguir enviando `table_id`, para no romper el contrato ni los tests de HU-10.
   - Una reserva en el pasado se rechaza solo cuando la mesa se asigna automáticamente (422 `reservation_in_past`); con `table_id` no cambia.
   - Prioridad: Must.
   - Ya estaban acordadas por todo el equipo, Levi incluido, el 15/10: el cliente no elige mesa y el máximo es de 8 personas.
+  - Comparar `reservation_in_past` con la hora del restaurante y no con UTC (Anna, 16/10).
 - **Lección:** pedir al agente que formatee y edite solo los archivos de la HU, nunca carpetas enteras, y que use el `.venv` del proyecto.
 
 ### HU-53 · Bitácora de IA

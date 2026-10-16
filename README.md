@@ -110,6 +110,17 @@ En `.opencode/` hay comandos para tareas que se repiten en cada HU. Se usan escr
 - Desde scripts o desde otra herramienta, `opencode run` se queda esperando si la entrada estándar no se cierra: añade `< /dev/null`.
 - Los hallazgos de `/seguridad` y los tests de `/tests` se revisan a mano antes de aceptarlos (`AGENTS.md`, "Seguridad").
 
+### Revisión automática de PRs (HU-36)
+
+Cada PR a `dev` o `main` recibe una revisión de OpenCode con el modelo gratuito `opencode/deepseek-v4.1-flash-free` ([`.github/workflows/revision-automatica.yml`](.github/workflows/revision-automatica.yml)):
+
+- El agente `revisor` (`.opencode/agents/revisor.md`) revisa el diff de la PR contra `AGENTS.md`, la ontología y la spec de la HU: capas, tests, formato de errores, migraciones, seguridad y `docs/api.md`. Solo puede leer (`git diff`, `git log` y `git show`) y tiene un máximo de 12 pasos. Su configuración se toma de la rama base, así que una PR no puede cambiar sus permisos.
+- El resultado aparece como **un único comentario** en la PR ("Revisión automática · OpenCode"), que se actualiza en cada push.
+- **Solo informa**: nunca bloquea la PR ni pone la CI en rojo. Si el modelo no responde en 10 minutos, el comentario lo dice. La revisión de una persona sigue siendo obligatoria.
+- No necesita claves ni secretos, y no se ejecuta en borradores ni en PRs desde forks.
+- Modelo: `deepseek-v4.1-flash-free` revisa en unos 2-3 minutos y su proveedor no guarda ni usa los datos para entrenar. `big-pickle` (el de `opencode.json`) tardaba más de 10 minutos en escribir la revisión.
+- Para revisar tu rama en local antes de abrir la PR: `/revision` en OpenCode, u `opencode run --command revision "origin/dev...HEAD" < /dev/null`.
+
 ## Reglas
 
 - `.env` nunca se sube; solo `.env.example` sin valores reales.
