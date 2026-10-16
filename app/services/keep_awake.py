@@ -38,7 +38,7 @@ def ping_once(url: str, timeout: int = _TIMEOUT_SECONDS) -> bool:
         request = urllib.request.Request(url, headers={"User-Agent": "RestoKeepAwake/1.0"})
         with urllib.request.urlopen(request, timeout=timeout) as response:
             return 200 <= response.status < 300
-    except (OSError, ValueError) as exc:  # sin red, DNS caído, HTTP 5xx, timeout...: se reintenta al siguiente ciclo
+    except (OSError, ValueError) as exc:
         logger.debug("Keep-awake ping fallido (%s): %s", url, exc)
         return False
 
