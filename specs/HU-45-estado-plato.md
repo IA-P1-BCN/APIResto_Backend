@@ -74,7 +74,7 @@ Añadir a la respuesta de los pedidos un resumen calculado, sin tocar el modelo:
   CSV siguen igual.
 - **Capas**: solo `schemas/schema_order.py` (`StationProgress`, `OrderProgress`, campos
   calculados). Sin cambios en routers, services, repositories ni models.
-- **Regla nueva `R-15` (M)** en `specs/ontology.md`, en el mismo PR.
+- **Regla nueva `R-16` (M)** en `specs/ontology.md`, en el mismo PR.
 - **Contrato**: solo se añaden campos de salida; no es `breaking-api`. Se documenta en
   `docs/api.md`.
 
@@ -106,7 +106,7 @@ Añadir a la respuesta de los pedidos un resumen calculado, sin tocar el modelo:
   suya (R-14).
 - [ ] Sin cambios de modelo ni migración.
 - [ ] El `status` del pedido, sus transiciones, las facturas y el CSV no cambian.
-- [ ] `R-15` añadida a `specs/ontology.md`.
+- [ ] `R-16` añadida a `specs/ontology.md`.
 - [ ] Tests (caso feliz + 4xx), ruff limpio, `docs/api.md` actualizado y entrada en
   `docs/ai-log.md`.
 
@@ -159,6 +159,14 @@ Ninguna.
   actuales.
 - **Alternativas rechazadas**: pasar a `served` solo cuando `stage` sea `all_served`.
 
-### Regla R-15 en la ontología
-- **Decisión**: se añade `R-15` (M) a `specs/ontology.md` en este PR.
+### Regla R-16 en la ontología
+- **Decisión**: se añade `R-16` (M) a `specs/ontology.md` en este PR.
 - **Por qué**: las HU y el ai-log citan las reglas por id y el progreso no estaba cubierto.
+
+### La regla pasa de R-15 a R-16
+- **Decisión** (Rita, 16/10): la regla del progreso del pedido es `R-16`.
+- **Por qué**: HU-33 (Levi, #145, ya en `dev`) usa `R-15` para la verificación de email en su
+  spec, en el código y en `docs/api.md`. Su PR ya está integrada; renumerar la de HU-45 toca
+  menos archivos y no cambia código ajeno.
+- **Alternativas rechazadas**: que HU-33 pase a `R-16` (cambiaría el código de Levi ya
+  integrado).

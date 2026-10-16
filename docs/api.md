@@ -545,7 +545,7 @@ El WebSocket de cocina (`/ws/kitchen`) admite `admin`, `kitchen` y `bartender`. 
 
 ### Progreso del pedido (`progress`) · HU-45
 
-Todas las respuestas de pedidos (`POST /orders/`, `GET /orders/`, `GET /orders/{id}` y los dos `PATCH`) traen el progreso del pedido. Se calcula al responder a partir de las unidades preparadas y servidas de cada línea: no hay campos nuevos en la base de datos ni migración, y no cambia el `status` del pedido (R-15).
+Todas las respuestas de pedidos (`POST /orders/`, `GET /orders/`, `GET /orders/{id}` y los dos `PATCH`) traen el progreso del pedido. Se calcula al responder a partir de las unidades preparadas y servidas de cada línea: no hay campos nuevos en la base de datos ni migración, y no cambia el `status` del pedido (R-16).
 
 - Cada línea trae `ready_to_serve`: unidades preparadas que aún no se han servido (`prepared_quantity - served_quantity`, nunca menos de 0).
 - `progress` suma las líneas de la respuesta: `quantity`, `prepared_quantity`, `served_quantity`, `ready_to_serve` (la suma de las líneas, no la resta de los totales) y `stage`.

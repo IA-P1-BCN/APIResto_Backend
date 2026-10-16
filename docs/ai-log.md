@@ -380,7 +380,7 @@ agente, la revisé y la commiteé primero.
 #### 2026-10-16 · Spec, progreso del pedido y documentación · @arita-pereira
 
 - **Herramienta y modelo:** Claude (app, sesión con el repo clonado en solo lectura) · Sonnet 5.5 para comentarios y mensajes, Opus 5.5 para spec, código y revisión
-- **Issue y reglas:** #89 · R-14, R-15 (nueva)
+- **Issue y reglas:** #89 · R-14, R-16 (nueva; era R-15, renumerada porque HU-33 ya usa R-15)
 - **Prompt clave:** "Mira AGENTS.md y specs primero" y, con la historia de la issue, "falta escribir los criterios de aceptación. Escribe tú, juntamente con lo que se hará en cada paso"
 - **Resultado:** aceptado con cambios. `ready_to_serve` por línea y `progress` por pedido (`stage` y `by_station`), calculados al responder, sin modelo ni migración. 18 tests nuevos, 764 en verde con SQLite, ruff limpio. Commits `51664c9` spec, `19a091e` pedido sin líneas, `96f8ec0` progreso, `03cbe7b` api.md.
 - **Errores o alucinaciones:** (1) La tabla de `stage` de la spec daba `all_served` a un pedido sin líneas (0 de 0 servidas). Causa raíz: la regla se escribió sin pensar en el caso vacío. Se vio al implementar y se corrigió en `19a091e` (queda `waiting`). (2) Los comandos del paso 2 ponían `pytest` después de los commits y no tenían `ruff`. Causa raíz: el agente ordenó los comandos sin seguir "comprobar y después commitear". Lo vi yo y se corrigió. (3) Los tests pasaron a la primera; al meter errores a propósito, uno (restar los totales en lugar de sumar por líneas) no lo detectaba ningún test. Se añadió uno.

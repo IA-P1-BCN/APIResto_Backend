@@ -1,4 +1,4 @@
-"""HU-45 / R-15: progreso del pedido (ready_to_serve, stage y by_station)."""
+"""HU-45 / R-16: progreso del pedido (ready_to_serve, stage y by_station)."""
 
 import pytest
 

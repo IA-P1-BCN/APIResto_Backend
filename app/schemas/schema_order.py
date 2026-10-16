@@ -36,12 +36,12 @@ class OrderItemOut(BaseModel):
     @computed_field
     @property
     def ready_to_serve(self) -> int:
-        """Unidades preparadas que aún no se han servido; nunca menos de 0 (R-15)."""
+        """Unidades preparadas que aún no se han servido; nunca menos de 0 (R-16)."""
         return max(self.prepared_quantity - self.served_quantity, 0)
 
 
 def _stage(quantity: int, prepared: int, served: int, ready: int) -> ProgressStage:
-    """Resumen del progreso (R-15): gana la primera condición que se cumple."""
+    """Resumen del progreso (R-16): gana la primera condición que se cumple."""
     if quantity and served >= quantity:
         return "all_served"
     if ready > 0:
@@ -120,7 +120,7 @@ class OrderOut(BaseModel):
     @computed_field
     @property
     def progress(self) -> OrderProgress:
-        """Progreso de las líneas de la respuesta, total y por estación (R-15)."""
+        """Progreso de las líneas de la respuesta, total y por estación (R-16)."""
         by_station = {
             station.value: StationProgress.from_items(lines)
             for station in Station
