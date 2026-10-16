@@ -1,0 +1,58 @@
+meta {
+  name: Editar categoría
+  type: http
+  seq: 4
+}
+
+put {
+  url: {{baseUrl}}/categories/:category_id
+  body: json
+  auth: bearer
+}
+
+params:path {
+  category_id: {{categoryId}}
+}
+
+headers {
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "sort_order": 100
+  }
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+
+  test("aplica sort_order", function() {
+    expect(res.body.sort_order).to.equal(100);
+  });
+}
+
+docs {
+  **`PUT /categories/{category_id}`**
+
+  Edición parcial (`name?`, `sort_order?`, `station?`).
+
+  **Roles permitidos:** admin
+
+  **Auth en este request:** Bearer `{{token}}` (admin)
+
+  **Respuestas posibles:**
+
+  - `200`: `CategoryOut`
+  - `401`: sin token
+  - `403`: rol distinto de admin (`Not enough permissions`)
+  - `404`: `Category not found`
+  - `409`: `Category already exists` (nombre de otra categoría)
+  - `422`: datos no válidos
+}

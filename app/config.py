@@ -17,6 +17,7 @@ class Settings(BaseSettings):
     FRONTEND_URL: str = "http://localhost:5173"
     PASSWORD_TOKEN_EXPIRE_HOURS: int = 48
     STATS_CACHE_TTL: int = 60
+    RESTAURANT_TIMEZONE: str = "Europe/Madrid"
     GOOGLE_CLIENT_ID: str = ""
     GOOGLE_CLIENT_SECRET: str = ""
     GITHUB_CLIENT_ID: str = ""

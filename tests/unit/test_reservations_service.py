@@ -487,3 +487,47 @@ def test_update_party_size_over_the_limit_is_rejected_for_customers(db, booked):
         )
 
     assert error.value.code == "party_size_too_large"
+
+
+NOW_UTC = datetime.fromisoformat("2026-10-20T18:30:00+00:00")
+
+
+class _FrozenDatetime(datetime):
+    @classmethod
+    def now(cls, tz=None):
+        return NOW_UTC.astimezone(tz) if tz else NOW_UTC.replace(tzinfo=None)
+
+
+@pytest.fixture
+def frozen_now(monkeypatch):
+    """Congela el reloj en las 18:30 UTC, que son las 20:30 en Madrid."""
+    monkeypatch.setattr(service, "datetime", _FrozenDatetime)
+
+
+def test_reservation_after_restaurant_now_is_accepted(db, two_tables, frozen_now):
+    customer, small, _large = two_tables
+    data = _create_data(reserved_at=datetime.fromisoformat("2026-10-20T21:00"))
+
+    reservation = service.create_reservation(db, data, customer.id, is_customer=True)
+
+    assert reservation.table_id == small.id
+
+
+def test_reservation_before_restaurant_now_is_rejected(db, two_tables, frozen_now):
+    customer, _small, _large = two_tables
+    data = _create_data(reserved_at=datetime.fromisoformat("2026-10-20T20:00"))
+
+    with pytest.raises(UnprocessableError) as error:
+        service.create_reservation(db, data, customer.id, is_customer=True)
+
+    assert error.value.code == "reservation_in_past"
+
+
+def test_restaurant_timezone_is_configurable(db, two_tables, frozen_now, monkeypatch):
+    customer, _small, _large = two_tables
+    monkeypatch.setattr(settings, "RESTAURANT_TIMEZONE", "UTC")
+    data = _create_data(reserved_at=datetime.fromisoformat("2026-10-20T19:00"))
+
+    reservation = service.create_reservation(db, data, customer.id, is_customer=True)
+
+    assert reservation.reserved_at == data.reserved_at

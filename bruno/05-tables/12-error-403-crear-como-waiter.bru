@@ -1,0 +1,52 @@
+meta {
+  name: Error 403 · crear mesa como waiter
+  type: http
+  seq: 12
+}
+
+post {
+  url: {{baseUrl}}/tables
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{tokenWaiter}}
+}
+
+body:json {
+  {
+    "number": 1,
+    "capacity": 2,
+    "location": "indoor"
+  }
+}
+
+tests {
+  test("status 403", function() {
+    expect(res.status).to.equal(403);
+  });
+
+  test("error {detail, code} con code forbidden", function() {
+    expect(res.body.detail).to.be.a("string");
+    expect(res.body.code).to.equal("forbidden");
+  });
+}
+
+docs {
+  **`POST /tables`**
+
+  El alta de mesas es solo de admin.
+
+  **Roles permitidos:** admin
+
+  **Auth en este request:** Bearer `{{tokenWaiter}}` (waiter)
+
+  **Respuestas posibles:**
+
+  - `403`: `Not enough permissions`
+}

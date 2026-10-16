@@ -1,0 +1,68 @@
+meta {
+  name: Editar plato
+  type: http
+  seq: 8
+}
+
+put {
+  url: {{baseUrl}}/dishes/:dish_id
+  body: json
+  auth: bearer
+}
+
+params:path {
+  dish_id: {{dishId}}
+}
+
+headers {
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "price": 13.0,
+    "description": "Precio actualizado desde Bruno"
+  }
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+
+  test("shape: id, category_id, name, description, price, allergens, is_available", function() {
+    expect(res.body).to.have.property("id");
+    expect(res.body).to.have.property("category_id");
+    expect(res.body).to.have.property("name");
+    expect(res.body).to.have.property("description");
+    expect(res.body).to.have.property("price");
+    expect(res.body).to.have.property("allergens");
+    expect(res.body).to.have.property("is_available");
+  });
+
+  test("nuevo precio", function() {
+    expect(Number(res.body.price)).to.equal(13);
+  });
+}
+
+docs {
+  **`PUT /dishes/{dish_id}`**
+
+  Edición parcial (todos los campos de `DishUpdate` son opcionales). El precio queda en 13.00: el pedido de 07-orders lo usa para comprobar el total.
+
+  **Roles permitidos:** admin
+
+  **Auth en este request:** Bearer `{{token}}` (admin)
+
+  **Respuestas posibles:**
+
+  - `200`: `DishOut`
+  - `401`: sin token
+  - `403`: rol distinto de admin (`Not enough permissions`)
+  - `404`: `Dish not found` o `Category not found` (`category_id` inexistente)
+  - `422`: datos no válidos
+}

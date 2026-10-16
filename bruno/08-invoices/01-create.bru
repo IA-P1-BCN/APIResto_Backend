@@ -1,0 +1,75 @@
+meta {
+  name: Facturar pedido servido (waiter)
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/orders/:order_id/invoice
+  body: none
+  auth: bearer
+}
+
+params:path {
+  order_id: {{orderId}}
+}
+
+auth:bearer {
+  token: {{tokenWaiter}}
+}
+
+script:post-response {
+  if (res.status === 201) {
+    bru.setVar("invoiceId", res.body.id);
+  }
+}
+
+tests {
+  test("status 201", function() {
+    expect(res.status).to.equal(201);
+  });
+
+  test("shape: id, number, order_id, base_amount, tax_rate, tax_amount, total, issued_at", function() {
+    expect(res.body).to.have.property("id");
+    expect(res.body).to.have.property("number");
+    expect(res.body).to.have.property("order_id");
+    expect(res.body).to.have.property("base_amount");
+    expect(res.body).to.have.property("tax_rate");
+    expect(res.body).to.have.property("tax_amount");
+    expect(res.body).to.have.property("total");
+    expect(res.body).to.have.property("issued_at");
+  });
+
+  test("número F-AAAA-NNNNN y del pedido", function() {
+    expect(res.body.number).to.match(/^F-\d{4}-\d{5}$/);
+    expect(res.body.order_id).to.equal(bru.getVar("orderId"));
+  });
+
+  test("base + IVA = total del pedido", function() {
+    const base = Number(res.body.base_amount);
+    const tax = Number(res.body.tax_amount);
+    const total = Number(res.body.total);
+    expect(Math.round((base + tax) * 100)).to.equal(Math.round(total * 100));
+    expect(total).to.equal(Number(bru.getVar("orderTotal")));
+    expect(Number(res.body.tax_rate)).to.equal(0.1);
+  });
+}
+
+docs {
+  **`POST /orders/{order_id}/invoice`**
+
+  Genera la factura del pedido. El total del pedido ya incluye el IVA: la API lo desglosa en `base_amount` + `tax_amount`. Guarda `invoiceId`.
+
+  **Roles permitidos:** admin, waiter
+
+  **Auth en este request:** Bearer `{{tokenWaiter}}` (waiter)
+
+  **Respuestas posibles:**
+
+  - `201`: `InvoiceOut`
+  - `401`: sin token (`unauthorized`)
+  - `403`: rol no permitido, solo admin y waiter (`forbidden`)
+  - `404`: `Order not found` (`not_found`)
+  - `409`: `order_not_served` o `invoice_already_exists` (y, en caso de carrera, `invoice_conflict`)
+  - `422`: `order_id` no entero (`validation_error`)
+}

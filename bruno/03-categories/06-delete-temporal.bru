@@ -1,0 +1,43 @@
+meta {
+  name: Borrar categoría temporal
+  type: http
+  seq: 6
+}
+
+delete {
+  url: {{baseUrl}}/categories/:category_id
+  body: none
+  auth: bearer
+}
+
+params:path {
+  category_id: {{tempCategoryId}}
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+tests {
+  test("status 204", function() {
+    expect(res.status).to.equal(204);
+  });
+}
+
+docs {
+  **`DELETE /categories/{category_id}`**
+
+  Borra una categoría sin platos. Si tiene platos devuelve 409 (ver 11-cleanup).
+
+  **Roles permitidos:** admin
+
+  **Auth en este request:** Bearer `{{token}}` (admin)
+
+  **Respuestas posibles:**
+
+  - `204`: sin contenido
+  - `401`: sin token
+  - `403`: rol distinto de admin (`Not enough permissions`)
+  - `404`: `Category not found`
+  - `409`: `Category has dishes and cannot be deleted`
+}

@@ -161,6 +161,32 @@ agente, la revisé y la commiteé primero.
   volvió a pasar todos los tests. También dejé documentado cómo trabajó cada ayudante en `docs/agents/HU-25/`.
   - **Lección:** comprobar el estado de `dev` antes de dar contexto al agente, y escribir la spec primero aunque la historia parezca pequeña.
 
+### HU-27 · Colección Bruno para pruebas de la API
+
+#### 2026-10-15 · Verificación end-to-end de la colección e integración de dev · @levifvy
+
+- **Herramienta y modelo:** Claude Code · Opus 5.5 (`claude-opus-5-5`); Bruno CLI (`npx @usebruno/cli`) para ejecutar la colección
+- **Issue y reglas:** #70 · R-02 (la colección comprueba que `password`/`password_hash` no salen), R-04 (baja lógica con `deactivate`)
+- **Prompt clave:** "Verificar HU-27 end-to-end y arreglar lo que impida el 130/130", con diagnóstico paso a paso (el agente propone un comando, yo lo ejecuto y le pego la salida) y sin tocar `app/`, `tests/` ni `migrations/`
+- **Resultado:** aceptado. La colección pasa 130/130 requests y 332/332 tests en local, antes y después de integrar `dev`. No hizo falta tocar código: el fallo era de entorno. Los commits están en la PR de HU-27 (colección, spec y diagramas); la rama se rebasó después sobre `dev`, así que no se citan hashes.
+- **Errores o alucinaciones:** nada inventado por el agente en esta sesión. El 130/130 en rojo no era de la colección: el contenedor `api` salía con `Exited (1)` porque `alembic upgrade head` fallaba con `DuplicateTable: relation "categories" already exists`. Causa raíz: el volumen de Postgres tenía las tablas creadas por `Base.metadata.create_all` (lo llaman `app/main.py` y `create_admin`) sin `alembic_version`, y el `set -e` de `docker-entrypoint.sh` paraba el arranque. Se corrigió con `docker compose down -v`, levantando la API antes de crear el admin. Además, el README y `collection.bru` decían que la colección cubría "los 43 endpoints", cuando cubría 42 (`/auth/register` ya estaba fuera); con `dev` son 46 y se cubren 42.
+- **Trabajo descartado:** `alembic stamp head` sobre las tablas existentes, porque el esquema de `create_all` podía no coincidir con el de las migraciones y la BD local habría quedado distinta de CI y producción.
+- **Mi prompt o la spec:** la spec no decía en qué orden preparar el entorno local (API migrada antes que `create_admin`); se ha añadido en "Testing Decisions". Tampoco preveía qué hacer con endpoints que llegan de `dev` a mitad de la HU.
+- **Decisiones humanas:** borrar el volumen local en vez de hacer `stamp` (Levi); dejar fuera de la colección `POST /auth/social/{provider}` (HU-38), `DELETE /users/{id}` y `POST /users/{id}/restore` (HU-32), que se añadirán en la PR de su HU, y solo actualizar los textos (Levi); no subir `docs/Briefing del Proyecto.md` (Levi).
+- **Lección:** cuando el runner falla al 100 % en pocos milisegundos, revisar antes `docker compose ps -a` y los logs de `api` que la colección; y volver a ejecutar Bruno cada vez que se integra `dev`.
+
+#### 2026-10-16 · Correcciones tras la revisión de Ana · @levifvy
+
+- **Herramienta y modelo:** Claude Code · Opus 5.5 (`claude-opus-5-5`); Bruno CLI 4.2.1
+- **Issue y reglas:** #70 · R-01, R-02, R-04, R-11, R-14
+- **Prompt clave:** revisar la rama punto por punto contra la revisión de Ana (con archivo y línea, sin tocar nada) y luego aplicar las correcciones en commits atómicos, sin entrar en `app/`, `tests/`, `migrations/` ni CI.
+- **Resultado:** aceptado. Ana acertaba: Production no tenía freno y la contraseña de prueba se deducía del email. Al rebasar salió lo que ella no vio: la colección daba 128/130 porque `09-list-users` esperaba un array y `GET /users/` ya es `Page[UserOut]` (HU-24), y `03-get-bartender` daba 404 porque el pedido solo tenía líneas de cocina (R-14, HU-40). Con eso resuelto y 9 requests nuevos para `/users/me`, cierra en 141/141 requests, 361/361 tests y 44 de 48 endpoints. Production queda de solo lectura, la contraseña es un uuid v4, la spec se llama ya `HU-27-coleccion-bruno.md` y `bruno/` sale de la imagen Docker.
+- **Errores o alucinaciones:** el 130/130 del 15/10 se midió sobre un `dev` sin HU-24, HU-25 ni HU-40; y la documentación daba por inexistentes endpoints que ya estaban mergeados. Al generar los requests de error de `/users/me`, una sustitución de shell rompió un `{{tokenCustomer}}`; el agente lo vio al revisar el diff antes del commit. También quedó anotado que cambiar la contraseña no revoca los tokens ya emitidos: ninguna regla lo exige.
+- **Trabajo descartado:** marcar el 404 del bartender como esperado (no probaba el caso feliz de R-14), `crypto.randomUUID()` porque no existe en el sandbox `safe`, y quitar el `create_all` de `app/` aquí porque se sale de HU-27.
+- **Mi prompt o la spec:** la spec no obligaba a re-ejecutar la colección tras un rebase, y la excepción de alcance del diff no contemplaba `.dockerignore`. Lo añadimos con fecha.
+- **Decisiones humanas (Levi):** Production de solo lectura; contraseña aleatoria; opción A para el bartender (una línea de barra de verdad, no un 404 esperado); sacar `bruno/` y `scripts/generate_agent_diagrams.py` de la imagen; citar la PR en vez de hashes, porque con squash quedarían huérfanos; incluir los dos requests de HU-25 aquí; y abrir issues aparte para el job de Bruno en CI y para el `create_all` de `app/main.py`. La PR se integra con squash.
+- **Lección:** volver a ejecutar la colección después de cada rebase, no solo cuando mergea `dev`. Y sin un job de Bruno en CI, cualquier cambio de contrato la rompe sin que nadie se entere.
+
 ### HU-35 · Comandos y subagentes de OpenCode
 
 #### 2026-10-15 · Comandos /tests, /seguridad y /migracion · @costanna
@@ -299,12 +325,13 @@ agente, la revisé y la commiteé primero.
   - La spec de #124 aún tenía tres `[NEEDS CLARIFICATION]` (si el cliente puede enviar `table_id`, si se rechaza el pasado y la prioridad). `AGENTS.md` pide cerrarlas antes de programar, así que se cerraron primero.
   - La spec no decía cómo sabe el servicio que el usuario es cliente (el agente añadió `is_customer`) ni cuántas mesas candidatas probar (límite de 100).
   - La spec no mencionaba que `reservation_in_past` rompe las fechas de los tests de HU-10.
-  - Riesgo abierto: `reserved_at` se guarda sin zona horaria y se compara con la hora UTC actual. Si el frontend envía la hora local de España, una reserva cercana a "ahora" podría rechazarse por error (hasta 2 h). Sin comprobar: preguntar a Anna qué envía el frontend.
+  - `reserved_at` se guarda sin zona horaria y el agente lo comparó con la hora UTC actual, sin que la spec dijera nada de zonas horarias. Si el frontend enviaba hora local de España, una reserva cercana a "ahora" podía rechazarse por error (hasta 2 h). Anna confirmó el 16/10 que envía hora local sin zona y propuso comparar con la hora del restaurante; se corrigió con `RESTAURANT_TIMEZONE` (por defecto `Europe/Madrid`), `tzdata` en `requirements.txt` y 3 tests con el reloj congelado.
 - **Decisiones humanas:** (Manon)
   - El `customer` puede seguir enviando `table_id`, para no romper el contrato ni los tests de HU-10.
   - Una reserva en el pasado se rechaza solo cuando la mesa se asigna automáticamente (422 `reservation_in_past`); con `table_id` no cambia.
   - Prioridad: Must.
   - Ya estaban acordadas por todo el equipo, Levi incluido, el 15/10: el cliente no elige mesa y el máximo es de 8 personas.
+  - Comparar `reservation_in_past` con la hora del restaurante y no con UTC (Anna, 16/10).
 - **Lección:** pedir al agente que formatee y edite solo los archivos de la HU, nunca carpetas enteras, y que use el `.venv` del proyecto.
 
 ### HU-53 · Bitácora de IA

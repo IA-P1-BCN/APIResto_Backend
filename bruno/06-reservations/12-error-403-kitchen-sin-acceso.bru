@@ -1,0 +1,40 @@
+meta {
+  name: Error 403 · kitchen sin acceso a reservas
+  type: http
+  seq: 12
+}
+
+get {
+  url: {{baseUrl}}/reservations
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenKitchen}}
+}
+
+tests {
+  test("status 403", function() {
+    expect(res.status).to.equal(403);
+  });
+
+  test("error {detail, code} con code forbidden", function() {
+    expect(res.body.detail).to.be.a("string");
+    expect(res.body.code).to.equal("forbidden");
+  });
+}
+
+docs {
+  **`GET /reservations`**
+
+  kitchen y bartender no tienen acceso a reservas.
+
+  **Roles permitidos:** admin, waiter, customer
+
+  **Auth en este request:** Bearer `{{tokenKitchen}}` (kitchen)
+
+  **Respuestas posibles:**
+
+  - `403`: `forbidden` (`Not enough permissions`)
+}

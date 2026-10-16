@@ -1,0 +1,60 @@
+meta {
+  name: Usuario autenticado (admin)
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/auth/me
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+script:post-response {
+  if (res.status === 200) {
+    bru.setVar("adminId", res.body.id);
+  }
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+
+  test("shape: id, name, email, phone, role, is_active, created_at", function() {
+    expect(res.body).to.have.property("id");
+    expect(res.body).to.have.property("name");
+    expect(res.body).to.have.property("email");
+    expect(res.body).to.have.property("phone");
+    expect(res.body).to.have.property("role");
+    expect(res.body).to.have.property("is_active");
+    expect(res.body).to.have.property("created_at");
+  });
+
+  test("no expone password ni password_hash", function() {
+    expect(JSON.stringify(res.body)).to.not.match(/"password(_hash)?"/);
+  });
+
+  test("rol admin", function() {
+    expect(res.body.role).to.equal("admin");
+  });
+}
+
+docs {
+  **`GET /auth/me`**
+
+  Datos del usuario del token. Guarda `adminId`.
+
+  **Roles permitidos:** cualquier usuario autenticado y activo
+
+  **Auth en este request:** Bearer `{{token}}` (admin)
+
+  **Respuestas posibles:**
+
+  - `200`: `UserOut`
+  - `401`: sin token, token inválido/caducado o usuario desactivado
+}

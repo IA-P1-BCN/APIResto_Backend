@@ -10,12 +10,14 @@ Los permisos (quién puede tocar qué reserva) se comprueban en el router.
 """
 
 import logging
-from datetime import UTC, date, datetime, timedelta
+from datetime import date, datetime, timedelta
 from html import escape
+from zoneinfo import ZoneInfo
 
 from sqlalchemy import Select
 from sqlalchemy.orm import Session
 
+from app.config import settings
 from app.core.exceptions import (
     ConflictError,
     NotFoundError,
@@ -126,8 +128,13 @@ def _ensure_customer_party_size(party_size: int) -> None:
         )
 
 
+def _restaurant_now() -> datetime:
+    """Hora actual del restaurante sin zona, como se guarda `reserved_at`."""
+    return datetime.now(ZoneInfo(settings.RESTAURANT_TIMEZONE)).replace(tzinfo=None)
+
+
 def _ensure_not_in_past(reserved_at: datetime) -> None:
-    if reserved_at < datetime.now(UTC).replace(tzinfo=None):
+    if reserved_at < _restaurant_now():
         raise UnprocessableError(
             "No se puede reservar en una fecha pasada", code="reservation_in_past"
         )

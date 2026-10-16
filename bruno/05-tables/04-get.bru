@@ -1,0 +1,54 @@
+meta {
+  name: Ver mesa
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{baseUrl}}/tables/:table_id
+  body: none
+  auth: bearer
+}
+
+params:path {
+  table_id: {{tableId}}
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+
+  test("shape: id, number, capacity, location, status", function() {
+    expect(res.body).to.have.property("id");
+    expect(res.body).to.have.property("number");
+    expect(res.body).to.have.property("capacity");
+    expect(res.body).to.have.property("location");
+    expect(res.body).to.have.property("status");
+  });
+
+  test("es la mesa pedida", function() {
+    expect(res.body.id).to.equal(bru.getVar("tableId"));
+  });
+}
+
+docs {
+  **`GET /tables/{table_id}`**
+
+  Detalle de una mesa.
+
+  **Roles permitidos:** admin, waiter
+
+  **Auth en este request:** Bearer `{{token}}` (admin)
+
+  **Respuestas posibles:**
+
+  - `200`: `DiningTableRead`
+  - `401`: sin token
+  - `403`: rol no permitido (solo admin, waiter)
+  - `404`: `Table <id> not found`
+}

@@ -1,0 +1,20 @@
+docs {
+  # RestoAPI · Colección Bruno (HU-27)
+
+  Cubre 44 de los 48 endpoints HTTP de `app/routers/*.py` con casos felices y de error (401, 403, 404, 409, 422). Los 4 que faltan (HU-22, HU-32 y HU-38) están en la sección 9 de `bruno/README.md`.
+
+  - Selecciona el entorno **Local (flujo completo)** o **Production (solo lectura)** y rellena las variables secretas `adminEmail` y `adminPassword`.
+  - Empieza siempre por `01-auth/01-login-admin`: genera los datos únicos de la ejecución (`runId`).
+  - El flujo completo se ejecuta en orden con el Collection Runner. Usa **Local**: el runner crea datos.
+  - En **Production** el pre-request de la colección bloquea todo lo que no sea `GET` o `POST /auth/login`, para no crear datos ni cuentas en la BD real.
+
+  Guía completa en `bruno/README.md`. Referencia: `docs/api.md` y Swagger en `/docs`.
+}
+
+script:pre-request {
+  // Production es de solo lectura: solo pasan los GET y el login.
+  const isLogin = req.getMethod() === "POST" && req.getUrl().endsWith("/auth/login");
+  if (bru.getEnvName() === "Production" && req.getMethod() !== "GET" && !isLogin) {
+    throw new Error("Production es de solo lectura: usa Local para el flujo completo.");
+  }
+}
