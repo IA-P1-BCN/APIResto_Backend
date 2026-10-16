@@ -281,6 +281,32 @@ agente, la revisé y la commiteé primero.
 - **Decisiones humanas:** nada
 - **Lección:** no añadir estilos al final de un CSS que tocan varias ramas a la vez.
 
+### HU-51 · Reservas hechas por el cliente
+
+#### 2026-10-15 · Asignación automática de mesa y límite de 8 personas (Backend #136) · @ManonChab
+
+- **Herramienta y modelo:** Claude Code · Sonnet 5.5
+- **Issue y reglas:** #106 · nada (la ontología no tiene reglas de reservas)
+- **Prompt clave:** "let's start HU-51. review repos and contexto, we already have defined some specs in Spec de reservas hechas por el cliente- #124"
+- **Resultado:** aceptado. Revisé el código a mano, sobre todo la comprobación de rol (`is_customer`) y la asignación de mesa. 22 tests nuevos (16 de integración y 6 unitarios), escritos primero y en rojo, y después el código. CI en verde en la PR #136 (Postgres). Commits: 6793260 (spec), 34acf7a (tests), 4ba9e46 (código) y 5320795 (docs).
+- **Errores o alucinaciones:**
+  - Ejecutó `ruff format tests` sobre toda la carpeta y reformateó unos 30 archivos ajenos. Causa raíz: formateó un directorio en vez de sus dos archivos. Se revirtió antes de commitear y la PR solo toca archivos de la HU.
+  - Instaló `requirements.txt` en el Python global (3.14) en vez de usar el `.venv` del proyecto. Causa raíz: no comprobó si ya existía un entorno virtual (el proyecto usa Python 3.12).
+  - El primer comando para aplicar los cambios falló por un error de comillas en el shell y no escribió nada; se repitió desde un archivo.
+  - Los tests de HU-10 usan la fecha 10/10/2026, que ya es pasado, y con `reservation_in_past` habrían fallado. Lo vio al diseñar y usó fechas futuras (hoy + 30 días) en los tests nuevos.
+- **Trabajo descartado:** el reformateo de los ~30 archivos de tests ajenos.
+- **Mi prompt o la spec:**
+  - La spec de #124 aún tenía tres `[NEEDS CLARIFICATION]` (si el cliente puede enviar `table_id`, si se rechaza el pasado y la prioridad). `AGENTS.md` pide cerrarlas antes de programar, así que se cerraron primero.
+  - La spec no decía cómo sabe el servicio que el usuario es cliente (el agente añadió `is_customer`) ni cuántas mesas candidatas probar (límite de 100).
+  - La spec no mencionaba que `reservation_in_past` rompe las fechas de los tests de HU-10.
+  - Riesgo abierto: `reserved_at` se guarda sin zona horaria y se compara con la hora UTC actual. Si el frontend envía la hora local de España, una reserva cercana a "ahora" podría rechazarse por error (hasta 2 h). Sin comprobar: preguntar a Anna qué envía el frontend.
+- **Decisiones humanas:** (Manon)
+  - El `customer` puede seguir enviando `table_id`, para no romper el contrato ni los tests de HU-10.
+  - Una reserva en el pasado se rechaza solo cuando la mesa se asigna automáticamente (422 `reservation_in_past`); con `table_id` no cambia.
+  - Prioridad: Must.
+  - Ya estaban acordadas por todo el equipo, Levi incluido, el 15/10: el cliente no elige mesa y el máximo es de 8 personas.
+- **Lección:** pedir al agente que formatee y edite solo los archivos de la HU, nunca carpetas enteras, y que use el `.venv` del proyecto.
+
 ### HU-53 · Bitácora de IA
 
 #### 2026-10-14 · Creación de la bitácora · @arita-pereira
