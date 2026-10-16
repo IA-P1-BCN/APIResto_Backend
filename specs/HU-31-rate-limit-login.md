@@ -7,7 +7,8 @@
 ## Problem Statement
 La issue dice: "Como equipo quiero limitar los intentos de login para frenar ataques de fuerza
 bruta". El título de la tarjeta ("Intentos de logout") es una errata: la historia es la regla
-R-10 (Should). No trae criterios de aceptación. Revisado `dev` (commit `e6164f4`):
+R-10 (Should). No trae criterios de aceptación. Revisado `dev` (commit `e6164f4`; vuelto a revisar con HU-33,
+`8682008`, que no cambia el login):
 
 - `POST /auth/login` (`app/routers/auth.py`) llama a `user_service.authenticate` y, si devuelve
   `None`, responde 401 `unauthorized`. No cuenta intentos: se pueden probar contraseñas sin
@@ -63,7 +64,7 @@ contador. Los números y la cabecera de la IP se leen de variables de entorno.
     Render: `True-Client-IP` (la pone Cloudflare delante de Render). Si la cabecera
     configurada no llega, se usa `request.client.host`. Nunca se lee `X-Forwarded-For`.
 - **Almacén**: `cachetools.TTLCache` en memoria (ya es dependencia, sin paquetes nuevos), con
-  `ttl` = la ventana y un `maxsize` fijo. Guarda el número de fallos y el momento del primero.
+  `ttl` = la ventana y un `maxsize` de 10.000 parejas (si se llena, descarta las más antiguas). Guarda el número de fallos y el momento del primero.
   Un `threading.Lock` protege la caché, porque los endpoints síncronos de FastAPI corren en
   varios hilos. El reloj se inyecta para poder probar la ventana sin esperar.
   Contrapartida aceptada: se pierde al reiniciar el servidor y no se comparte entre
