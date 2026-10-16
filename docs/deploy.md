@@ -61,7 +61,7 @@ En `restochino-dev/backend`, **Settings → Secrets and variables → Actions** 
 | Secret | `RENDER_DEPLOY_HOOK_URL` | URL del deploy hook de Render |
 | Secret | `JWT_SECRET_KEY_TEST` | Cualquier cadena (solo tests) |
 | Variable | `RENDER_URL` | `https://<servicio>.onrender.com` |
-| Variable | `COVERAGE_MIN` | `0` al principio · `70` en el Sprint 2 |
+| Variable | `COVERAGE_MIN` | `98` desde HU-34 (valor por defecto de `ci.yml`; si la variable existe, manda ella) |
 
 | Workflow | Cuándo | Qué hace |
 |---|---|---|
