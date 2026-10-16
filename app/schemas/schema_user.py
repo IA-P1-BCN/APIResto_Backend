@@ -13,6 +13,22 @@ class UserBase(BaseModel):
     phone: str | None = None
 
 class UserCreate(UserBase):
+    """Alta de un usuario por un admin, con cualquier rol (R-03)."""
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "name": "José Ruiz",
+                    "email": "jose@example.com",
+                    "phone": "600654321",
+                    "password": "secreto123",
+                    "role": "waiter",
+                }
+            ]
+        }
+    )
+
     password: str
     role: Role = Role.customer
 
@@ -42,6 +58,17 @@ class UserRegister(UserBase):
     )
 
 class UserUpdate(BaseModel):
+    """Edición por un admin. Solo se aplican los campos enviados."""
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {"role": "kitchen"},
+                {"name": "José Ruiz Martín", "phone": "600111222"},
+            ]
+        }
+    )
+
     name: str | None = None
     email: EmailStr | None = None
     phone: str | None = None

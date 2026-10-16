@@ -1,9 +1,10 @@
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, Query, Response, status
+from fastapi import APIRouter, Depends, Path, Query, Response, status
 from sqlalchemy.orm import Session
 
 from app.core.exceptions import ErrorResponse
+from app.core.openapi import error_responses
 from app.core.pagination import Page, PageParamsDep
 from app.core.permissions import USERS, CurrentUser, require_role
 from app.database import get_db
@@ -31,10 +32,36 @@ SEARCH_MAX_LENGTH = 100
 IncludeDeleted = Annotated[
     bool, Query(description="Incluir también los usuarios borrados (soft delete)")
 ]
+UserId = Annotated[int, Path(description="Id del usuario.", examples=[7])]
+
+NOT_ADMIN = "El usuario autenticado no es `admin` (`forbidden`)."
+NOT_ADMIN_OR_SELF = (
+    "El usuario autenticado no es `admin`, o un admin intenta desactivarse o borrarse a sí "
+    "mismo (`forbidden`)."
+)
+USER_NOT_FOUND = "El usuario no existe o está borrado (`not_found`)."
+EMAIL_TAKEN = "El email ya pertenece a otro usuario (`conflict`, R-01)."
+BAD_USER_ID = "`user_id` no es un número entero (`validation_error`)."
 
 
-@router.post("/", response_model=UserOut, status_code=201, summary="Crear usuario")
+@router.post(
+    "/",
+    response_model=UserOut,
+    status_code=201,
+    summary="Crear usuario",
+    responses=error_responses(
+        401,
+        403,
+        409,
+        422,
+        descriptions={403: NOT_ADMIN, 409: EMAIL_TAKEN},
+    ),
+)
 def create_user(user: UserCreate, db: DbSession, actor: CurrentUser):
+    """Crea un usuario de cualquier rol (R-03), activo al instante.
+
+    El email se guarda en minúsculas y debe ser único (R-01). Rol: admin.
+    """
     return user_service.create_user(db, user, actor)
 
 
@@ -44,7 +71,19 @@ def create_user(user: UserCreate, db: DbSession, actor: CurrentUser):
     summary="Listar, filtrar y buscar usuarios",
     description=(
         "Listado paginado (HU-24). Los filtros se combinan entre sí. "
-        "Orden fijo por `id` ascendente."
+        "Orden fijo por `id` ascendente. Los borrados solo salen con "
+        "`include_deleted=true`. Rol: admin."
+    ),
+    responses=error_responses(
+        401,
+        403,
+        422,
+        descriptions={
+            403: NOT_ADMIN,
+            422: "Parámetros no válidos: `role` desconocido, `q` de más de "
+            f"{SEARCH_MAX_LENGTH} caracteres, `page` menor que 1 o `size` fuera de 1-100 "
+            "(`validation_error`).",
+        },
     ),
 )
 def list_users(
@@ -75,28 +114,110 @@ def list_users(
     )
 
 
-@router.get("/{user_id}", response_model=UserOut, summary="Obtener usuario")
-def get_user(user_id: int, db: DbSession, include_deleted: IncludeDeleted = False):
+@router.get(
+    "/{user_id}",
+    response_model=UserOut,
+    summary="Obtener usuario",
+    responses=error_responses(
+        401,
+        403,
+        404,
+        422,
+        descriptions={
+            403: NOT_ADMIN,
+            404: "El usuario no existe, o está borrado y no se ha pedido "
+            "`include_deleted=true` (`not_found`).",
+            422: BAD_USER_ID,
+        },
+    ),
+)
+def get_user(user_id: UserId, db: DbSession, include_deleted: IncludeDeleted = False):
+    """Devuelve un usuario por su id. Los borrados solo con `include_deleted=true`. Rol: admin."""
     return user_service.get_user(db, user_id, include_deleted=include_deleted)
 
 
-@router.put("/{user_id}", response_model=UserOut, summary="Editar usuario")
-def update_user(user_id: int, data: UserUpdate, db: DbSession, actor: CurrentUser):
+@router.put(
+    "/{user_id}",
+    response_model=UserOut,
+    summary="Editar usuario",
+    responses=error_responses(
+        401,
+        403,
+        404,
+        409,
+        422,
+        descriptions={403: NOT_ADMIN, 404: USER_NOT_FOUND, 409: EMAIL_TAKEN},
+    ),
+)
+def update_user(user_id: UserId, data: UserUpdate, db: DbSession, actor: CurrentUser):
+    """Edita solo los campos enviados, incluidos `role` y `password` (se guarda con bcrypt).
+
+    Rol: admin.
+    """
     return user_service.update_user(db, user_id, data, actor)
 
 
-@router.patch("/{user_id}/deactivate", response_model=UserOut, summary="Desactivar usuario")
-def deactivate(user_id: int, db: DbSession, actor: CurrentUser):
+@router.patch(
+    "/{user_id}/deactivate",
+    response_model=UserOut,
+    summary="Desactivar usuario",
+    responses=error_responses(
+        401,
+        403,
+        404,
+        422,
+        descriptions={403: NOT_ADMIN_OR_SELF, 404: USER_NOT_FOUND, 422: BAD_USER_ID},
+    ),
+)
+def deactivate(user_id: UserId, db: DbSession, actor: CurrentUser):
+    """Pone `is_active=false`: sigue en los listados, pero no puede iniciar sesión (R-04, R-08).
+
+    Rol: admin.
+    """
     return user_service.deactivate_user(db, user_id, actor)
 
 
-@router.delete("/{user_id}", response_model=UserOut, summary="Borrar usuario (soft delete)")
-def delete_user(user_id: int, db: DbSession, actor: CurrentUser):
+@router.delete(
+    "/{user_id}",
+    response_model=UserOut,
+    summary="Borrar usuario (soft delete)",
+    responses=error_responses(
+        401,
+        403,
+        404,
+        422,
+        descriptions={403: NOT_ADMIN_OR_SELF, 404: USER_NOT_FOUND, 422: BAD_USER_ID},
+    ),
+)
+def delete_user(user_id: UserId, db: DbSession, actor: CurrentUser):
+    """Soft delete: marca `deleted_at` e `is_active=false` y lo oculta de los listados (R-11).
+
+    No hay borrado físico (R-04). Se puede deshacer con `POST /users/{user_id}/restore`.
+    Rol: admin.
+    """
     return user_service.delete_user(db, user_id, actor)
 
 
-@router.post("/{user_id}/restore", response_model=UserOut, summary="Restaurar usuario borrado")
-def restore_user(user_id: int, db: DbSession, actor: CurrentUser):
+@router.post(
+    "/{user_id}/restore",
+    response_model=UserOut,
+    summary="Restaurar usuario borrado",
+    responses=error_responses(
+        401,
+        403,
+        404,
+        409,
+        422,
+        descriptions={
+            403: NOT_ADMIN,
+            404: "El usuario no existe (`not_found`).",
+            409: "El usuario no está borrado (`conflict`).",
+            422: BAD_USER_ID,
+        },
+    ),
+)
+def restore_user(user_id: UserId, db: DbSession, actor: CurrentUser):
+    """Quita `deleted_at` y deja el usuario activo de nuevo. Rol: admin."""
     return user_service.restore_user(db, user_id, actor)
 
 
