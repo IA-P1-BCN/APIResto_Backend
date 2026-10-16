@@ -105,7 +105,9 @@ Retry-After: 812
 
 Variables: `LOGIN_MAX_ATTEMPTS` (5), `LOGIN_WINDOW_MINUTES` (15) y `CLIENT_IP_HEADER`
 (cabecera con la IP real; vacía en local, `True-Client-IP` en Render). Los contadores viven
-en memoria: un reinicio del servidor los borra. El login social no tiene límite.
+en memoria: un reinicio del servidor los borra. El login social no tiene límite. El código de
+la verificación en dos pasos tiene su propio límite, por usuario
+([HU-37](#login-con-verificación-en-dos-pasos-post-auth2faverify--hu-37)).
 
 ### Login social (`POST /auth/social/{provider}`) · HU-38
 
@@ -142,6 +144,11 @@ caduca en 5 min y no sirve como access token. El cliente pide el código y lo ca
 
 `code` es el código de 6 dígitos de la app de autenticación (se acepta ±30 s) o un código de
 recuperación (`a1b2c3d4e5-f6a7b8c9d0`, de un solo uso). Respuesta `200`: `{"access_token", "token_type"}`.
+
+Límite de intentos (HU-31, R-10): tras 5 códigos incorrectos (`invalid_totp_code`) de la misma
+cuenta en 15 minutos, responde `429` `too_many_attempts` con `Retry-After`, también con un
+código correcto y desde cualquier IP. Cuenta por usuario, no por IP: para llegar aquí hace
+falta la contraseña. Un código correcto borra los fallos.
 
 | HTTP | `code` | Cuándo |
 |---|---|---|

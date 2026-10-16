@@ -43,7 +43,8 @@ contador. Los números y la cabecera de la IP se leen de variables de entorno.
 ## Implementation Decisions
 - **Modelo**: ninguno. Sin tabla, sin migración de Alembic y sin cambios en la ontología (R-10
   delega N y la ventana en esta spec).
-- **Endpoint**: solo `POST /auth/login`. Misma ruta y mismo 200 y 401. Nuevo 429:
+- **Endpoints**: `POST /auth/login` y, desde la sesión del 16/10, el código 2FA de
+  `POST /auth/2fa/verify` (HU-37). Mismas rutas y mismos 200 y 401. Nuevo 429:
   - cuerpo `{"detail": "Too many failed login attempts. Try again later.", "code":
     "too_many_attempts"}`;
   - cabecera `Retry-After` con los segundos enteros que faltan para que acabe la ventana
@@ -69,20 +70,31 @@ contador. Los números y la cabecera de la IP se leen de variables de entorno.
   varios hilos. El reloj se inyecta para poder probar la ventana sin esperar.
   Contrapartida aceptada: se pierde al reiniciar el servidor y no se comparte entre
   instancias (hay una sola).
-- **Log**: al quinto fallo, un warning `Login blocked` con `client_ip` y el email normalizado.
-  Nunca la contraseña. Los 429 ya los registra `http_error_handler`.
+- **Código 2FA (HU-37)**: en `POST /auth/2fa/verify` cuenta cada `invalid_totp_code` (TOTP
+  o de recuperación) por **usuario**, con los mismos `LOGIN_MAX_ATTEMPTS` y
+  `LOGIN_WINDOW_MINUTES` y el mismo 429. El bloqueo se comprueba después de validar el
+  `mfa_token` y antes del código: durante el bloqueo, el código correcto también recibe 429.
+  Un código correcto borra el contador. Un `invalid_mfa_token` no cuenta (no se sabe de qué
+  usuario es). Contadores separados de los del login.
+- **Log**: al quinto fallo, un warning `Login blocked` con `client_ip` y el email normalizado;
+  en 2FA, `Two-factor blocked` con `user_id`. Nunca la contraseña ni el código. Los 429 ya los
+  registra `http_error_handler`.
 - **Capas**:
   - `routers/auth.py`: obtiene la IP del cliente (con `CLIENT_IP_HEADER`) y pasa IP y email al
     service; documenta el 429.
-  - `services/login_rate_limit_service.py` (nuevo): comprobar el bloqueo, sumar un fallo,
-    borrar el contador y calcular `Retry-After`.
+  - `services/login_rate_limit_service.py` (nuevo): `FixedWindowCounter` (comprobar el
+    bloqueo, sumar un fallo, borrar el contador y calcular `Retry-After`) y los dos límites,
+    `login_rate_limiter` y `two_factor_rate_limiter`.
+  - `services/totp_service.py` (Anna, HU-37): tres llamadas en `verify_challenge`, sin
+    cambiar su firma. `routers/router_2fa.py`: el 429 en Swagger.
   - `core/exceptions.py`: `TooManyRequestsError` (429, `too_many_attempts`) y el 429 en
     `CODES_BY_STATUS`.
   - `core/openapi.py`: el 429 en `DEFAULT_DESCRIPTIONS`.
   - Sin repository: no hay base de datos.
 - **Swagger**: el login declara el 429 con `error_responses` y una descripción que cita
   `too_many_attempts` y `Retry-After`. El `description` del endpoint explica el límite.
-- **Documentación**: `docs/api.md` gana un apartado corto sobre el límite de login.
+- **Documentación**: `docs/api.md` gana un apartado corto sobre el límite de login y una línea
+  en el de la 2FA.
 
 ## Testing Decisions
 - Fixture `autouse` en `tests/conftest.py` que vacía los contadores antes de cada test: todas
@@ -123,9 +135,13 @@ contador. Los números y la cabecera de la IP se leen de variables de entorno.
   `Retry-After`; `tests/test_openapi.py` pasa.
 - [ ] Sin cambios de modelo ni migración; los tests existentes pasan sin modificarse (solo se
   añade el fixture de `conftest.py`).
+- [ ] Tras 5 códigos 2FA incorrectos de la misma cuenta en 15 minutos, `POST /auth/2fa/verify`
+  responde 429 `too_many_attempts` con `Retry-After`, también con un código correcto y desde
+  otra IP; un código correcto antes del bloqueo borra los fallos; Swagger documenta el 429.
 - [ ] `docs/api.md` explica el límite.
 - [ ] Tras el deploy, el log `Login blocked` de producción muestra la IP real del cliente y no
-  la del proxy (se anota en la issue).
+  la del proxy, y un `True-Client-IP` inventado por el cliente no la cambia (se anota en la
+  issue).
 - [ ] Lint limpio, CI en verde con la cobertura mínima, entrada en `docs/ai-log.md` y PR
   `[HU-31] ...` de menos de 400 líneas (si no cabe, se divide en pasos).
 
@@ -138,6 +154,8 @@ contador. Los números y la cabecera de la IP se leen de variables de entorno.
 - Guardar los intentos en la base de datos o compartirlos entre instancias (Redis).
 - Tope adicional por email solo, independiente de la IP.
 - Avisar al usuario por email de un bloqueo.
+- Límite en `/users/me/2fa/enable` y `/users/me/2fa/disable`: piden un token de sesión válido,
+  así que quien prueba códigos ahí ya ha entrado en la cuenta.
 
 ## Preguntas abiertas
 Ninguna.
@@ -174,3 +192,9 @@ Sesión de 16/10/2026 (Rita, con Claude):
   que no se puede saltar. Rechazados: `FORWARDED_ALLOW_IPS="*"` (lo propuso Claude y se
   descartó al leer el código de uvicorn), tope extra por email (más variables y tests) y
   cambiar la clave a solo email.
+- **El código 2FA entra en HU-31** (Rita, 16/10) → HU-37 (Anna, #149) dejó en su Out of Scope
+  "Límite de intentos en `/auth/2fa/verify` (lo cubre la HU de rate limiting, R-10)", y sin
+  límite un código de 6 dígitos se puede probar hasta acertar. Va por usuario y no por IP:
+  para llegar al código hay que saber la contraseña, así que nadie sin ella bloquea a otro y
+  quien la sabe no puede cambiar de IP para seguir probando. Rechazado: dejarlo para otra HU
+  (el hueco seguiría abierto en la entrega del 19/10).
