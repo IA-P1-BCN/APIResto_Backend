@@ -44,6 +44,7 @@ https://restoapi-47sp.onrender.com/docs. El esquema OpenAPI está en `/openapi.j
 | `POST` | `/auth/register` | Auto-registro público de un `customer` | `201` |
 | `POST` | `/auth/login` | Inicia sesión y devuelve un `AccessToken` | `200` |
 | `POST` | `/auth/social/{provider}` | Login con Google o GitHub (`provider` = `google` \| `github`) | `200` |
+| `POST` | `/auth/2fa/verify` | Segundo paso del login con verificación en dos pasos | `200` |
 | `GET` | `/auth/me` | Datos del usuario autenticado | `200` |
 | `POST` | `/auth/set-password` | Crea o restablece la contraseña con el token del email ([HU-52](#crear-la-contraseña-post-authset-password)) | `204` |
 | `POST` | `/auth/verify-email` | Verifica el email con el token del email ([HU-33](#verificación-de-email-y-recuperación-de-contraseña--hu-33)) | `204` |
@@ -103,6 +104,24 @@ Devuelve `{"access_token", "token_type"}`, igual que `/auth/login`.
 | 422 | `redirect_uri_not_allowed` | `redirect_uri` fuera de los orígenes permitidos (un `provider` desconocido → `validation_error`) |
 | 502 | `provider_unavailable` | Google o GitHub no responden |
 | 503 | `provider_not_configured` | Faltan el client id o el secreto del proveedor |
+
+### Login con verificación en dos pasos (`POST /auth/2fa/verify`) · HU-37
+
+Si el usuario tiene la 2FA activada, `POST /auth/login` y `POST /auth/social/{provider}` no
+devuelven el JWT sino `{"mfa_required": true, "mfa_token": "..."}` (`200`). El `mfa_token`
+caduca en 5 min y no sirve como access token. El cliente pide el código y lo canjea:
+
+```json
+{"mfa_token": "eyJhbGciOiJIUzI1NiIs...", "code": "123456"}
+```
+
+`code` es el código de 6 dígitos de la app de autenticación (se acepta ±30 s) o un código de
+recuperación (`a1b2c3d4e5-f6a7b8c9d0`, de un solo uso). Respuesta `200`: `{"access_token", "token_type"}`.
+
+| HTTP | `code` | Cuándo |
+|---|---|---|
+| 401 | `invalid_mfa_token` | `mfa_token` no válido o caducado, o usuario inactivo, borrado o sin 2FA |
+| 401 | `invalid_totp_code` | Código incorrecto o código de recuperación ya usado |
 
 ### Usuario autenticado (`GET /auth/me`)
 
@@ -332,6 +351,10 @@ válido → `401`. Para ver los datos se usa `GET /auth/me`.
 |---|---|---|---|
 | `PATCH` | `/users/me` | Edita el `name`, el `email` y el `phone` propios | `200` |
 | `POST` | `/users/me/password` | Cambia la propia contraseña indicando la actual | `204` |
+| `GET` | `/users/me/2fa` | Estado de la verificación en dos pasos (HU-37) | `200` |
+| `POST` | `/users/me/2fa/setup` | Prepara la 2FA: secreto nuevo y QR | `200` |
+| `POST` | `/users/me/2fa/enable` | Activa la 2FA con un primer código | `200` |
+| `POST` | `/users/me/2fa/disable` | Desactiva la 2FA con un código | `200` |
 
 ### Editar mi perfil (`PATCH /users/me`)
 
@@ -386,6 +409,25 @@ momento `POST /auth/login` funciona con la nueva y deja de funcionar con la ante
 | 409 | `conflict` | `PATCH /users/me`: el email ya pertenece a otro usuario: `"Email already registered"` (R-01) |
 | 422 | `validation_error` | Campos no editables o desconocidos (`role`, `is_active`…), `name` vacío, `null` en `name`/`email`, email con formato incorrecto o `new_password` < 8 caracteres |
 | 422 | `same_password` | `new_password` es igual a la actual: `"New password must be different from the current one"` |
+
+### Verificación en dos pasos (`/users/me/2fa`) · HU-37
+
+1. `POST /users/me/2fa/setup` → `{"secret", "otpauth_uri", "qr_svg"}`. Se escanea el QR (o se
+   teclea `secret`) en una app de autenticación. El secreto se guarda cifrado y aún no está activo.
+2. `POST /users/me/2fa/enable` `{"code": "123456"}` → `{"recovery_codes": [...]}`: 8 códigos de
+   un solo uso que solo se muestran esta vez (se guardan con hash).
+3. `GET /users/me/2fa` → `{"enabled": true, "recovery_codes_left": 8}`.
+4. `POST /users/me/2fa/disable` `{"code": "..."}` (TOTP o código de recuperación) →
+   `{"enabled": false, "recovery_codes_left": 0}`; borra el secreto y los códigos.
+
+Ninguna respuesta de la API devuelve el secreto salvo `setup`, y nunca se escribe en el log.
+
+| HTTP | `code` | Cuándo |
+|---|---|---|
+| 400 | `invalid_totp_code` | `enable` o `disable` con un código incorrecto |
+| 409 | `totp_already_enabled` | `setup` o `enable` con la 2FA ya activada |
+| 409 | `totp_not_set_up` | `enable` sin `setup` previo |
+| 409 | `totp_not_enabled` | `disable` sin la 2FA activada |
 
 ## Invitación y crear la contraseña · HU-52
 

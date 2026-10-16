@@ -64,3 +64,13 @@ def save(db: Session, user: User) -> User:
     db.commit()
     db.refresh(user)
     return user
+
+
+def get_by_id_for_update(db: Session, user_id: int) -> User | None:
+    """Usuario leído de nuevo de la BD y con su fila bloqueada (FOR UPDATE en Postgres) hasta el commit.
+
+    Así dos peticiones con el mismo código de recuperación no pueden gastarlo las dos (HU-37).
+    """
+    return db.execute(
+        select(User).where(User.id == user_id).with_for_update().execution_options(populate_existing=True)
+    ).scalar_one_or_none()

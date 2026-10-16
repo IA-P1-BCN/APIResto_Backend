@@ -38,6 +38,7 @@
 | `email_verified` | bool | (S) por defecto `false` |
 | `deleted_at`, `created_by`, `updated_by` | datetime / FK users, nulos | (S) soft delete + auditoría |
 | `totp_secret`, `totp_enabled` | str cifrado / bool | (C) 2FA |
+| `totp_recovery_codes` | str, nulo | (C) 2FA: SHA-256 de los códigos de recuperación sin usar, separados por comas (HU-37) |
 
 ### Role (M) — enum `Role`, sin tabla
 Valores: `admin`, `waiter`, `kitchen`, `bartender`, `customer`. Se guarda como string en `users.role`.
