@@ -2,7 +2,11 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, computed_field, model_validator
+
+from app.models.model_category import Station
+
+ProgressStage = Literal["waiting", "preparing", "ready_to_serve", "all_served"]
 
 
 class OrderItemCreate(BaseModel):
@@ -28,6 +32,51 @@ class OrderItemOut(BaseModel):
 
     class Config:
         from_attributes = True
+
+    @computed_field
+    @property
+    def ready_to_serve(self) -> int:
+        """Unidades preparadas que aún no se han servido; nunca menos de 0 (R-15)."""
+        return max(self.prepared_quantity - self.served_quantity, 0)
+
+
+def _stage(quantity: int, prepared: int, served: int, ready: int) -> ProgressStage:
+    """Resumen del progreso (R-15): gana la primera condición que se cumple."""
+    if quantity and served >= quantity:
+        return "all_served"
+    if ready > 0:
+        return "ready_to_serve"
+    if prepared == 0 and served == 0:
+        return "waiting"
+    return "preparing"
+
+
+class StationProgress(BaseModel):
+    quantity: int
+    prepared_quantity: int
+    served_quantity: int
+    ready_to_serve: int
+    stage: ProgressStage
+
+    @classmethod
+    def from_items(cls, items: list[OrderItemOut]) -> "StationProgress":
+        """Suma las unidades de las líneas y calcula su `stage`."""
+        quantity = sum(item.quantity for item in items)
+        prepared = sum(item.prepared_quantity for item in items)
+        served = sum(item.served_quantity for item in items)
+        ready = sum(item.ready_to_serve for item in items)
+        return cls(
+            quantity=quantity,
+            prepared_quantity=prepared,
+            served_quantity=served,
+            ready_to_serve=ready,
+            stage=_stage(quantity, prepared, served, ready),
+        )
+
+
+class OrderProgress(StationProgress):
+    by_station: dict[str, StationProgress] = Field(default_factory=dict)
+
 
 class OrderItemUpdate(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -67,3 +116,15 @@ class OrderOut(BaseModel):
 
     class Config:
         from_attributes = True
+
+    @computed_field
+    @property
+    def progress(self) -> OrderProgress:
+        """Progreso de las líneas de la respuesta, total y por estación (R-15)."""
+        by_station = {
+            station.value: StationProgress.from_items(lines)
+            for station in Station
+            if (lines := [item for item in self.items if item.station == station.value])
+        }
+        total = StationProgress.from_items(self.items)
+        return OrderProgress(**total.model_dump(), by_station=by_station)
