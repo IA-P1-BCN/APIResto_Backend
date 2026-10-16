@@ -9,6 +9,8 @@ contrato por módulo. Formatos comunes:
   - Error inesperado (`500`): `{"detail": "Internal server error", "code": "internal_error"}`.
   - Codes genéricos: `not_found` (404), `conflict` (409), `forbidden` (403), `unauthorized`
     (401), `method_not_allowed` (405), `unprocessable` (422 de reglas de negocio).
+  - Los `422` de reglas de negocio (por ejemplo `same_password` o `redirect_uri_not_allowed`)
+    solo traen `detail` y `code`, sin `errors`.
 - **Listados paginados:** `{"items": [], "total": int, "page": int, "size": int}` con
   `?page` (≥ 1, por defecto 1) y `?size` (1..100, por defecto 20)
 - **Autenticación:** cabecera `Authorization: Bearer <token>`. Sin token o con un token
@@ -16,6 +18,24 @@ contrato por módulo. Formatos comunes:
 - **Modelo de datos:** diagrama entidad-relación en [`er.md`](er.md).
 
 <!-- TODO(Rita, R-08): completar el resto de módulos. -->
+
+## Swagger (`/docs`) · HU-26
+
+Swagger está en `/docs`: en local, http://127.0.0.1:8000/docs, y en producción,
+https://restoapi-47sp.onrender.com/docs. El esquema OpenAPI está en `/openapi.json`.
+
+- **Authorize:** pulsa **Authorize**, escribe el email en `username` y la contraseña en
+  `password`, y deja vacíos `client_id` y `client_secret`. Swagger llama a `POST /auth/login`
+  y añade `Authorization: Bearer <token>` a todas las peticiones. El token no se guarda al
+  recargar la página.
+- **Desde otra aplicación:** `POST /auth/login` como formulario
+  (`application/x-www-form-urlencoded`, `username` = email) devuelve
+  `{"access_token": "...", "token_type": "bearer"}`. Envía el `access_token` en la cabecera
+  `Authorization`.
+- **Qué documenta cada endpoint de `/auth` y `/users`:** el rol permitido (línea `Rol: ...`
+  de la descripción), ejemplos de petición y de respuesta, y cada error posible con su
+  `code`. `tests/test_openapi.py` falla si un endpoint nuevo de `/auth` o `/users` llega sin
+  esa documentación.
 
 ## Autenticación (`/auth`) · HU-04, HU-22, HU-38
 
