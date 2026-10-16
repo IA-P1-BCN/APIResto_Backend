@@ -42,6 +42,7 @@ Pasos (por si hay que recrearlo):
    | `DATABASE_URL` | Neon, rama `main` (pooled), empezando por `postgresql+psycopg://` (no `postgresql://`: ver paso 3 de Neon) |
    | `ALLOWED_ORIGINS` | URLs de producción de Vercel, exactas, sin `/` final y separadas por comas sin espacios. Ahora: `https://resto-api-f5.vercel.app,https://apiresto-f5.vercel.app` |
    | `BREVO_API_KEY`, `MAIL_FROM` | Vacías hasta HU-19 (D7) |
+   | `FRONTEND_URL` | URL de producción de Vercel, sin `/` final: `https://apiresto-f5.vercel.app`. Es la base del enlace del email para crear la contraseña (HU-52). `PASSWORD_TOKEN_EXPIRE_HOURS` (48 por defecto) no hace falta tocarla |
    | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET` | Login social (HU-38). Vacías = ese proveedor responde `503`. Se crean en Google Cloud Console y en GitHub (OAuth App) con la callback `<URL de Vercel>/auth/callback`; los secretos solo en Render |
 
    `JWT_SECRET_KEY` la genera Render automáticamente.

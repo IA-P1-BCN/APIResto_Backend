@@ -129,7 +129,7 @@ GET /tables/available?reserved_at=2026-10-10T21:00:00&party_size=4
 }
 ```
 
-## Reservas (`/reservations`) · HU-10, HU-19
+## Reservas (`/reservations`) · HU-10, HU-19, HU-51
 
 Roles: `admin` y `waiter` operan sobre todas las reservas; `customer` solo sobre las suyas
 (`403` si intenta tocar una ajena); `kitchen` no tiene acceso (`403`).
@@ -151,6 +151,17 @@ Roles: `admin` y `waiter` operan sobre todas las reservas; `customer` solo sobre
   Si se solapan → `409` con `code="reservation_conflict"`.
 - **Aforo:** `party_size` no puede superar `dining_tables.capacity` → `422` con
   `code="party_size_exceeds_capacity"`.
+- **Asignación automática (HU-51):** `table_id` es opcional. Sin él, el backend elige la
+  mesa libre más pequeña con sitio para `party_size` en ese hueco (la primera de
+  `GET /tables/available`) y la devuelve en `table_id`. Vale para todos los roles. Si no hay
+  ninguna → `409` con `code="no_table_available"` y el mensaje
+  "No hay mesa libre para N personas el DD/MM/AAAA a las HH:MM". Sin `table_id`, una
+  `reserved_at` en el pasado → `422` con `code="reservation_in_past"`; con `table_id` no se
+  valida, como antes.
+- **Máximo de 8 personas para el cliente (HU-51):** un `customer` que crea o edita una reserva
+  con `party_size` mayor que 8 → `422` con `code="party_size_too_large"` y el mensaje
+  "Para reservas de más de 8 personas, llama al restaurante". `admin` y `waiter` no tienen
+  este límite.
 - **Cancelar libera el hueco:** una reserva cancelada deja de contar para el solapamiento.
 - `reserved_at` se guarda **sin zona horaria**. Si se envía con zona
   (`2026-10-10T22:00:00+02:00`), se convierte a UTC (`2026-10-10T20:00:00`).
@@ -163,6 +174,16 @@ Roles: `admin` y `waiter` operan sobre todas las reservas; `customer` solo sobre
   "table_id": 3,
   "reserved_at": "2026-10-10T21:00:00",
   "duration_min": 90,
+  "party_size": 4,
+  "notes": "Cumpleaños, trona para un bebé"
+}
+```
+
+Un `customer` normalmente no envía `table_id`:
+
+```json
+{
+  "reserved_at": "2026-10-10T21:00:00",
   "party_size": 4,
   "notes": "Cumpleaños, trona para un bebé"
 }
@@ -193,7 +214,7 @@ Respuesta `201` (también la de `GET`, `PATCH` y `/cancel`):
 ### Editar (`PATCH /reservations/{id}`)
 
 Se cambian solo los campos enviados: `table_id`, `reserved_at`, `duration_min`, `party_size`,
-`notes` y `status`. Si cambia la mesa, la hora, la duración o las personas, se revalidan el aforo
+`notes` y `status`. Un `customer` no puede subir `party_size` por encima de 8. No se reasigna la mesa sola. Si cambia la mesa, la hora, la duración o las personas, se revalidan el aforo
 y el solapamiento. `status` solo lo pueden cambiar `admin` y `waiter`, y solo a `confirmed`,
 `completed` o `no_show`. Para cancelar se usa `/cancel`, que es el que envía el email.
 
@@ -330,6 +351,51 @@ momento `POST /auth/login` funciona con la nueva y deja de funcionar con la ante
 | 409 | `conflict` | `PATCH /users/me`: el email ya pertenece a otro usuario: `"Email already registered"` (R-01) |
 | 422 | `validation_error` | Campos no editables o desconocidos (`role`, `is_active`…), `name` vacío, `null` en `name`/`email`, email con formato incorrecto o `new_password` < 8 caracteres |
 | 422 | `same_password` | `new_password` es igual a la actual: `"New password must be different from the current one"` |
+
+## Invitación y crear la contraseña · HU-52
+
+El admin da de alta a un usuario **sin contraseña** y este la crea con el enlace que le
+llega por email. El enlace lleva un `PasswordResetToken` de un solo uso que caduca a las
+`PASSWORD_TOKEN_EXPIRE_HOURS` horas (48 por defecto) (R-09). Solo se guarda el SHA-256 del
+token, y el token nunca aparece en el log.
+
+| Endpoint | Rol | Respuesta |
+|---|---|---|
+| `POST /users/invite` | `admin` | `201` con `UserOut`. Envía el email en segundo plano |
+| `POST /auth/set-password` | Público | `204` sin cuerpo |
+
+### Invitar (`POST /users/invite`)
+
+```json
+{"name": "Lucía Gómez", "email": "lucia@example.com", "phone": "600123456", "role": "customer"}
+```
+
+`phone` es opcional y `role` vale `customer` por defecto. El usuario se crea con
+`password_hash` nulo, así que no puede iniciar sesión hasta crear su contraseña. El email
+("Crea tu contraseña de APIResto") lleva el enlace
+`{FRONTEND_URL}/crear-contrasena?token=…`; con `EMAIL_ENABLED=false` solo se registra en
+el log, sin el enlace.
+
+### Crear la contraseña (`POST /auth/set-password`)
+
+```json
+{"token": "token-del-enlace-del-email", "new_password": "MiClave2026"}
+```
+
+Guarda la contraseña (bcrypt, mínimo 8 caracteres, R-02) y marca como usados todos los
+tokens pendientes del usuario. Después se entra con `POST /auth/login`.
+
+### Códigos de error
+
+| HTTP | `code` | Cuándo |
+|---|---|---|
+| 400 | `invalid_token` | Token desconocido, o usuario desactivado o borrado: `"Invalid token"` |
+| 401 | `unauthorized` | `POST /users/invite` sin token o con token no válido |
+| 403 | `forbidden` | `POST /users/invite` con un rol que no es `admin` |
+| 409 | `conflict` | `POST /users/invite`: el email ya está registrado (R-01) |
+| 410 | `token_used` | El token ya se usó: `"Token already used"` |
+| 410 | `token_expired` | El token ha caducado: `"Token expired"` |
+| 422 | `validation_error` | Email con formato incorrecto, campos desconocidos o `new_password` < 8 caracteres |
 
 ## Pedidos (`/orders`) · HU-07, HU-05
 

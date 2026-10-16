@@ -104,6 +104,63 @@ Copia este bloque en la sección de tu HU:
 - **Decisiones humanas:** big-pickle por defecto para todo el equipo aunque yo uso mi propio proveedor (lo cambio con `/models`); documentar OpenCode en el README (Anna).
 - **Lección:** para consultas que no deben tocar ficheros, usar `--agent plan`, y adjuntar con `-f` todo lo que la pregunta necesita (por ejemplo, el modelo además de la migración).
 
+### HU-24 · Filtros admin de usuarios
+
+#### 2026-10-15 · Spec, filtros, búsqueda y paginación de GET /users · @arita-pereira
+
+- **Herramienta y modelo:** Claude (claude.ai, no Claude Code) · Opus 5.5
+- **Issue y reglas:** #67 · R-11 (`include_deleted` de HU-32)
+- **Prompt clave:** "empezamos el HU-24", con el estado del proyecto adjunto; la issue solo tenía la historia, sin criterios de aceptación
+- **Resultado:** aceptado. Spec en `specs/HU-24-filtros-admin.md` y `GET /users/` con `Page[UserOut]`, `role`, `is_active` y `q`. 589 tests en verde con SQLite y Postgres 16.
+- **Errores o alucinaciones:** en la cabecera de la spec puso "Aprueba: Levi (PO)", copiado de `specs/HU-TEMPLATE.md`. Causa raíz: la plantilla y la DoD de `AGENTS.md` aún dicen que aprueba Levi, pero el equipo ya no depende de él. Corregido a "Revisa y aprueba: Manon". Además, no preparó los comentarios de cada paso para el issue hasta que lo eché en falta.
+- **Trabajo descartado:** nada
+- **Mi prompt o la spec:** la issue no tenía criterios de aceptación; los fijó la spec con cuatro preguntas (formato, filtros, búsqueda y orden).
+- **Decisiones humanas:** `Page[UserOut]` aunque sea breaking-api, filtros `role` + `is_active`, un solo `q` en nombre o email, orden fijo por `id` (Rita).
+- **Lección:** leer `AGENTS.md` y `dev` antes de empezar funcionó otra vez: detectó que la PR #110 había vuelto a exigir spec por HU, y que HU-32 ya fijaba `include_deleted`.
+
+#### 2026-10-15 · Revisión de Manon: acentos, longitud de q y skip/limit · @arita-pereira
+
+- **Herramienta y modelo:** Claude (claude.ai, no Claude Code) · Opus 5.5
+- **Issue y reglas:** #67 (PR #126 ya integrada) · nada
+- **Prompt clave:** los tres comentarios de Manon en la PR #126
+- **Resultado:** aceptado. Búsqueda sin acentos con `translate()` (`app/core/text_search.py`), `q` con máximo 100 caracteres y casillas de la spec marcadas.
+- **Errores o alucinaciones:** en la PR #126 el agente afirmó que los tests pasaban "con SQLite y con Postgres 16", y era falso: `tests/conftest.py` usa siempre SQLite en memoria, aunque se le pase la URL de Postgres. Causa raíz: dio por bueno que cambiar `DATABASE_URL` cambiaba la base de datos de los tests, sin leer el `conftest.py`. Por eso no vio que el `lower()` no quita los acentos. Corregido probando la consulta directamente contra Postgres. Además, el primer intento (48 `replace()` anidados) desbordó la pila de SQLite.
+- **Trabajo descartado:** los `replace()` anidados; la extensión `unaccent` (migración y no existe en SQLite).
+- **Mi prompt o la spec:** la spec no decía nada de acentos, aunque el equipo trabaja con nombres en español y portugués.
+- **Decisiones humanas:** `translate()` sin migración; `skip`/`limit` sin 422, solo la etiqueta `breaking-api` (Rita).
+- **Lección:** antes de decir "probado en X", comprobar qué base de datos usan los tests de verdad.
+
+### HU-25 · Cambio de contraseña y edición del propio perfil                                                                                                                     
+                                                                                                                                                                                   
+#### 2026-10-15 · Perfil propio y cambio de contraseña con un equipo de agentes · @levifvy                                                                                       
+                                                                                                                                                                                   
+- **Herramienta y modelo:** Claude Code · Opus 5.5. Usé un agente líder que coordinaba a cinco ayudantes, cada uno con una parte del trabajo: los datos de entrada, las reglas,  
+los endpoints, los tests y la documentación.                                                                                                                                     
+- **Issue y reglas:** #68 · R-01, R-02, R-03, R-04, R-11                                                                                                                         
+- **Prompt clave:** le pedí que hiciera de líder del equipo para la HU-25 y que, antes de empezar, me confirmara qué campos del perfil se podían editar, cómo funcionaría el     
+cambio de contraseña y dónde irían los endpoints. Cada ayudante debía tocar solo sus archivos y esperar a que terminara el anterior.                                             
+- **Resultado:** aceptado. Ahora cualquier usuario puede editar su nombre, email y teléfono, y cambiar su contraseña indicando la actual. No hizo falta tocar la base de datos.  
+Al final todo pasaba los tests (620) y el lint estaba limpio. Commits principales: 95fc335 (spec), 97222c7 (código), be56010 (tests), f601792 (docs) y f01523b (merge con `dev`).
+- **Errores o alucinaciones:** el código salió bien a la primera. Lo que falló fue mi prompt, que no coincidía con el estado real del repo, y el agente me lo señaló al leerlo:  
+daba por borrada una carpeta antigua que aún tenía restos, mencionaba una spec y una colección Bruno que todavía no estaban en `dev`, y no tenía en cuenta que la sección        
+`/users` era solo para admins. Si se hubiera hecho tal cual, un cliente no habría podido editar su perfil; se resolvió con un router aparte. Además, el primer intento de commit 
+falló por un error de sintaxis en el comando, sin llegar a guardar nada, y se repitió bien.                                                                                      
+- **Trabajo descartado:** la colección Bruno, porque aún no se había subido al repositorio. Tampoco hizo falta migración.                                                        
+- **Mi prompt o la spec:** di por hecho cómo estaba `dev` sin comprobarlo (aún no se habían aceptado algunas pull requests) y no pensé en dos casos: usuarios que entran solo con
+Google o GitHub y no tienen contraseña, y alguien que "cambia" la contraseña por la misma. También olvidé que `AGENTS.md` pide escribir la spec antes del código; la redactó el  
+agente, la revisé y la commiteé primero.                                                                                                                                         
+- **Decisiones humanas:** las tomé yo y están en `specs/HU-25-cambio-password-perfil.md`:                                                                                        
+  - si la contraseña actual es incorrecta se devuelve 403 y no 401, para que no parezca que la sesión ha caducado;                                                               
+  - si alguien intenta cambiarse el rol o la activación desde su perfil, se rechaza con un error en vez de ignorarlo en silencio;
+  - una cuenta sin contraseña no puede usar este cambio (lo cubrirá la HU de recuperación);
+  - no se acepta como nueva la misma contraseña;
+  - los endpoints van en `/users/me`;
+  - equipo de cinco ayudantes, aunque el agente proponía tres;
+  - revisores de la spec: Ana, Carla, Manon y Rita.
+  - **Después del trabajo:** mientras trabajábamos se aceptó en `dev` la HU-24, que tocaba los mismos archivos. El agente unió los cambios de las dos historias sin perder nada y
+  volvió a pasar todos los tests. También dejé documentado cómo trabajó cada ayudante en `docs/agents/HU-25/`.
+  - **Lección:** comprobar el estado de `dev` antes de dar contexto al agente, y escribir la spec primero aunque la historia parezca pequeña.
+
 ### HU-35 · Comandos y subagentes de OpenCode
 
 #### 2026-10-15 · Comandos /tests, /seguridad y /migracion · @costanna
@@ -117,6 +174,56 @@ Copia este bloque en la sección de tu HU:
 - **Mi prompt o la spec:** en `/migracion` faltaba decir que sin argumentos no se ejecuta ningún comando y que los nombres se copian de la lista; se añadió.
 - **Decisiones humanas:** el subagente de seguridad solo puede leer y usar `git diff`, `git log` y `git show`; los hallazgos de la #116 se pasan a Manon en lugar de arreglarlos, porque es su código (Anna).
 - **Lección:** en un comando, decir cuándo parar y qué variables y ficheros existen; y en scripts, lanzar `opencode run` con `< /dev/null`.
+
+### HU-40 · Estación de barra en los pedidos
+
+#### 2026-10-15 · HU-40_Estación de barra en los pedidos  · @ManonChab
+
+- **Herramienta y modelo:** Claude Code with Sonnet 5.5
+- **Issue y reglas:** #83
+- **Prompt clave:**  "Read the necessary doc, the repo back and front, the kanban and let's start the new       H-40U,starting by spec definition"
+- **Resultado:** aceptado 
+- **Errores o alucinaciones:**
+  - The one-line issue: I found the real gap by reading the code, and invented nothing.
+  - The empty WebSocket assertion I wrote and then replaced.
+  - The lazy="joined" draft I changed.
+  - The two old tests that R-14 broke. I changed their data and didn't weaken them.
+- **Trabajo descartado:** //
+- **Mi prompt o la spec:**
+    · ¿Qué entrega el backend en HU-40? Hoy el filtro por estación solo existe en el frontend (StationBoard); el  backend manda todo a cocina y a barra. → Filtrar en el backend (Recomendado)
+    · El `status` del pedido es único (pending → in_kitchen → served) y hoy lo mueve cualquiera de cocina/barra. Con dos estaciones, ¿qué hacemos en esta HU? → Dejarlo como está (Recomendado)
+    · En el pedido filtrado que ve `kitchen`/`bartender`, ¿qué se devuelve en `total`? → El del pedido completo (Recomendado)
+    · Si el admin cambia la `station` de una categoría con pedidos abiertos, ¿qué pasa con las líneas ya creadas? → Se derivan en vivo (Recomendado)
+    · Producción (Neon): las categorías existentes quedaron `kitchen` por defecto. ¿Cómo pasan Bebidas y Postres a `bar`? → Migración de datos
+    · El enrutado por estación no está en la ontología (solo se cita como referencia externa). ¿Añadimos una regla R-14 a specs/ontology.md en el mismo PR? → Sí, R-14 (Recomendado)
+- **Decisiones humanas:**
+
+```text
+   Tema     │                            Decisión                            │
+├──────────────┼────────────────────────────────────────────────────────────────┤
+│              │ El backend filtra según el rol: kitchen ve y marca solo líneas │
+│ Alcance      │  kitchen, bartender solo bar, y admin/waiter ven todo. Esto    │
+│              │ vale para GET /orders, GET /orders/{id}, PATCH .../items/{id}  │
+│              │ y el WebSocket.                                                │
+├──────────────┼────────────────────────────────────────────────────────────────┤
+│ Contrato     │ Cada línea del pedido expone station. No hay parámetro         │
+│              │ ?station=. total sigue siendo el del pedido completo.          │
+├──────────────┼────────────────────────────────────────────────────────────────┤
+│ Estado del   │ Sin cambios. El estado por producto o estación es HU-45 de     │
+│ pedido       │ Rita, que toca el mismo router, así que hay que avisarla.      │
+├──────────────┼────────────────────────────────────────────────────────────────┤
+│ Estación de  │ Se deriva en vivo de la categoría actual del plato. No hay     │
+│ una línea    │ columna nueva.                                                 │
+├──────────────┼────────────────────────────────────────────────────────────────┤
+│ Datos de     │ Migración 0007 que marca Bebidas y Postres como bar. Elegí     │
+│ producción   │ esto frente a la opción recomendada, que era que el admin las  │
+│              │ marcara.                                                       │
+├──────────────┼────────────────────────────────────────────────────────────────┤
+│ Ontología    │ Se añade la regla R-14 a specs/ontology.md en el mismo PR.     │
+│              │ Necesita el visto bueno de Levi.
+```
+
+- **Lección:** //
 
 ### HU-41 · Pantalla de barra en tiempo real
 
@@ -174,111 +281,31 @@ Copia este bloque en la sección de tu HU:
 - **Decisiones humanas:** nada
 - **Lección:** no añadir estilos al final de un CSS que tocan varias ramas a la vez.
 
-### HU-40 · Estación de barra en los pedidos
+### HU-51 · Reservas hechas por el cliente
 
-#### 2026-10-15 · HU-40_Estación de barra en los pedidos  · @ManonChab
+#### 2026-10-15 · Asignación automática de mesa y límite de 8 personas (Backend #136) · @ManonChab
 
-- **Herramienta y modelo:** Claude Code with Sonnet 5.5
-- **Issue y reglas:** #83
-- **Prompt clave:**  "Read the necessary doc, the repo back and front, the kanban and let's start the new       H-40U,starting by spec definition"
-- **Resultado:** aceptado 
+- **Herramienta y modelo:** Claude Code · Sonnet 5.5
+- **Issue y reglas:** #106 · nada (la ontología no tiene reglas de reservas)
+- **Prompt clave:** "let's start HU-51. review repos and contexto, we already have defined some specs in Spec de reservas hechas por el cliente- #124"
+- **Resultado:** aceptado. Revisé el código a mano, sobre todo la comprobación de rol (`is_customer`) y la asignación de mesa. 22 tests nuevos (16 de integración y 6 unitarios), escritos primero y en rojo, y después el código. CI en verde en la PR #136 (Postgres). Commits: 6793260 (spec), 34acf7a (tests), 4ba9e46 (código) y 5320795 (docs).
 - **Errores o alucinaciones:**
-  - The one-line issue: I found the real gap by reading the code, and invented nothing.
-  - The empty WebSocket assertion I wrote and then replaced.
-  - The lazy="joined" draft I changed.
-  - The two old tests that R-14 broke. I changed their data and didn't weaken them.
-- **Trabajo descartado:** //
+  - Ejecutó `ruff format tests` sobre toda la carpeta y reformateó unos 30 archivos ajenos. Causa raíz: formateó un directorio en vez de sus dos archivos. Se revirtió antes de commitear y la PR solo toca archivos de la HU.
+  - Instaló `requirements.txt` en el Python global (3.14) en vez de usar el `.venv` del proyecto. Causa raíz: no comprobó si ya existía un entorno virtual (el proyecto usa Python 3.12).
+  - El primer comando para aplicar los cambios falló por un error de comillas en el shell y no escribió nada; se repitió desde un archivo.
+  - Los tests de HU-10 usan la fecha 10/10/2026, que ya es pasado, y con `reservation_in_past` habrían fallado. Lo vio al diseñar y usó fechas futuras (hoy + 30 días) en los tests nuevos.
+- **Trabajo descartado:** el reformateo de los ~30 archivos de tests ajenos.
 - **Mi prompt o la spec:**
-    · ¿Qué entrega el backend en HU-40? Hoy el filtro por estación solo existe en el frontend (StationBoard); el  backend manda todo a cocina y a barra. → Filtrar en el backend (Recomendado)
-    · El `status` del pedido es único (pending → in_kitchen → served) y hoy lo mueve cualquiera de cocina/barra. Con dos estaciones, ¿qué hacemos en esta HU? → Dejarlo como está (Recomendado)
-    · En el pedido filtrado que ve `kitchen`/`bartender`, ¿qué se devuelve en `total`? → El del pedido completo (Recomendado)
-    · Si el admin cambia la `station` de una categoría con pedidos abiertos, ¿qué pasa con las líneas ya creadas? → Se derivan en vivo (Recomendado)
-    · Producción (Neon): las categorías existentes quedaron `kitchen` por defecto. ¿Cómo pasan Bebidas y Postres a `bar`? → Migración de datos
-    · El enrutado por estación no está en la ontología (solo se cita como referencia externa). ¿Añadimos una regla R-14 a specs/ontology.md en el mismo PR? → Sí, R-14 (Recomendado)
-- **Decisiones humanas:**
-
-```text
-   Tema     │                            Decisión                            │
-├──────────────┼────────────────────────────────────────────────────────────────┤
-│              │ El backend filtra según el rol: kitchen ve y marca solo líneas │
-│ Alcance      │  kitchen, bartender solo bar, y admin/waiter ven todo. Esto    │
-│              │ vale para GET /orders, GET /orders/{id}, PATCH .../items/{id}  │
-│              │ y el WebSocket.                                                │
-├──────────────┼────────────────────────────────────────────────────────────────┤
-│ Contrato     │ Cada línea del pedido expone station. No hay parámetro         │
-│              │ ?station=. total sigue siendo el del pedido completo.          │
-├──────────────┼────────────────────────────────────────────────────────────────┤
-│ Estado del   │ Sin cambios. El estado por producto o estación es HU-45 de     │
-│ pedido       │ Rita, que toca el mismo router, así que hay que avisarla.      │
-├──────────────┼────────────────────────────────────────────────────────────────┤
-│ Estación de  │ Se deriva en vivo de la categoría actual del plato. No hay     │
-│ una línea    │ columna nueva.                                                 │
-├──────────────┼────────────────────────────────────────────────────────────────┤
-│ Datos de     │ Migración 0007 que marca Bebidas y Postres como bar. Elegí     │
-│ producción   │ esto frente a la opción recomendada, que era que el admin las  │
-│              │ marcara.                                                       │
-├──────────────┼────────────────────────────────────────────────────────────────┤
-│ Ontología    │ Se añade la regla R-14 a specs/ontology.md en el mismo PR.     │
-│              │ Necesita el visto bueno de Levi.
-```
-
-- **Lección:** //
-### HU-24 · Filtros admin de usuarios
-
-#### 2026-10-15 · Spec, filtros, búsqueda y paginación de GET /users · @arita-pereira
-
-- **Herramienta y modelo:** Claude (claude.ai, no Claude Code) · Opus 5.5
-- **Issue y reglas:** #67 · R-11 (`include_deleted` de HU-32)
-- **Prompt clave:** "empezamos el HU-24", con el estado del proyecto adjunto; la issue solo tenía la historia, sin criterios de aceptación
-- **Resultado:** aceptado. Spec en `specs/HU-24-filtros-admin.md` y `GET /users/` con `Page[UserOut]`, `role`, `is_active` y `q`. 589 tests en verde con SQLite y Postgres 16.
-- **Errores o alucinaciones:** en la cabecera de la spec puso "Aprueba: Levi (PO)", copiado de `specs/HU-TEMPLATE.md`. Causa raíz: la plantilla y la DoD de `AGENTS.md` aún dicen que aprueba Levi, pero el equipo ya no depende de él. Corregido a "Revisa y aprueba: Manon". Además, no preparó los comentarios de cada paso para el issue hasta que lo eché en falta.
-- **Trabajo descartado:** nada
-- **Mi prompt o la spec:** la issue no tenía criterios de aceptación; los fijó la spec con cuatro preguntas (formato, filtros, búsqueda y orden).
-- **Decisiones humanas:** `Page[UserOut]` aunque sea breaking-api, filtros `role` + `is_active`, un solo `q` en nombre o email, orden fijo por `id` (Rita).
-- **Lección:** leer `AGENTS.md` y `dev` antes de empezar funcionó otra vez: detectó que la PR #110 había vuelto a exigir spec por HU, y que HU-32 ya fijaba `include_deleted`.
-
-#### 2026-10-15 · Revisión de Manon: acentos, longitud de q y skip/limit · @arita-pereira
-
-- **Herramienta y modelo:** Claude (claude.ai, no Claude Code) · Opus 5.5
-- **Issue y reglas:** #67 (PR #126 ya integrada) · nada
-- **Prompt clave:** los tres comentarios de Manon en la PR #126
-- **Resultado:** aceptado. Búsqueda sin acentos con `translate()` (`app/core/text_search.py`), `q` con máximo 100 caracteres y casillas de la spec marcadas.
-- **Errores o alucinaciones:** en la PR #126 el agente afirmó que los tests pasaban "con SQLite y con Postgres 16", y era falso: `tests/conftest.py` usa siempre SQLite en memoria, aunque se le pase la URL de Postgres. Causa raíz: dio por bueno que cambiar `DATABASE_URL` cambiaba la base de datos de los tests, sin leer el `conftest.py`. Por eso no vio que el `lower()` no quita los acentos. Corregido probando la consulta directamente contra Postgres. Además, el primer intento (48 `replace()` anidados) desbordó la pila de SQLite.
-- **Trabajo descartado:** los `replace()` anidados; la extensión `unaccent` (migración y no existe en SQLite).
-- **Mi prompt o la spec:** la spec no decía nada de acentos, aunque el equipo trabaja con nombres en español y portugués.
-- **Decisiones humanas:** `translate()` sin migración; `skip`/`limit` sin 422, solo la etiqueta `breaking-api` (Rita).
-- **Lección:** antes de decir "probado en X", comprobar qué base de datos usan los tests de verdad.
-
-### HU-25 · Cambio de contraseña y edición del propio perfil                                                                                                                     
-                                                                                                                                                                                   
-#### 2026-10-15 · Perfil propio y cambio de contraseña con un equipo de agentes · @levifvy                                                                                       
-                                                                                                                                                                                   
-- **Herramienta y modelo:** Claude Code · Opus 5.5. Usé un agente líder que coordinaba a cinco ayudantes, cada uno con una parte del trabajo: los datos de entrada, las reglas,  
-los endpoints, los tests y la documentación.                                                                                                                                     
-- **Issue y reglas:** #68 · R-01, R-02, R-03, R-04, R-11                                                                                                                         
-- **Prompt clave:** le pedí que hiciera de líder del equipo para la HU-25 y que, antes de empezar, me confirmara qué campos del perfil se podían editar, cómo funcionaría el     
-cambio de contraseña y dónde irían los endpoints. Cada ayudante debía tocar solo sus archivos y esperar a que terminara el anterior.                                             
-- **Resultado:** aceptado. Ahora cualquier usuario puede editar su nombre, email y teléfono, y cambiar su contraseña indicando la actual. No hizo falta tocar la base de datos.  
-Al final todo pasaba los tests (620) y el lint estaba limpio. Commits principales: 95fc335 (spec), 97222c7 (código), be56010 (tests), f601792 (docs) y f01523b (merge con `dev`).
-- **Errores o alucinaciones:** el código salió bien a la primera. Lo que falló fue mi prompt, que no coincidía con el estado real del repo, y el agente me lo señaló al leerlo:  
-daba por borrada una carpeta antigua que aún tenía restos, mencionaba una spec y una colección Bruno que todavía no estaban en `dev`, y no tenía en cuenta que la sección        
-`/users` era solo para admins. Si se hubiera hecho tal cual, un cliente no habría podido editar su perfil; se resolvió con un router aparte. Además, el primer intento de commit 
-falló por un error de sintaxis en el comando, sin llegar a guardar nada, y se repitió bien.                                                                                      
-- **Trabajo descartado:** la colección Bruno, porque aún no se había subido al repositorio. Tampoco hizo falta migración.                                                        
-- **Mi prompt o la spec:** di por hecho cómo estaba `dev` sin comprobarlo (aún no se habían aceptado algunas pull requests) y no pensé en dos casos: usuarios que entran solo con
-Google o GitHub y no tienen contraseña, y alguien que "cambia" la contraseña por la misma. También olvidé que `AGENTS.md` pide escribir la spec antes del código; la redactó el  
-agente, la revisé y la commiteé primero.                                                                                                                                         
-- **Decisiones humanas:** las tomé yo y están en `specs/HU-25-cambio-password-perfil.md`:                                                                                        
-  - si la contraseña actual es incorrecta se devuelve 403 y no 401, para que no parezca que la sesión ha caducado;                                                               
-  - si alguien intenta cambiarse el rol o la activación desde su perfil, se rechaza con un error en vez de ignorarlo en silencio;
-  - una cuenta sin contraseña no puede usar este cambio (lo cubrirá la HU de recuperación);
-  - no se acepta como nueva la misma contraseña;
-  - los endpoints van en `/users/me`;
-  - equipo de cinco ayudantes, aunque el agente proponía tres;
-  - revisores de la spec: Ana, Carla, Manon y Rita.
-  - **Después del trabajo:** mientras trabajábamos se aceptó en `dev` la HU-24, que tocaba los mismos archivos. El agente unió los cambios de las dos historias sin perder nada y
-  volvió a pasar todos los tests. También dejé documentado cómo trabajó cada ayudante en `docs/agents/HU-25/`.
-  - **Lección:** comprobar el estado de `dev` antes de dar contexto al agente, y escribir la spec primero aunque la historia parezca pequeña.
+  - La spec de #124 aún tenía tres `[NEEDS CLARIFICATION]` (si el cliente puede enviar `table_id`, si se rechaza el pasado y la prioridad). `AGENTS.md` pide cerrarlas antes de programar, así que se cerraron primero.
+  - La spec no decía cómo sabe el servicio que el usuario es cliente (el agente añadió `is_customer`) ni cuántas mesas candidatas probar (límite de 100).
+  - La spec no mencionaba que `reservation_in_past` rompe las fechas de los tests de HU-10.
+  - Riesgo abierto: `reserved_at` se guarda sin zona horaria y se compara con la hora UTC actual. Si el frontend envía la hora local de España, una reserva cercana a "ahora" podría rechazarse por error (hasta 2 h). Sin comprobar: preguntar a Anna qué envía el frontend.
+- **Decisiones humanas:** (Manon)
+  - El `customer` puede seguir enviando `table_id`, para no romper el contrato ni los tests de HU-10.
+  - Una reserva en el pasado se rechaza solo cuando la mesa se asigna automáticamente (422 `reservation_in_past`); con `table_id` no cambia.
+  - Prioridad: Must.
+  - Ya estaban acordadas por todo el equipo, Levi incluido, el 15/10: el cliente no elige mesa y el máximo es de 8 personas.
+- **Lección:** pedir al agente que formatee y edite solo los archivos de la HU, nunca carpetas enteras, y que use el `.venv` del proyecto.
 
 ### HU-53 · Bitácora de IA
 

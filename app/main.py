@@ -17,6 +17,7 @@ from app.models import (  # noqa: F401
     model_invoice,
     model_order,
     model_order_item,
+    model_password_reset_token,
     model_social_account,
     model_user,
     reservation,
@@ -29,6 +30,7 @@ from app.routers import (
     router_export,
     router_invoice,
     router_order,
+    router_password,
     router_stats,
     router_user,
     tables,
@@ -68,6 +70,8 @@ app.add_middleware(
 register_exception_handlers(app)
 
 app.include_router(auth.router)
+app.include_router(router_password.router)
+app.include_router(router_password.invite_router)
 app.include_router(router_user.me_router)
 app.include_router(router_user.router)
 app.include_router(router_category.router)
