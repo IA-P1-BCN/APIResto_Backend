@@ -13,11 +13,40 @@ class UserBase(BaseModel):
     phone: str | None = None
 
 class UserCreate(UserBase):
+    """Alta de un usuario por un admin, con cualquier rol (R-03)."""
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "name": "José Ruiz",
+                    "email": "jose@example.com",
+                    "phone": "600654321",
+                    "password": "secreto123",
+                    "role": "waiter",
+                }
+            ]
+        }
+    )
+
     password: str
     role: Role = Role.customer
 
 class UserRegister(UserBase):
     """Datos del auto-registro (R-03). El `role` del payload se ignora."""
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "name": "Ana Gómez",
+                    "email": "ana@example.com",
+                    "phone": "600123456",
+                    "password": "secreto123",
+                }
+            ]
+        }
+    )
 
     password: str = Field(
         min_length=MIN_PASSWORD_LENGTH,
@@ -29,6 +58,17 @@ class UserRegister(UserBase):
     )
 
 class UserUpdate(BaseModel):
+    """Edición por un admin. Solo se aplican los campos enviados."""
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {"role": "kitchen"},
+                {"name": "José Ruiz Martín", "phone": "600111222"},
+            ]
+        }
+    )
+
     name: str | None = None
     email: EmailStr | None = None
     phone: str | None = None
@@ -86,7 +126,26 @@ class PasswordChange(BaseModel):
     )
 
 class UserOut(UserBase):
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(
+        from_attributes=True,
+        json_schema_extra={
+            "examples": [
+                {
+                    "id": 7,
+                    "name": "Ana Gómez",
+                    "email": "ana@example.com",
+                    "phone": "600123456",
+                    "role": "customer",
+                    "is_active": True,
+                    "created_at": "2026-10-14T10:15:00",
+                    "updated_at": None,
+                    "deleted_at": None,
+                    "created_by": None,
+                    "updated_by": None,
+                }
+            ]
+        },
+    )
 
     id: int
     role: Role

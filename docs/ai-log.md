@@ -161,6 +161,23 @@ agente, la revisé y la commiteé primero.
   volvió a pasar todos los tests. También dejé documentado cómo trabajó cada ayudante en `docs/agents/HU-25/`.
   - **Lección:** comprobar el estado de `dev` antes de dar contexto al agente, y escribir la spec primero aunque la historia parezca pequeña.
 
+
+### HU-26 · Swagger y auth
+
+#### 2026-10-16 · Spec, Swagger de /auth y /users y test de contrato · @arita-pereira
+
+- **Herramienta y modelo:** Claude (app de Claude, no Claude Code) · Sonnet 5.5 hasta el paso 2; Opus 5.5 desde el paso 3
+- **Issue y reglas:** #69 · R-01, R-02, R-03, R-04, R-11 (citadas en las descripciones de Swagger)
+- **Prompt clave:** "seguimos con el HU-26, primero hay que leer AGENTS.md y los specs"; después, "faltan los criterios de aceptación, se deberían escribir ahora"
+- **Resultado:** aceptado. Criterios escritos a partir de una auditoría del `/openapi.json` real de `dev`. Spec en `specs/HU-26-swagger-auth.md`, helper `app/core/openapi.py` y 15 endpoints de `/auth` y `/users` documentados (tags, rol, errores con su `code`, ejemplos). `tests/test_openapi.py` falla si llega un endpoint nuevo sin documentar (probado en falso). Ruff limpio y 746 tests en verde con SQLite. Commits: 7ee820b (spec), 45e688e, ea89e79, 89867d9, 3db8f0f, 5dc6dd9, 799d538 y cdb40a4.
+- **Errores o alucinaciones:**
+  - Documentó todo 422 con `errors` obligatorio, pero los 422 de negocio (`redirect_uri_not_allowed`, `same_password`) solo traen `detail` y `code`. Causa raíz: dio por hecho que todo 422 venía de la validación de Pydantic, sin leer los `UnprocessableError` de los services. Lo vio el agente en el paso 5 y lo confirmó llamando a la API. Corregido con `errors` opcional y un test con el cuerpo real (5dc6dd9).
+  - Le pedí los comandos para commitear los pasos 0 y 1 y los ejecutó él en mi ordenador. Causa raíz: tomó "puedes añadirlos a git add y git commit" como una orden de hacerlo. Como la carpeta conectada no deja borrar, git dejó un `HEAD.lock` (el agente lo apartó) y temporales en `.git/objects`. Desde entonces, el agente solo me pasa los comandos y los ejecuto yo.
+- **Trabajo descartado:** la excepción de `/users/me*` en el criterio del 422, que se quitó cuando Levi dio el visto bueno.
+- **Mi prompt o la spec:** la issue no tenía criterios de aceptación. La spec dio por fijos 13 endpoints, pero mientras trabajábamos HU-52 añadió 2 en `/auth` y `/users`. El agente lo detectó al revisar `dev` antes del paso 5.
+- **Decisiones humanas:** módulo compartido `core/openapi.py` y tocar `main.py`; prioridad Must y que revise la primera persona que la vea (Rita). Alinear `/users/me*` con el helper (Levi dio el visto bueno el 16/10). Incluir los endpoints de HU-52 avisando a Anna, dejar fuera de esta HU la contraseña sin mínimo de `UserCreate` y `UserUpdate` (R-02), y una sola PR aunque pase de 400 líneas, revisada por commits (Rita).
+- **Lección:** antes de documentar un error, provocarlo y validar el cuerpo real contra el modelo documentado.
+
 ### HU-27 · Colección Bruno para pruebas de la API
 
 #### 2026-10-15 · Verificación end-to-end de la colección e integración de dev · @levifvy
