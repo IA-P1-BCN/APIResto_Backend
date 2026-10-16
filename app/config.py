@@ -14,6 +14,8 @@ class Settings(BaseSettings):
     EMAIL_ENABLED: bool = False
     BREVO_API_KEY: str = ""
     MAIL_FROM: str = ""
+    FRONTEND_URL: str = "http://localhost:5173"
+    PASSWORD_TOKEN_EXPIRE_HOURS: int = 48
     STATS_CACHE_TTL: int = 60
     GOOGLE_CLIENT_ID: str = ""
     GOOGLE_CLIENT_SECRET: str = ""

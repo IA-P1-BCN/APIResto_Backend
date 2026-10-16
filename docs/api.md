@@ -331,6 +331,51 @@ momento `POST /auth/login` funciona con la nueva y deja de funcionar con la ante
 | 422 | `validation_error` | Campos no editables o desconocidos (`role`, `is_active`…), `name` vacío, `null` en `name`/`email`, email con formato incorrecto o `new_password` < 8 caracteres |
 | 422 | `same_password` | `new_password` es igual a la actual: `"New password must be different from the current one"` |
 
+## Invitación y crear la contraseña · HU-52
+
+El admin da de alta a un usuario **sin contraseña** y este la crea con el enlace que le
+llega por email. El enlace lleva un `PasswordResetToken` de un solo uso que caduca a las
+`PASSWORD_TOKEN_EXPIRE_HOURS` horas (48 por defecto) (R-09). Solo se guarda el SHA-256 del
+token, y el token nunca aparece en el log.
+
+| Endpoint | Rol | Respuesta |
+|---|---|---|
+| `POST /users/invite` | `admin` | `201` con `UserOut`. Envía el email en segundo plano |
+| `POST /auth/set-password` | Público | `204` sin cuerpo |
+
+### Invitar (`POST /users/invite`)
+
+```json
+{"name": "Lucía Gómez", "email": "lucia@example.com", "phone": "600123456", "role": "customer"}
+```
+
+`phone` es opcional y `role` vale `customer` por defecto. El usuario se crea con
+`password_hash` nulo, así que no puede iniciar sesión hasta crear su contraseña. El email
+("Crea tu contraseña de APIResto") lleva el enlace
+`{FRONTEND_URL}/crear-contrasena?token=…`; con `EMAIL_ENABLED=false` solo se registra en
+el log, sin el enlace.
+
+### Crear la contraseña (`POST /auth/set-password`)
+
+```json
+{"token": "token-del-enlace-del-email", "new_password": "MiClave2026"}
+```
+
+Guarda la contraseña (bcrypt, mínimo 8 caracteres, R-02) y marca como usados todos los
+tokens pendientes del usuario. Después se entra con `POST /auth/login`.
+
+### Códigos de error
+
+| HTTP | `code` | Cuándo |
+|---|---|---|
+| 400 | `invalid_token` | Token desconocido, o usuario desactivado o borrado: `"Invalid token"` |
+| 401 | `unauthorized` | `POST /users/invite` sin token o con token no válido |
+| 403 | `forbidden` | `POST /users/invite` con un rol que no es `admin` |
+| 409 | `conflict` | `POST /users/invite`: el email ya está registrado (R-01) |
+| 410 | `token_used` | El token ya se usó: `"Token already used"` |
+| 410 | `token_expired` | El token ha caducado: `"Token expired"` |
+| 422 | `validation_error` | Email con formato incorrecto, campos desconocidos o `new_password` < 8 caracteres |
+
 ## Pedidos (`/orders`) · HU-07, HU-05
 
 | Endpoint | Roles |
