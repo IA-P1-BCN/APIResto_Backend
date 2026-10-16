@@ -349,9 +349,6 @@ agente, la revisé y la commiteé primero.
 - **Decisiones humanas:** separar HU-21 en HU-21 (OpenCode, Anna) y HU-53 (bitácora, Rita), decidido por mí.
 - **Lección:** antes de pedir una propuesta, pedir al agente que lea `AGENTS.md` y el estado de `dev`.
 
-<<<<<<< HEAD
->>>>>>> 27711f50e5988202260aa8fc7a37551c78cb32e4
-=======
 ### Tarea #117 · Unidades preparadas y servidas
 
 #### 2026-10-14 · Contar unidades (Backend #118 y #119, Frontend #42) · @costanna
