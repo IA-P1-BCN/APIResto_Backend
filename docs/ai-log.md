@@ -207,23 +207,28 @@ agente, la revisé y la commiteé primero.
 
 ### HU-33 · Verificación de email y recuperación de contraseña
 
-#### 2026-10-16 · Spec y equipo de agentes (sin código) · @levifvy
+#### 2026-10-16 · Implementación con un equipo de agentes · @levifvy
 
-- **Herramienta y modelo:** Claude Code · Opus 5.5 (`claude-opus-5-5`)
-- **Issue y reglas:** #76 · R-01, R-02, R-04, R-09, R-11, R-13 y R-15 (definida en la propia spec, no en la ontología)
-- **Prompt clave:** leer `AGENTS.md`, la ontología, el briefing, la plantilla, las specs de HU-25 y HU-52, el ai-log y el código; proponer las decisiones como preguntas sin escribir nada; después, redactar la spec y un equipo de agentes con el patrón de HU-27 (líder + especialistas con archivos exclusivos), sin código, sin commits y sin dependencias nuevas.
-- **Resultado:** aceptado con cambios. Salieron `specs/HU-33-verificacion-email.md` y `docs/agents/HU-33/` (líder + 7 agentes: modelo, repositorio, emails, servicio, endpoints, tests y docs). La recuperación reutiliza `PasswordResetToken` y `POST /auth/set-password` de HU-52; solo es nuevo `POST /auth/forgot-password`. No se tocó código: `ruff` limpio y 746 tests en verde, igual que en `dev`. Los commits van en la PR de HU-33.
-- **Errores o alucinaciones:** el agente no inventó reglas. Al leer el código vio que el prompt daba por hechas cosas que no lo eran: `User` no tiene `email_verified`, no hay refresh tokens, `jti` ni rate limiting, la sección de HU-52 no existe en el ai-log y la issue #76 no se podía leer (`gh` no está instalado). También corrigió mi formulario de votación, que decía "Google/Apple" cuando el repo solo tiene Google y GitHub. Hubo dos huecos que ninguna decisión cubría: la vinculación de un login social con una cuenta sin verificar (riesgo de robo de cuenta) y `create_admin` (con el bloqueo, el primer admin no habría podido entrar). El agente los marcó como `[NEEDS CLARIFICATION]` en vez de decidir por su cuenta. Un error suyo: en el primer reparto asignó `app/config.py` a un agente posterior al que lo necesitaba; lo vio y lo corrigió antes de entregar. Además añadió R-15 a `specs/ontology.md` porque yo se lo pedí; lo revertimos con `git checkout`.
-- **Trabajo descartado:** todo el diseño con el login bloqueado (403 `email_not_verified`, usuarios de prueba verificados por defecto, lista de tests que fallarían a propósito, aviso de breaking-api y cambios en Bruno), y R-15 dentro de la ontología.
-- **Mi prompt o la spec:** pedí leer una sección de HU-52 en el ai-log que no existe. Votamos bloquear el login (A=3) sin medir antes que cambiaba el contrato, rompía tests y la colección Bruno. Pedí poner R-15 en la ontología y después decidimos no tocarla. Mi lista final de respuestas no incluía las dos preguntas pendientes (vinculación social y `create_admin`); quedaron con la propuesta del agente, que está en la spec.
-- **Decisiones humanas:**
-  - Votación del equipo: A=3, B=1 (backfill a `true`), C 👍, D=1 (email automático), E=1 (cambio de email → `false` + email nuevo), F=1 (`forgot-password` + `set-password`), I=1 (respuesta idéntica) y M=1 (espera entre envíos sin librerías).
-  - Yo Levi cambié después **A a 1 (solo informativa)** para no romper la API y que la PR se pudiera aprobar.
-  - G–Q, con la recomendación del agente (recuperación 1 h, verificación 48 h, espera de 60 s sin 429, helper común de tokens avisando a Anna).
-  - R-15 vive en la spec y no se modifica `specs/ontology.md` (Levi).
-  - `forgot-password` va en `router_password.py` y `verify-email`/`resend-verification` en un router nuevo (Levi).
-  - Quedan para issues aparte: el frontend, el bloqueo opcional del login, el riesgo de la vinculación social, cerrar sesiones tras un reset y R-10.
-- **Lección:** antes de votar una opción, comprobar si cambia el contrato o rompe tests; y comprobar qué existe de verdad en `dev` antes de citarlo en el prompt.
+- **Herramienta y modelo:** Claude Code · Opus 5.5 (`claude-opus-5-5`): un líder y 7 especialistas (modelo, repositorio, emails, servicio, endpoints, tests y docs), lanzados uno tras otro según `docs/agents/HU-33/lead.md`.
+- **Issue y reglas:** #76 · R-01, R-02, R-04, R-09, R-11, R-13 y R-15 (definida en la spec de HU-33)
+- **Prompt clave:** "sigue con la implementación". El líder lanza a cada especialista con su directriz y sus archivos exclusivos, revisa su `git diff` antes de lanzar al siguiente y exige `ruff` limpio y `pytest` entero en verde sin modificar ningún test existente.
+- **Resultado:** aceptado. Columna `users.email_verified` y tabla `email_verification_tokens` (migración `0009` con backfill a `true`); helper común `app/core/one_time_tokens.py`; `POST /auth/verify-email`, `POST /auth/resend-verification` y `POST /auth/forgot-password`. La recuperación reutiliza `PasswordResetToken` y `POST /auth/set-password` de HU-52. `register`, `PATCH /users/me`, `set-password`, `POST /users/`, el login social y `create_admin` aplican R-15 sin cambiar sus respuestas; `UserOut` gana `email_verified`. Sin breaking-api y sin dependencias nuevas. 804 tests en verde (746 al empezar, 3 del test de documentación de HU-26 y 55 nuevos en `tests/test_email_verification.py` y `tests/test_forgot_password.py`), 99 % de cobertura (100 % en los archivos de HU-33) y `ruff` limpio. La colección Bruno no compara `UserOut` campo a campo y no hubo que tocarla. Los commits van en la PR de HU-33.
+- **Errores o alucinaciones:** `agent-model` registró el modelo nuevo en `app/models/__init__.py`, un patrón que no usa ningún otro modelo. Causa raíz: el reparto del líder no le daba `app/main.py` ni `migrations/env.py`, donde se registran los modelos. El líder se lo devolvió y le asignó esas dos líneas. `agent-endpoints` no llegó a enviar su informe; el líder verificó el paso por su cuenta. Los 3 tests de más que aparecieron en ese paso no eran nuevos: el test de HU-26 se ejecuta una vez por endpoint y ahora cubre también los tres nuevos.
+- **Trabajo descartado:** nada
+- **Mi prompt o la spec:** la spec no fijaba tres cosas que salieron al implementar: el orden de las comprobaciones de `verify-email`, si el cambio de email en `/users/me` debía guardarse en un solo commit, y qué pasa con el tiempo de espera de `forgot-password` justo después de una invitación. `docs/deploy.md` no mencionaba la migración `0008`; se añadió junto con la `0009`.
+- **Decisiones humanas (Levi):**
+  * **Flujos de tokens y validación:**
+    * `verify-email` valida la caducidad/uso del token (410) antes de comprobar si el usuario está activo (400), alineándose con `set-password`.
+    * Las invitaciones recientes activan el tiempo de espera de 60 segundos en `forgot-password`, ya que comparten el modelo `PasswordResetToken`.
+  * **Persistencia y cambios de email:**
+    * El cambio de email en `PATCH /users/me` se realiza en dos commits para proteger los tests de `update_profile`. Se asume el riesgo de que falle el segundo commit y el email quede verificado.
+    * Se aprueban los textos de correo propuestos por `agent-email`.
+  * **Notificaciones para Anna (Impacto en Backend):**
+    * El helper de tokens se movió a `password_token_service.py`.
+    * `forgot-password` se integra en `router_password.py` y su repositorio estrena `get_latest_for_user`.
+    * `set-password` ahora marca el campo `email_verified`. El comportamiento previo de HU-52 no se altera y sus tests pasan sin cambios.
+- **Lección:** entregar a cada agente **todos los archivos impactados** (incluyendo registros globales como `main.py`) y **ejecutar la suite completa de tests** tras cada iteración previene desviaciones y detecta rupturas de contrato inmediatamente.
+
 
 ### HU-35 · Comandos y subagentes de OpenCode
 
