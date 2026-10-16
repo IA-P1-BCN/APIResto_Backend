@@ -139,9 +139,8 @@ contador. Los números y la cabecera de la IP se leen de variables de entorno.
   responde 429 `too_many_attempts` con `Retry-After`, también con un código correcto y desde
   otra IP; un código correcto antes del bloqueo borra los fallos; Swagger documenta el 429.
 - [ ] `docs/api.md` explica el límite.
-- [ ] Tras el deploy, el log `Login blocked` de producción muestra la IP real del cliente y no
-  la del proxy, y un `True-Client-IP` inventado por el cliente no la cambia (se anota en la
-  issue).
+- [ ] `docs/deploy.md` lista las 3 variables para Render y explica cómo comprobar el límite en
+  producción.
 - [ ] Lint limpio, CI en verde con la cobertura mínima, entrada en `docs/ai-log.md` y PR
   `[HU-31] ...` de menos de 400 líneas (si no cabe, se divide en pasos).
 
@@ -154,6 +153,9 @@ contador. Los números y la cabecera de la IP se leen de variables de entorno.
 - Guardar los intentos en la base de datos o compartirlos entre instancias (Redis).
 - Tope adicional por email solo, independiente de la IP.
 - Avisar al usuario por email de un bloqueo.
+- Comprobar en producción que el log `Login blocked` muestra la IP real y que un
+  `True-Client-IP` inventado no la cambia: lo hace quien despliega (Anna) con los pasos de
+  `docs/deploy.md` ("Comprobar el límite de login"), y no bloquea el cierre de la HU.
 - Límite en `/users/me/2fa/enable` y `/users/me/2fa/disable`: piden un token de sesión válido,
   así que quien prueba códigos ahí ya ha entrado en la cuenta.
 
@@ -198,3 +200,8 @@ Sesión de 16/10/2026 (Rita, con Claude):
   para llegar al código hay que saber la contraseña, así que nadie sin ella bloquea a otro y
   quien la sabe no puede cambiar de IP para seguir probando. Rechazado: dejarlo para otra HU
   (el hueco seguiría abierto en la entrega del 19/10).
+- **La comprobación en producción sale de la HU** (Rita, 16/10) → solo Anna despliega y tiene
+  acceso a los logs de Render (`docs/deploy.md`), y el deploy no tiene fecha fija. La HU se
+  cierra con la PR a `dev`; la comprobación queda escrita en `docs/deploy.md` para quien
+  despliegue. Rechazado: dejar la issue abierta hasta el deploy (una casilla que Rita no puede
+  cerrar).
