@@ -205,6 +205,24 @@ agente, la revisé y la commiteé primero.
 - **Decisiones humanas (Levi):** Production de solo lectura; contraseña aleatoria; opción A para el bartender (una línea de barra de verdad, no un 404 esperado); sacar `bruno/` y `scripts/generate_agent_diagrams.py` de la imagen; citar la PR en vez de hashes, porque con squash quedarían huérfanos; incluir los dos requests de HU-25 aquí; y abrir issues aparte para el job de Bruno en CI y para el `create_all` de `app/main.py`. La PR se integra con squash.
 - **Lección:** volver a ejecutar la colección después de cada rebase, no solo cuando mergea `dev`. Y sin un job de Bruno en CI, cualquier cambio de contrato la rompe sin que nadie se entere.
 
+### HU-34 · Cobertura de tests ≥ 80 %                                                                                                                                            
+                                                                                                                                                                                   
+#### 2026-10-16 · Cobertura al 100 % y umbral del 98 % en el CI · @levifvy                                                                                                       
+                                                                                                                                                                                   
+- **Herramienta y modelo:** Claude Code · Opus 5.5 (`claude-opus-5-5`), coordinando a los subagentes `agent-tests` y `agent-ci-docs`.
+- **Issue y reglas:** #77 · R-02, R-13, R-14.
+- **Prompt clave:** Le pedí cubrir las 10 sentencias que nos faltaban para el 100% (partíamos del 99%), sin tocar código de `app/` ni usar pragmas, y subir el mínimo en el CI al 95-98%.
+- **Resultado:** Aceptado. Metimos 5 tests nuevos y un caso más en un parametrize. Pasamos de 746 a 756 tests y tocamos el 100% de cobertura. Además, dejamos el cerrojo en `ci.yml` con un umbral del 98%.
+- **Errores o alucinaciones:** 
+  - El agente líder contó 12 sentencias de memoria en vez de las 10 reales; lo pilló el subagente de tests al medir con pytest.
+  - Aseguró que `docs/agents/` no existía en `dev` y se lió con las variables de producción. Causa raíz: no comprobó el repositorio ni miró bien `deploy.yml`.
+  - Los comandos con saltos de línea largos se rompieron al copiarlos de la terminal y nos chafaron el orden de los commits. A partir de ahora, los comandos se ejecutan de uno en uno.
+- **Trabajo descartado:** Los pragmas que proponía para `stats.py` y `social_providers.py`, un test duplicado para la pareja `served` y la idea de poner el listón del CI al 100%, que nos habría obligado a meter pragmas con calzador.
+- **Mi prompt o la spec:** La issue andaba desactualizada (pedía un 80% que ya pasábamos); lo que nos faltaba de verdad era proteger el CI para no ir hacia atrás. Además, en el prompt le pedí leer `pyproject.toml` y cosas de la HU-33 que aún no están en `dev`.
+- **Decisiones humanas (Levi):** Dejar el 98% fijo en el YAML de CI, borrar la variable del repositorio para que no confunda, meter la info en `docs/agents/HU-34/` y negarme en rotundo a usar pragmas.
+- **Lección:** Hay que medir antes de planificar (casi nos ponemos a picar código sin ver que ya estábamos en el 99%) y obligar al agente a comprobar el repositorio antes de dar datos por buenos.
+
+
 ### HU-35 · Comandos y subagentes de OpenCode
 
 #### 2026-10-15 · Comandos /tests, /seguridad y /migracion · @costanna
