@@ -1,3 +1,4 @@
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -20,6 +21,9 @@ class Settings(BaseSettings):
     PASSWORD_RESET_EXPIRE_HOURS: int = 1
     TOKEN_RESEND_COOLDOWN_SECONDS: int = 60
     STATS_CACHE_TTL: int = 60
+    LOGIN_MAX_ATTEMPTS: int = Field(default=5, ge=1)
+    LOGIN_WINDOW_MINUTES: int = Field(default=15, ge=1)
+    CLIENT_IP_HEADER: str = ""
     RESTAURANT_TIMEZONE: str = "Europe/Madrid"
     GOOGLE_CLIENT_ID: str = ""
     GOOGLE_CLIENT_SECRET: str = ""
