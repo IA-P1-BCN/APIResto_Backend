@@ -376,4 +376,3 @@ agente, la revisé y la commiteé primero.
 - **Mi prompt o la spec:** nada
 - **Decisiones humanas:** mantener la URL antigua activa y aceptar las dos en `ALLOWED_ORIGINS` (Anna).
 - **Lección:** después de tocar variables en Render, probar el login desde las dos URLs.
->>>>>>> d8234f2fd7a241e75adc948bc02bdc1d5f95eb35
