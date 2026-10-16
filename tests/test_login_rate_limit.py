@@ -1,7 +1,9 @@
 """HU-31 / R-10: límite de intentos de `POST /auth/login` (integración)."""
 
 import logging
+from datetime import UTC, datetime, timedelta
 
+import pyotp
 import pytest
 
 from app.config import settings
@@ -140,3 +142,114 @@ def test_swagger_documenta_el_429_del_login(client):
     assert error["content"]["application/json"]["schema"]["$ref"].endswith("/ErrorResponse")
     assert "too_many_attempts" in error["description"]
     assert "Retry-After" in error["description"]
+
+
+def enable_2fa(client):
+    """Activa la 2FA de Ana y devuelve su secreto TOTP."""
+    token = login(client).json()["access_token"]
+    headers = {"Authorization": f"Bearer {token}"}
+    secret = client.post("/users/me/2fa/setup", headers=headers).json()["secret"]
+    code = pyotp.TOTP(secret).now()
+    assert client.post("/users/me/2fa/enable", headers=headers, json={"code": code}).status_code == 200
+    return secret
+
+
+def wrong_code(secret):
+    totp = pyotp.TOTP(secret)
+    now = datetime.now(UTC)
+    valid = {totp.at(now + timedelta(seconds=s)) for s in (-30, 0, 30)}
+    return next(c for c in (f"{n:06d}" for n in range(1000)) if c not in valid)
+
+
+def verify(client, mfa_token, code):
+    return client.post("/auth/2fa/verify", json={"mfa_token": mfa_token, "code": code})
+
+
+def mfa_token(client):
+    return login(client).json()["mfa_token"]
+
+
+def fail_2fa(client, secret, times):
+    for _ in range(times):
+        assert verify(client, mfa_token(client), wrong_code(secret)).status_code == 401
+
+
+def test_2fa_cinco_codigos_malos_dan_401_y_el_sexto_429(client, ana):
+    secret = enable_2fa(client)
+    fail_2fa(client, secret, MAX_ATTEMPTS)
+
+    response = verify(client, mfa_token(client), wrong_code(secret))
+
+    assert response.status_code == 429
+    assert response.json()["code"] == "too_many_attempts"
+    assert 1 <= int(response.headers["Retry-After"]) <= WINDOW_SECONDS
+
+
+def test_2fa_durante_el_bloqueo_el_codigo_correcto_tambien_da_429(client, ana):
+    secret = enable_2fa(client)
+    fail_2fa(client, secret, MAX_ATTEMPTS)
+
+    assert verify(client, mfa_token(client), pyotp.TOTP(secret).now()).status_code == 429
+
+
+def test_2fa_un_codigo_correcto_borra_los_fallos(client, ana):
+    secret = enable_2fa(client)
+    fail_2fa(client, secret, MAX_ATTEMPTS - 1)
+    assert verify(client, mfa_token(client), pyotp.TOTP(secret).now()).status_code == 200
+
+    fail_2fa(client, secret, MAX_ATTEMPTS - 1)
+
+    assert verify(client, mfa_token(client), pyotp.TOTP(secret).now()).status_code == 200
+
+
+def test_2fa_cuenta_por_usuario_aunque_cambie_la_ip(client, ana, ip_header):
+    secret = enable_2fa(client)
+    for n in range(MAX_ATTEMPTS):
+        ip = {ip_header: f"203.0.113.{n}"}
+        token = login(client, headers=ip).json()["mfa_token"]
+        assert client.post(
+            "/auth/2fa/verify", json={"mfa_token": token, "code": wrong_code(secret)}, headers=ip
+        ).status_code == 401
+
+    other_ip = {ip_header: "198.51.100.1"}
+    token = login(client, headers=other_ip).json()["mfa_token"]
+    response = client.post(
+        "/auth/2fa/verify",
+        json={"mfa_token": token, "code": pyotp.TOTP(secret).now()},
+        headers=other_ip,
+    )
+    assert response.status_code == 429
+
+
+def test_2fa_el_bloqueo_no_afecta_a_otro_usuario(client, ana, make_user):
+    secret = enable_2fa(client)
+    fail_2fa(client, secret, MAX_ATTEMPTS)
+    make_user(Role.waiter, email="otra@test.com")
+
+    assert login(client, email="otra@test.com").status_code == 200
+
+
+def test_2fa_un_mfa_token_no_valido_no_cuenta(client, ana):
+    secret = enable_2fa(client)
+    for _ in range(MAX_ATTEMPTS + 1):
+        assert verify(client, "no-es-un-token", "123456").status_code == 401
+
+    assert verify(client, mfa_token(client), pyotp.TOTP(secret).now()).status_code == 200
+
+
+def test_2fa_avisa_en_el_log_al_bloquear(client, ana, caplog):
+    secret = enable_2fa(client)
+    with caplog.at_level(logging.WARNING, logger="app.services.login_rate_limit_service"):
+        fail_2fa(client, secret, MAX_ATTEMPTS)
+
+    blocked = [r for r in caplog.records if r.getMessage() == "Two-factor blocked"]
+    assert len(blocked) == 1
+    assert blocked[0].user_id == ana.id
+
+
+def test_swagger_documenta_el_429_de_2fa_verify(client):
+    paths = client.get("/openapi.json").json()["paths"]
+    error = paths["/auth/2fa/verify"]["post"]["responses"]["429"]
+
+    assert error["content"]["application/json"]["schema"]["$ref"].endswith("/ErrorResponse")
+    assert "too_many_attempts" in error["description"]

@@ -10,6 +10,7 @@ from app.services.login_rate_limit_service import (
     TOO_MANY_ATTEMPTS_CODE,
     TOO_MANY_ATTEMPTS_DETAIL,
     LoginRateLimiter,
+    TwoFactorRateLimiter,
 )
 
 IP = "203.0.113.7"
@@ -142,3 +143,30 @@ def test_avisa_en_el_log_una_sola_vez_al_bloquear(limiter, caplog):
 def test_el_429_tiene_codigo_y_descripcion_por_defecto():
     assert CODES_BY_STATUS[429] == "too_many_requests"
     assert "Retry-After" in error_responses(429)[429]["description"]
+
+
+def test_2fa_bloquea_por_usuario_y_se_resetea(clock):
+    limiter = TwoFactorRateLimiter(max_attempts=5, window_seconds=WINDOW, timer=clock)
+    for _ in range(5):
+        limiter.register_failure(7)
+
+    with pytest.raises(TooManyRequestsError):
+        limiter.check(7)
+    assert limiter.retry_after(8) is None
+
+    limiter.reset(7)
+    limiter.check(7)
+
+
+def test_2fa_clear_y_caducidad(clock):
+    limiter = TwoFactorRateLimiter(max_attempts=5, window_seconds=WINDOW, timer=clock)
+    for _ in range(5):
+        limiter.register_failure(7)
+    clock.advance(WINDOW)
+
+    assert limiter.retry_after(7) is None
+
+    for _ in range(5):
+        limiter.register_failure(7)
+    limiter.clear()
+    assert limiter.retry_after(7) is None
