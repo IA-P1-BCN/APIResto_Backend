@@ -52,7 +52,10 @@ def test_no_se_pueden_marcar_mas_unidades_que_la_cantidad(client, auth_headers, 
     assert "quantity" in r.json()["detail"]
 
 
-@pytest.mark.parametrize("body", [{"prepared_quantity": -1}, {"prepared": True, "prepared_quantity": 1}])
+@pytest.mark.parametrize(
+    "body",
+    [{"prepared_quantity": -1}, {"prepared": True, "prepared_quantity": 1}, {"served": True, "served_quantity": 1}],
+)
 def test_rechaza_cantidades_negativas_o_los_dos_campos_a_la_vez(client, auth_headers, order, body):
     r = client.patch(item_url(order), headers=auth_headers(Role.kitchen), json=body)
     assert r.status_code == 422

@@ -193,3 +193,37 @@ def test_secrets_and_code_are_not_logged(client, provider_api, caplog):
         _login(client)
     assert "abc123" not in caplog.text
     assert "test-value" not in caplog.text
+
+
+@pytest.mark.parametrize(
+    ("provider", "url", "outcome"),
+    [
+        ("google", providers.GOOGLE_USERINFO_URL, (500, {})),
+        ("google", providers.GOOGLE_USERINFO_URL, (200, {k: v for k, v in GOOGLE_PROFILE.items() if k != "sub"})),
+        ("github", providers.GITHUB_TOKEN_URL, (500, {})),
+        ("github", providers.GITHUB_USER_URL, (200, {k: v for k, v in GITHUB_USER.items() if k != "id"})),
+    ],
+)
+def test_provider_bad_responses_are_502(client, provider_api, provider, url, outcome):
+    provider_api[url] = outcome
+    r = _login(client, provider)
+    assert r.status_code == 502
+    assert r.json()["code"] == "provider_unavailable"
+
+
+def test_google_token_without_access_token_is_401(client, provider_api):
+    provider_api[providers.GOOGLE_TOKEN_URL] = (200, {})
+    r = _login(client)
+    assert r.status_code == 401
+    assert r.json()["code"] == "invalid_code"
+
+
+def test_provider_invalid_json_is_502(client, monkeypatch):
+    monkeypatch.setattr(
+        providers.httpx,
+        "request",
+        lambda *a, **k: httpx.Response(200, content=b"<html>", request=httpx.Request("POST", "http://test")),
+    )
+    r = _login(client)
+    assert r.status_code == 502
+    assert r.json()["code"] == "provider_unavailable"

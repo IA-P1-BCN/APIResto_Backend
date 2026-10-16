@@ -528,7 +528,7 @@ devuelve `429`, porque un `429` solo aparecería con emails registrados. El enla
 | 410 | `token_expired` | `verify-email`: el token ha caducado: `"Token expired"` |
 | 422 | `validation_error` | Falta `token` o `email`, email con formato incorrecto o campos de más |
 
-## Pedidos (`/orders`) · HU-07, HU-05
+## Pedidos (`/orders`) · HU-07, HU-05, HU-45
 
 | Endpoint | Roles |
 |---|---|
@@ -542,6 +542,46 @@ Sin token → `401`. `customer` en cualquier endpoint, `kitchen` o `bartender` c
 Cada línea de `items` lleva `prepared` (cocina o barra la tiene lista) y `served` (sala la ha llevado a la mesa), las dos `false` al crear el pedido. Marcar una línea de otro pedido o que no existe → `404`; de un pedido `paid` o `cancelled` → `409`; sin `prepared` ni `served` en el cuerpo → `422`.
 
 El WebSocket de cocina (`/ws/kitchen`) admite `admin`, `kitchen` y `bartender`. Cada evento (`order_created`, `order_status_changed`) trae `order.stations` y, en `order_created`, `items` con su `station`; `kitchen` y `bartender` solo reciben los pedidos con líneas de su estación y con esas líneas, `admin` recibe todo.
+
+### Progreso del pedido (`progress`) · HU-45
+
+Todas las respuestas de pedidos (`POST /orders/`, `GET /orders/`, `GET /orders/{id}` y los dos `PATCH`) traen el progreso del pedido. Se calcula al responder a partir de las unidades preparadas y servidas de cada línea: no hay campos nuevos en la base de datos ni migración, y no cambia el `status` del pedido (R-16).
+
+- Cada línea trae `ready_to_serve`: unidades preparadas que aún no se han servido (`prepared_quantity - served_quantity`, nunca menos de 0).
+- `progress` suma las líneas de la respuesta: `quantity`, `prepared_quantity`, `served_quantity`, `ready_to_serve` (la suma de las líneas, no la resta de los totales) y `stage`.
+- `progress.by_station` repite el cálculo para `kitchen` y `bar`, con su propio `stage`. Solo aparecen las estaciones que tiene el pedido.
+- `admin` y `waiter` ven el total y las dos estaciones. `kitchen` y `bartender` solo reciben sus líneas (R-14), así que ven su progreso y una sola entrada en `by_station`.
+
+| `stage` | Cuándo |
+| --- | --- |
+| `all_served` | Todas las unidades están servidas (un pedido sin líneas queda `waiting`) |
+| `ready_to_serve` | Hay unidades preparadas sin servir: sala tiene algo que llevar a la mesa |
+| `waiting` | No hay nada preparado ni servido |
+| `preparing` | Cualquier otro caso: algo hecho y nada pendiente de llevar |
+
+Ejemplo: 2 pastas (1 preparada y servida) y 2 cervezas (las 2 preparadas, ninguna servida), visto por `waiter`:
+
+```json
+{
+  "items": [
+    {"dish_id": 1, "quantity": 2, "prepared_quantity": 1, "served_quantity": 1, "station": "kitchen", "ready_to_serve": 0},
+    {"dish_id": 2, "quantity": 2, "prepared_quantity": 2, "served_quantity": 0, "station": "bar", "ready_to_serve": 2}
+  ],
+  "progress": {
+    "quantity": 4,
+    "prepared_quantity": 3,
+    "served_quantity": 1,
+    "ready_to_serve": 2,
+    "stage": "ready_to_serve",
+    "by_station": {
+      "kitchen": {"quantity": 2, "prepared_quantity": 1, "served_quantity": 1, "ready_to_serve": 0, "stage": "preparing"},
+      "bar": {"quantity": 2, "prepared_quantity": 2, "served_quantity": 0, "ready_to_serve": 2, "stage": "ready_to_serve"}
+    }
+  }
+}
+```
+
+El mismo pedido visto por `kitchen` trae solo la línea de pasta, y `progress` y `by_station.kitchen` valen `{"quantity": 2, "prepared_quantity": 1, "served_quantity": 1, "ready_to_serve": 0, "stage": "preparing"}`. Se puede marcar como servida una unidad que no se ha preparado: no da error y `ready_to_serve` se queda en 0.
 
 ## Facturas y exportación CSV · HU-14
 

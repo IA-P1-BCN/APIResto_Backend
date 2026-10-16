@@ -229,6 +229,22 @@ agente, la revisé y la commiteé primero.
     * `set-password` ahora marca el campo `email_verified`. El comportamiento previo de HU-52 no se altera y sus tests pasan sin cambios.
 - **Lección:** entregar a cada agente **todos los archivos impactados** (incluyendo registros globales como `main.py`) y **ejecutar la suite completa de tests** tras cada iteración previene desviaciones y detecta rupturas de contrato inmediatamente.
 
+### HU-34 · Cobertura de tests ≥ 80 %
+
+#### 2026-10-16 · Cobertura al 100 % y umbral del 98 % en el CI · @levifvy
+
+- **Herramienta y modelo:** Claude Code · Opus 5.5 (`claude-opus-5-5`), coordinando a los subagentes `agent-tests` y `agent-ci-docs`.
+- **Issue y reglas:** #77 · R-02, R-13, R-14.
+- **Prompt clave:** Le pedí cubrir las 10 sentencias que nos faltaban para el 100% (partíamos del 99%), sin tocar código de `app/` ni usar pragmas, y subir el mínimo en el CI al 95-98%.
+- **Resultado:** Aceptado. Metimos 5 tests nuevos y un caso más en un parametrize. Pasamos de 746 a 756 tests y tocamos el 100% de cobertura. Además, dejamos el cerrojo en `ci.yml` con un umbral del 98%.
+- **Errores o alucinaciones:**
+  - El agente líder contó de memoria 12 ejecuciones de tests nuevas en vez de las 10 reales; lo pilló el subagente de tests al medir con pytest (746 → 756).
+  - Aseguró que `docs/agents/` no existía en `dev` y se lió con las variables de producción. Causa raíz: no comprobó el repositorio ni miró bien `deploy.yml`.
+  - Los comandos con saltos de línea largos se rompieron al copiarlos de la terminal y nos chafaron el orden de los commits. A partir de ahora, los comandos se ejecutan de uno en uno.
+- **Trabajo descartado:** Los pragmas en `stats.py:75` y `social_providers.py:59-60` (ninguna línea era inalcanzable), un test aparte para la pareja `served` y la idea de poner el listón del CI al 100%, que nos habría obligado a meter pragmas con calzador.
+- **Mi prompt o la spec:** La issue andaba desactualizada (pedía un 80% que ya pasábamos); lo que nos faltaba de verdad era proteger el CI para no ir hacia atrás. Además, en el prompt le pedí leer `pyproject.toml` y cosas de la HU-33 que aún no estaban en `dev`.
+- **Decisiones humanas (Levi):** Dejar el 98% fijo en el YAML de CI, borrar la variable del repositorio para que no confunda, meter la info en `docs/agents/HU-34/` y negarme en rotundo a usar pragmas.
+- **Lección:** Hay que medir antes de planificar (casi nos ponemos a picar código sin ver que ya estábamos en el 99%) y obligar al agente a comprobar el repositorio antes de dar datos por buenos.
 
 ### HU-35 · Comandos y subagentes de OpenCode
 
@@ -374,6 +390,20 @@ agente, la revisé y la commiteé primero.
 - **Mi prompt o la spec:** no pensé en cómo se rellenaría `station` en una BD que ya existe.
 - **Decisiones humanas:** el estado del pedido lo lleva cocina salvo en los pedidos solo de barra (Anna).
 - **Lección:** comprobar cómo queda una función nueva con los datos que ya hay en producción.
+
+### HU-45 · Estado de plato
+
+#### 2026-10-16 · Spec, progreso del pedido y documentación · @arita-pereira
+
+- **Herramienta y modelo:** Claude (app, sesión con el repo clonado en solo lectura) · Sonnet 5.5 para comentarios y mensajes, Opus 5.5 para spec, código y revisión
+- **Issue y reglas:** #89 · R-14, R-16 (nueva; era R-15, renumerada porque HU-33 ya usa R-15)
+- **Prompt clave:** "Mira AGENTS.md y specs primero" y, con la historia de la issue, "falta escribir los criterios de aceptación. Escribe tú, juntamente con lo que se hará en cada paso"
+- **Resultado:** aceptado con cambios. `ready_to_serve` por línea y `progress` por pedido (`stage` y `by_station`), calculados al responder, sin modelo ni migración. 18 tests nuevos, 764 en verde con SQLite, ruff limpio. Commits `51664c9` spec, `19a091e` pedido sin líneas, `96f8ec0` progreso, `03cbe7b` api.md.
+- **Errores o alucinaciones:** (1) La tabla de `stage` de la spec daba `all_served` a un pedido sin líneas (0 de 0 servidas). Causa raíz: la regla se escribió sin pensar en el caso vacío. Se vio al implementar y se corrigió en `19a091e` (queda `waiting`). (2) Los comandos del paso 2 ponían `pytest` después de los commits y no tenían `ruff`. Causa raíz: el agente ordenó los comandos sin seguir "comprobar y después commitear". Lo vi yo y se corrigió. (3) Los tests pasaron a la primera; al meter errores a propósito, uno (restar los totales en lugar de sumar por líneas) no lo detectaba ningún test. Se añadió uno.
+- **Trabajo descartado:** la regla "no se puede servir más de lo preparado" (cambiaba el código y los tests de Anna de la #117) y un `progress` solo con el total del pedido (sustituido por `by_station`).
+- **Mi prompt o la spec:** la issue no tenía criterios y "estados más detallados" era ambiguo. No dije al principio que sala tenía que ver cocina y barra por separado; lo añadí al revisar la propuesta.
+- **Decisiones humanas:** seguir permitiendo servir sin preparar (Anna, Discord, 16/10); `by_station` con las dos estaciones para `admin` y `waiter` (Rita); no cambiar el `status` del pedido automáticamente (Rita).
+- **Lección:** probar los tests en falso: que pasen a la primera no demuestra que comprueben lo que importa.
 
 ### HU-46 · Estilo de la vista de pedidos del camarero
 
