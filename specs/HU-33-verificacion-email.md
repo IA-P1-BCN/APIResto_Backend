@@ -3,7 +3,7 @@
 > Issue: #76 · Prioridad Should (nivel avanzado del brief P3) · Escribe: Levi · Revisa:
 > equipo · Aprueba: Levi (PO). Vocabulario: `specs/ontology.md` (R-01, R-02, R-04, R-09,
 > R-11, R-13). Regla propia de esta HU: R-15 (sección "Regla de verificación de email").
-> Usa `specs/HU-TEMPLATE.md`. Equipo de agentes: `specs/agents/HU-33/`.
+> Usa `specs/HU-TEMPLATE.md`. Equipo de agentes: `docs/agents/HU-33/`.
 > Sin breaking-api: ningún endpoint existente cambia su respuesta. `UserOut` gana un campo
 > (`email_verified`).
 
@@ -159,7 +159,7 @@ HTTP) → `email_verification_service.py` / `password_token_service.py` / `user_
 `social_auth_service.py` (reglas y transacciones) → `email_verification_token_repository.py`
 / `password_reset_token_repository.py` / `user_repository.py` (solo BD) → modelos. Los
 emails se arman en `services/auth_emails.py`. El reparto de archivos entre agentes está en
-`specs/agents/HU-33/lead.md`.
+`docs/agents/HU-33/lead.md`.
 
 ## Testing Decisions
 - **Sin regresiones**: los tests existentes no se modifican y siguen pasando. Es la prueba

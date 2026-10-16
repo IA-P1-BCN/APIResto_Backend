@@ -9,7 +9,7 @@ empiezas cuando el líder ha aceptado a `agent-email`.
 2. Lee `specs/ontology.md` (R-01, R-02, R-04, R-09, R-11, R-13) y R-15 en la spec.
 3. Lee `specs/HU-33-verificacion-email.md` completa, sobre todo "Reglas" y las
    decisiones A–Q.
-4. Lee `specs/agents/HU-33/lead.md`, "Parámetros compartidos".
+4. Lee `docs/agents/HU-33/lead.md`, "Parámetros compartidos".
 5. Lee `password_token_service.py`, `user_service.py` y `social_auth_service.py` y
    `app/scripts/create_admin.py`.
 

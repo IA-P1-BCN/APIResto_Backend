@@ -8,7 +8,7 @@ empiezas cuando el líder ha aceptado a `agent-service`.
 1. Lee `AGENTS.md` (convenciones: `summary`, `tags`, ejemplos, `{detail, code}`).
 2. Lee `specs/ontology.md` (R-02, R-09) y R-15 en la spec.
 3. Lee `specs/HU-33-verificacion-email.md`, tabla "Endpoints".
-4. Lee `specs/agents/HU-33/lead.md`: códigos, cuerpo del `202`.
+4. Lee `docs/agents/HU-33/lead.md`: códigos, cuerpo del `202`.
 5. Lee como referencia `app/routers/router_password.py` (HU-52): `_errors`,
    `BackgroundTasks`, `Response` 204.
 

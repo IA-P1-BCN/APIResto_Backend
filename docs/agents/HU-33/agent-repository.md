@@ -9,7 +9,7 @@ ha aceptado a `agent-model`.
    HTTP ni reglas).
 2. Lee `specs/ontology.md` (R-09).
 3. Lee `specs/HU-33-verificacion-email.md`.
-4. Lee `specs/agents/HU-33/lead.md`.
+4. Lee `docs/agents/HU-33/lead.md`.
 5. Lee como referencia `app/repositories/password_reset_token_repository.py` (HU-52).
 
 ## Archivos exclusivos

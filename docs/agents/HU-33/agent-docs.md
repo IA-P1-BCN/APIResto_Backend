@@ -9,7 +9,7 @@ aceptado a `agent-tests`.
    IA").
 2. Lee `specs/ontology.md` y R-15 en la spec de HU-33.
 3. Lee `specs/HU-33-verificacion-email.md`.
-4. Lee `specs/agents/HU-33/lead.md`.
+4. Lee `docs/agents/HU-33/lead.md`.
 5. Lee `docs/api.md` (secciones de auth y de HU-52) y `docs/deploy.md`.
 
 ## Archivos exclusivos

@@ -7,7 +7,7 @@ líder ha aceptado a `agent-repository`.
 ## Antes de empezar
 1. Lee `AGENTS.md`.
 2. Lee `specs/HU-33-verificacion-email.md`, sección "Emails" (decisión O).
-3. Lee `specs/agents/HU-33/lead.md`: enlaces, variables de caducidad.
+3. Lee `docs/agents/HU-33/lead.md`: enlaces, variables de caducidad.
 4. Lee como referencia `invitation_email` y `set_password_link` en
    `app/services/password_token_service.py`, y `app/services/notifications.py`.
 

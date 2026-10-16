@@ -56,7 +56,7 @@ R-15 está definida en la spec de HU-33, no en `specs/ontology.md`. **Nadie modi
 `specs/ontology.md`**; `agent-docs` solo comprueba que el código y R-15 coinciden.
 
 ## Tareas
-1. Lanza a cada especialista con su archivo `specs/agents/HU-33/agent-*.md`, en el orden de
+1. Lanza a cada especialista con su archivo `docs/agents/HU-33/agent-*.md`, en el orden de
    la tabla.
 2. Tras cada entrega, revisa:
    - que solo ha tocado sus archivos (`git status`, `git diff --stat`);

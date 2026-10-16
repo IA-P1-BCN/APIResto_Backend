@@ -7,7 +7,7 @@ Eres el especialista en el modelo de datos de HU-33. Paso 1 del equipo (ver `lea
 1. Lee `AGENTS.md`.
 2. Lee `specs/ontology.md` (§2 `User` y `EmailVerificationToken`, R-09) y R-15 en la spec.
 3. Lee `specs/HU-33-verificacion-email.md`, sección "Modelo".
-4. Lee `specs/agents/HU-33/lead.md`, "Parámetros compartidos".
+4. Lee `docs/agents/HU-33/lead.md`, "Parámetros compartidos".
 5. Lee como referencia `app/models/model_password_reset_token.py` y
    `migrations/versions/0008_tokens_para_crear_contrasena.py`.
 

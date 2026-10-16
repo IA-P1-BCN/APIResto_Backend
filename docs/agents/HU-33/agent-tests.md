@@ -9,7 +9,7 @@ Eres el especialista en los tests de HU-33. Paso 6: empiezas cuando el líder ha
 2. Lee `specs/ontology.md` (R-02, R-04, R-09) y R-15 en la spec.
 3. Lee `specs/HU-33-verificacion-email.md`, "Testing Decisions" y "Criterios de
    aceptación".
-4. Lee `specs/agents/HU-33/lead.md`.
+4. Lee `docs/agents/HU-33/lead.md`.
 5. Lee como referencia `tests/test_password_tokens.py` (HU-52) y `tests/conftest.py`.
 
 ## Archivos exclusivos
