@@ -85,6 +85,22 @@ def test_start_spawns_one_daemon_thread_pinging_the_url():
     )
 
 
+def test_run_sleeps_between_pings():
+    pings = []
+    sleeps = []
+    stop = threading.Event()
+
+    def fake_ping(url):
+        pings.append(url)
+        if len(pings) == 2:
+            stop.set()
+        return True
+
+    keep_awake._run("https://api.example.com/health", 600, ping=fake_ping, sleep=sleeps.append, stop=stop)
+    assert pings == ["https://api.example.com/health"] * 2
+    assert sleeps == [600]
+
+
 def test_start_rejects_bad_url():
     assert start_keep_awake("localhost:8000/health", 10) is None
     assert start_keep_awake("https://api.example.com/health", 0) is None
