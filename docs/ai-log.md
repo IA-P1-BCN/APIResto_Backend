@@ -350,6 +350,20 @@ agente, la revisé y la commiteé primero.
 - **Decisiones humanas:** el estado del pedido lo lleva cocina salvo en los pedidos solo de barra (Anna).
 - **Lección:** comprobar cómo queda una función nueva con los datos que ya hay en producción.
 
+### HU-45 · Estado de plato
+
+#### 2026-10-16 · Spec, progreso del pedido y documentación · @arita-pereira
+
+- **Herramienta y modelo:** Claude (app, sesión con el repo clonado en solo lectura) · Sonnet 5.5 para comentarios y mensajes, Opus 5.5 para spec, código y revisión
+- **Issue y reglas:** #89 · R-14, R-15 (nueva)
+- **Prompt clave:** "Mira AGENTS.md y specs primero" y, con la historia de la issue, "falta escribir los criterios de aceptación. Escribe tú, juntamente con lo que se hará en cada paso"
+- **Resultado:** aceptado con cambios. `ready_to_serve` por línea y `progress` por pedido (`stage` y `by_station`), calculados al responder, sin modelo ni migración. 18 tests nuevos, 764 en verde con SQLite, ruff limpio. Commits `51664c9` spec, `19a091e` pedido sin líneas, `96f8ec0` progreso, `03cbe7b` api.md.
+- **Errores o alucinaciones:** (1) La tabla de `stage` de la spec daba `all_served` a un pedido sin líneas (0 de 0 servidas). Causa raíz: la regla se escribió sin pensar en el caso vacío. Se vio al implementar y se corrigió en `19a091e` (queda `waiting`). (2) Los comandos del paso 2 ponían `pytest` después de los commits y no tenían `ruff`. Causa raíz: el agente ordenó los comandos sin seguir "comprobar y después commitear". Lo vi yo y se corrigió. (3) Los tests pasaron a la primera; al meter errores a propósito, uno (restar los totales en lugar de sumar por líneas) no lo detectaba ningún test. Se añadió uno.
+- **Trabajo descartado:** la regla "no se puede servir más de lo preparado" (cambiaba el código y los tests de Anna de la #117) y un `progress` solo con el total del pedido (sustituido por `by_station`).
+- **Mi prompt o la spec:** la issue no tenía criterios y "estados más detallados" era ambiguo. No dije al principio que sala tenía que ver cocina y barra por separado; lo añadí al revisar la propuesta.
+- **Decisiones humanas:** seguir permitiendo servir sin preparar (Anna, Discord, 16/10); `by_station` con las dos estaciones para `admin` y `waiter` (Rita); no cambiar el `status` del pedido automáticamente (Rita).
+- **Lección:** probar los tests en falso: que pasen a la primera no demuestra que comprueben lo que importa.
+
 ### HU-46 · Estilo de la vista de pedidos del camarero
 
 #### 2026-10-14 · Carta sin viñetas y aviso al repetir un plato (Frontend #34) · @costanna
