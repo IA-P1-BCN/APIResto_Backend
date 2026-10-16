@@ -15,7 +15,7 @@ Tu trabajo es **orquestar, verificar y consolidar**. No escribes archivos
 1. Crea el equipo de agentes especialistas según la tabla de
    `specs/HU-27-coleccion-bruno.md`.
 2. Asigna a cada especialista la tarea definida en su archivo
-   `specs/agents/HU-27/agent-*.md`.
+   `docs/agents/HU-27/agent-*.md`.
 3. Verifica que cada especialista trabaja solo en las carpetas asignadas.
 4. Al terminar cada especialista, revisa su trabajo:
    - ¿Los `.bru` tienen `meta`, request, body, `script:post-response` y `tests`?

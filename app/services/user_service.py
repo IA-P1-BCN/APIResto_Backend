@@ -55,6 +55,7 @@ def list_users(
 
 
 def create_user(db: Session, data: UserCreate, actor: User | None = None) -> User:
+    """Alta por un admin: nace con el email verificado (R-15, decisión C)."""
     email = normalize_email(data.email)
     if user_repository.get_by_email(db, email):
         raise HTTPException(status_code=409, detail="Email already registered")
@@ -65,6 +66,7 @@ def create_user(db: Session, data: UserCreate, actor: User | None = None) -> Use
         password_hash=hash_password(data.password),
         phone=data.phone,
         role=data.role.value,
+        email_verified=True,
         created_by=actor.id if actor else None,
         updated_by=actor.id if actor else None,
     )

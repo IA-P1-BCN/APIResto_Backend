@@ -53,7 +53,7 @@ bien delimitadas.
 
 1. Se habilita el flag experimental de agent teams en Claude Code.
 2. Se invoca al agente líder con la instrucción de crear el equipo.
-3. El líder lee `specs/agents/HU-27/lead.md` y reparte las tareas según los
+3. El líder lee `docs/agents/HU-27/lead.md` y reparte las tareas según los
    archivos `agent-*.md`.
 4. Los agentes especialistas trabajan **en paralelo**, cada uno en su
    carpeta de dominio dentro de `bruno/`, sin solapamiento de archivos.
@@ -63,12 +63,12 @@ bien delimitadas.
 
 | Agente | Archivo de directriz | Tarea única | Archivos que posee |
 |---|---|---|---|
-| **Lead** | `specs/agents/HU-27/lead.md` | Orquestar, verificar, consolidar, abrir PR | Ninguno (solo lectura + coordinación) |
-| **Auth & Users** | `specs/agents/HU-27/agent-auth.md` | Revisar/crear `.bru` de `01-auth/` y `02-users/` | `bruno/01-auth/`, `bruno/02-users/` |
-| **Menus & Tables** | `specs/agents/HU-27/agent-menus.md` | Revisar/crear `.bru` de `03-categories/`, `04-dishes/`, `05-tables/` | `bruno/03-categories/`, `bruno/04-dishes/`, `bruno/05-tables/` |
-| **Orders & Invoices** | `specs/agents/HU-27/agent-orders.md` | Revisar/crear `.bru` de `07-orders/` y `08-invoices/` | `bruno/07-orders/`, `bruno/08-invoices/` |
-| **Reservations** | `specs/agents/HU-27/agent-reservations.md` | Revisar/crear `.bru` de `06-reservations/` | `bruno/06-reservations/` |
-| **Stats, Export & Cleanup** | `specs/agents/HU-27/agent-cleanup.md` | Revisar/crear `.bru` de `09-stats/`, `10-exports/`, `11-cleanup/` | `bruno/09-stats/`, `bruno/10-exports/`, `bruno/11-cleanup/` |
+| **Lead** | `docs/agents/HU-27/lead.md` | Orquestar, verificar, consolidar, abrir PR | Ninguno (solo lectura + coordinación) |
+| **Auth & Users** | `docs/agents/HU-27/agent-auth.md` | Revisar/crear `.bru` de `01-auth/` y `02-users/` | `bruno/01-auth/`, `bruno/02-users/` |
+| **Menus & Tables** | `docs/agents/HU-27/agent-menus.md` | Revisar/crear `.bru` de `03-categories/`, `04-dishes/`, `05-tables/` | `bruno/03-categories/`, `bruno/04-dishes/`, `bruno/05-tables/` |
+| **Orders & Invoices** | `docs/agents/HU-27/agent-orders.md` | Revisar/crear `.bru` de `07-orders/` y `08-invoices/` | `bruno/07-orders/`, `bruno/08-invoices/` |
+| **Reservations** | `docs/agents/HU-27/agent-reservations.md` | Revisar/crear `.bru` de `06-reservations/` | `bruno/06-reservations/` |
+| **Stats, Export & Cleanup** | `docs/agents/HU-27/agent-cleanup.md` | Revisar/crear `.bru` de `09-stats/`, `10-exports/`, `11-cleanup/` | `bruno/09-stats/`, `bruno/10-exports/`, `bruno/11-cleanup/` |
 
 *Nota: El agente Lead no escribe archivos `.bru`; solo coordina, verifica y
 consolida. Los especialistas escriben únicamente en las carpetas que
@@ -78,7 +78,7 @@ poseen.*
 
 Cada agente especialista debe:
 1. Leer primero `AGENTS.md`, luego `specs/ontology.md`, luego su archivo
-   `specs/agents/HU-27/agent-*.md`.
+   `docs/agents/HU-27/agent-*.md`.
 2. Trabajar **únicamente** en las carpetas de `bruno/` que se le asignan.
 3. No tocar código de `app/`, `tests/`, migraciones, CI ni configuración de
    despliegue.
@@ -91,7 +91,7 @@ Cada agente especialista debe:
 ### Reglas para el agente líder
 
 El agente líder debe:
-1. Leer `specs/agents/HU-27/lead.md` antes de hacer nada.
+1. Leer `docs/agents/HU-27/lead.md` antes de hacer nada.
 2. Crear el equipo de agentes especialistas.
 3. Asignar tareas según la tabla de arriba.
 4. Verificar que cada especialista entrega lo pactado.
@@ -222,7 +222,7 @@ El agente líder debe:
 - [x] Ninguna credencial real ni token hardcodeado en el repo.
 - [ ] El diff de la PR contra `dev` solo muestra cambios dentro de `bruno/`,
       `docs/agents/HU-27/`, `scripts/generate_agent_diagrams.py`,
-      `specs/agents/HU-27/`, este fichero y la sección HU-27 de
+      `docs/agents/HU-27/`, este fichero y la sección HU-27 de
       `docs/ai-log.md`.
   > Excepción aprobada por Levi (PO) el 14/10/2026 para incluir
   > la documentación visual y las directrices de agentes de esta HU.
@@ -232,7 +232,7 @@ El agente líder debe:
   > `.dockerignore` excluye `bruno/` y `scripts/generate_agent_diagrams.py`
   > de la imagen Docker (solo añade dos líneas; no cambia el código que corre).
 - [ ] PR revisada por otra persona y aprobada por Levi (PO).
-- [ ] Los archivos `specs/agents/HU-27/*.md` existen y describen las tareas
+- [ ] Los archivos `docs/agents/HU-27/*.md` existen y describen las tareas
       de cada agente de forma clara y sin solapamiento.
 
 ## Out of Scope
@@ -268,8 +268,8 @@ El agente líder debe:
   - `docs/api.md` — documentación funcional de la API.
   - `docs/deploy.md` — despliegue y entornos (Local, Production).
   - Swagger: https://restoapi-47sp.onrender.com/docs
-  - `specs/agents/HU-27/lead.md` — directriz del agente líder.
-  - `specs/agents/HU-27/agent-*.md` — directrices de los agentes especialistas.
+  - `docs/agents/HU-27/lead.md` — directriz del agente líder.
+  - `docs/agents/HU-27/agent-*.md` — directrices de los agentes especialistas.
 - Alineado con `R-02` (no exponer `password_hash`), `R-03` (roles y creación
   de cuentas), `R-04` (desactivación lógica) y `R-05`/`R-06`/`R-07` (par de
   tokens) en la medida en que el código actual los implementa.

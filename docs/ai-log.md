@@ -205,6 +205,30 @@ agente, la revisé y la commiteé primero.
 - **Decisiones humanas (Levi):** Production de solo lectura; contraseña aleatoria; opción A para el bartender (una línea de barra de verdad, no un 404 esperado); sacar `bruno/` y `scripts/generate_agent_diagrams.py` de la imagen; citar la PR en vez de hashes, porque con squash quedarían huérfanos; incluir los dos requests de HU-25 aquí; y abrir issues aparte para el job de Bruno en CI y para el `create_all` de `app/main.py`. La PR se integra con squash.
 - **Lección:** volver a ejecutar la colección después de cada rebase, no solo cuando mergea `dev`. Y sin un job de Bruno en CI, cualquier cambio de contrato la rompe sin que nadie se entere.
 
+### HU-33 · Verificación de email y recuperación de contraseña
+
+#### 2026-10-16 · Implementación con un equipo de agentes · @levifvy
+
+- **Herramienta y modelo:** Claude Code · Opus 5.5 (`claude-opus-5-5`): un líder y 7 especialistas (modelo, repositorio, emails, servicio, endpoints, tests y docs), lanzados uno tras otro según `docs/agents/HU-33/lead.md`.
+- **Issue y reglas:** #76 · R-01, R-02, R-04, R-09, R-11, R-13 y R-15 (definida en la spec de HU-33)
+- **Prompt clave:** "sigue con la implementación". El líder lanza a cada especialista con su directriz y sus archivos exclusivos, revisa su `git diff` antes de lanzar al siguiente y exige `ruff` limpio y `pytest` entero en verde sin modificar ningún test existente.
+- **Resultado:** aceptado. Columna `users.email_verified` y tabla `email_verification_tokens` (migración `0009` con backfill a `true`); helper común `app/core/one_time_tokens.py`; `POST /auth/verify-email`, `POST /auth/resend-verification` y `POST /auth/forgot-password`. La recuperación reutiliza `PasswordResetToken` y `POST /auth/set-password` de HU-52. `register`, `PATCH /users/me`, `set-password`, `POST /users/`, el login social y `create_admin` aplican R-15 sin cambiar sus respuestas; `UserOut` gana `email_verified`. Sin breaking-api y sin dependencias nuevas. 804 tests en verde (746 al empezar, 3 del test de documentación de HU-26 y 55 nuevos en `tests/test_email_verification.py` y `tests/test_forgot_password.py`), 99 % de cobertura (100 % en los archivos de HU-33) y `ruff` limpio. La colección Bruno no compara `UserOut` campo a campo y no hubo que tocarla. Los commits van en la PR de HU-33.
+- **Errores o alucinaciones:** `agent-model` registró el modelo nuevo en `app/models/__init__.py`, un patrón que no usa ningún otro modelo. Causa raíz: el reparto del líder no le daba `app/main.py` ni `migrations/env.py`, donde se registran los modelos. El líder se lo devolvió y le asignó esas dos líneas. `agent-endpoints` no llegó a enviar su informe; el líder verificó el paso por su cuenta. Los 3 tests de más que aparecieron en ese paso no eran nuevos: el test de HU-26 se ejecuta una vez por endpoint y ahora cubre también los tres nuevos.
+- **Trabajo descartado:** nada
+- **Mi prompt o la spec:** la spec no fijaba tres cosas que salieron al implementar: el orden de las comprobaciones de `verify-email`, si el cambio de email en `/users/me` debía guardarse en un solo commit, y qué pasa con el tiempo de espera de `forgot-password` justo después de una invitación. `docs/deploy.md` no mencionaba la migración `0008`; se añadió junto con la `0009`.
+- **Decisiones humanas (Levi):**
+  * **Flujos de tokens y validación:**
+    * `verify-email` valida la caducidad/uso del token (410) antes de comprobar si el usuario está activo (400), alineándose con `set-password`.
+    * Las invitaciones recientes activan el tiempo de espera de 60 segundos en `forgot-password`, ya que comparten el modelo `PasswordResetToken`.
+  * **Persistencia y cambios de email:**
+    * El cambio de email en `PATCH /users/me` se realiza en dos commits para proteger los tests de `update_profile`. Se asume el riesgo de que falle el segundo commit y el email quede verificado.
+    * Se aprueban los textos de correo propuestos por `agent-email`.
+  * **Notificaciones para Anna (Impacto en Backend):**
+    * El helper de tokens se movió a `password_token_service.py`.
+    * `forgot-password` se integra en `router_password.py` y su repositorio estrena `get_latest_for_user`.
+    * `set-password` ahora marca el campo `email_verified`. El comportamiento previo de HU-52 no se altera y sus tests pasan sin cambios.
+- **Lección:** entregar a cada agente **todos los archivos impactados** (incluyendo registros globales como `main.py`) y **ejecutar la suite completa de tests** tras cada iteración previene desviaciones y detecta rupturas de contrato inmediatamente.
+
 ### HU-34 · Cobertura de tests ≥ 80 %                                                                                                                                            
                                                                                                                                                                                    
 #### 2026-10-16 · Cobertura al 100 % y umbral del 98 % en el CI · @levifvy                                                                                                       
@@ -221,7 +245,6 @@ agente, la revisé y la commiteé primero.
 - **Mi prompt o la spec:** La issue andaba desactualizada (pedía un 80% que ya pasábamos); lo que nos faltaba de verdad era proteger el CI para no ir hacia atrás. Además, en el prompt le pedí leer `pyproject.toml` y cosas de la HU-33 que aún no están en `dev`.
 - **Decisiones humanas (Levi):** Dejar el 98% fijo en el YAML de CI, borrar la variable del repositorio para que no confunda, meter la info en `docs/agents/HU-34/` y negarme en rotundo a usar pragmas.
 - **Lección:** Hay que medir antes de planificar (casi nos ponemos a picar código sin ver que ya estábamos en el 99%) y obligar al agente a comprobar el repositorio antes de dar datos por buenos.
-
 
 ### HU-35 · Comandos y subagentes de OpenCode
 

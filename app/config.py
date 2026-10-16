@@ -16,6 +16,9 @@ class Settings(BaseSettings):
     MAIL_FROM: str = ""
     FRONTEND_URL: str = "http://localhost:5173"
     PASSWORD_TOKEN_EXPIRE_HOURS: int = 48
+    EMAIL_VERIFY_EXPIRE_HOURS: int = 48
+    PASSWORD_RESET_EXPIRE_HOURS: int = 1
+    TOKEN_RESEND_COOLDOWN_SECONDS: int = 60
     STATS_CACHE_TTL: int = 60
     RESTAURANT_TIMEZONE: str = "Europe/Madrid"
     GOOGLE_CLIENT_ID: str = ""
