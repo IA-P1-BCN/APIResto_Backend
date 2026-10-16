@@ -37,7 +37,7 @@ https://restoapi-47sp.onrender.com/docs. El esquema OpenAPI está en `/openapi.j
   `code`. `tests/test_openapi.py` falla si un endpoint nuevo de `/auth` o `/users` llega sin
   esa documentación.
 
-## Autenticación (`/auth`) · HU-04, HU-22, HU-38
+## Autenticación (`/auth`) · HU-04, HU-22, HU-38, HU-33
 
 | Método | Ruta | Qué hace | Éxito |
 |---|---|---|---|
@@ -45,12 +45,18 @@ https://restoapi-47sp.onrender.com/docs. El esquema OpenAPI está en `/openapi.j
 | `POST` | `/auth/login` | Inicia sesión y devuelve un `AccessToken` | `200` |
 | `POST` | `/auth/social/{provider}` | Login con Google o GitHub (`provider` = `google` \| `github`) | `200` |
 | `GET` | `/auth/me` | Datos del usuario autenticado | `200` |
+| `POST` | `/auth/set-password` | Crea o restablece la contraseña con el token del email ([HU-52](#crear-la-contraseña-post-authset-password)) | `204` |
+| `POST` | `/auth/verify-email` | Verifica el email con el token del email ([HU-33](#verificación-de-email-y-recuperación-de-contraseña--hu-33)) | `204` |
+| `POST` | `/auth/resend-verification` | Pide otro enlace de verificación (HU-33) | `202` |
+| `POST` | `/auth/forgot-password` | Pide un enlace para restablecer la contraseña (HU-33) | `202` |
 
 ### Auto-registro (`POST /auth/register`)
 
 No requiere token. Crea la cuenta al instante (`is_active=true`); el `role` del payload se
 ignora y siempre se crea un `customer` (R-03). No emite token: hay que iniciar sesión
-después con `POST /auth/login`.
+después con `POST /auth/login`. La cuenta nace con `email_verified=false` y recibe en
+segundo plano un email con el enlace de verificación (HU-33, R-15); la respuesta no cambia
+y se puede iniciar sesión sin verificar.
 
 ```json
 {"name": "Ana Gómez", "email": "ana@test.com", "phone": "600123456", "password": "secreto123"}
@@ -60,7 +66,8 @@ Respuesta `201` (`UserOut`; nunca incluye `password_hash` ni el token):
 
 ```json
 {"id": 7, "name": "Ana Gómez", "email": "ana@test.com", "phone": "600123456",
- "role": "customer", "is_active": true, "created_at": "2026-10-14T10:15:00"}
+ "role": "customer", "is_active": true, "email_verified": false,
+ "created_at": "2026-10-14T10:15:00"}
 ```
 
 - **Email único sin distinguir mayúsculas** y guardado en minúsculas (R-01): se puede
@@ -71,7 +78,8 @@ Respuesta `201` (`UserOut`; nunca incluye `password_hash` ni el token):
 
 `application/x-www-form-urlencoded` con `username` (el email) y `password`. Devuelve
 `{"access_token": "...", "token_type": "bearer"}` (`200`). Credenciales incorrectas o
-usuario desactivado → `401`.
+usuario desactivado → `401`. No comprueba `email_verified`: una cuenta sin verificar
+inicia sesión igual (HU-33, R-15).
 
 ### Login social (`POST /auth/social/{provider}`) · HU-38
 
@@ -82,7 +90,8 @@ Devuelve `{"access_token", "token_type"}`, igual que `/auth/login`.
 - Cuenta social ya vinculada → inicia sesión.
 - Si no, hace falta un email **verificado** por el proveedor (Google: `email_verified`; GitHub:
   el email primario verificado). Si ya existe un usuario con ese email se vincula (conserva su
-  rol); si no, se crea un `customer` sin contraseña.
+  rol); si no, se crea un `customer` sin contraseña. En los dos casos queda
+  `email_verified=true` (HU-33, R-15).
 - Un usuario inactivo o borrado no entra. Un usuario sin contraseña no puede usar `/auth/login`.
 - Variables: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`.
 
@@ -290,7 +299,7 @@ Todos los endpoints son solo `admin` (otro rol → `403`), salvo los del propio 
 | `DELETE /users/{id}` | Soft delete: `deleted_at` + `is_active=false`; desaparece de los listados. Devuelve el usuario |
 | `POST /users/{id}/restore` | `deleted_at=null` e `is_active=true`. Solo si estaba borrado |
 
-`UserOut` incluye `updated_at`, `deleted_at`, `created_by` y `updated_by` (nulos en usuarios anteriores a la HU-32 o creados por auto-registro). Un usuario nunca se borra físicamente; su email sigue reservado (crearlo otra vez → `409`).
+`UserOut` incluye `updated_at`, `deleted_at`, `created_by` y `updated_by` (nulos en usuarios anteriores a la HU-32 o creados por auto-registro), y `email_verified` (HU-33; los creados con `POST /users/` nacen con `true`). Un usuario nunca se borra físicamente; su email sigue reservado (crearlo otra vez → `409`).
 
 | Código | Cuándo |
 |---|---|
@@ -338,15 +347,19 @@ Edición parcial: solo se aplican los campos enviados.
   `422` `validation_error`. El rol y la activación siguen siendo cosa de un admin (R-03, R-04).
 - **Email** guardado en minúsculas y único sin distinguir mayúsculas (R-01). Si ya es de
   otro usuario, incluidos los borrados → `409`. Enviar el mismo email que ya tienes es válido.
+- **Cambiar el email pide verificarlo de nuevo** (HU-33, R-15): `email_verified=false`, se
+  invalidan los enlaces de verificación pendientes y se envía uno nuevo a la dirección
+  nueva, sin tiempo de espera. La respuesta sigue siendo `200` y no se pierde el acceso.
+  Con el mismo email o sin `email` en el cuerpo, `email_verified` no cambia.
 - Guarda `updated_by` con el propio id (R-11) y actualiza `updated_at`.
 
 Respuesta `200` (`UserOut`; nunca incluye `password_hash`):
 
 ```json
 {"id": 7, "name": "Ana López", "email": "ana@example.com", "phone": "600123456",
- "role": "customer", "is_active": true, "created_at": "2026-10-14T10:15:00",
- "updated_at": "2026-10-15T09:30:00", "deleted_at": null, "created_by": null,
- "updated_by": 7}
+ "role": "customer", "is_active": true, "email_verified": false,
+ "created_at": "2026-10-14T10:15:00", "updated_at": "2026-10-15T09:30:00",
+ "deleted_at": null, "created_by": null, "updated_by": 7}
 ```
 
 ### Cambiar mi contraseña (`POST /users/me/password`)
@@ -393,7 +406,8 @@ token, y el token nunca aparece en el log.
 ```
 
 `phone` es opcional y `role` vale `customer` por defecto. El usuario se crea con
-`password_hash` nulo, así que no puede iniciar sesión hasta crear su contraseña. El email
+`password_hash` nulo, así que no puede iniciar sesión hasta crear su contraseña, y con
+`email_verified=false` (HU-33). El email
 ("Crea tu contraseña de APIResto") lleva el enlace
 `{FRONTEND_URL}/crear-contrasena?token=…`; con `EMAIL_ENABLED=false` solo se registra en
 el log, sin el enlace.
@@ -407,6 +421,10 @@ el log, sin el enlace.
 Guarda la contraseña (bcrypt, mínimo 8 caracteres, R-02) y marca como usados todos los
 tokens pendientes del usuario. Después se entra con `POST /auth/login`.
 
+Sirve también para la recuperación de HU-33 (el token de `POST /auth/forgot-password`). Con
+cualquiera de los dos tokens marca además `email_verified=true`, porque el enlace llegó por
+email (R-15). La respuesta sigue siendo `204`.
+
 ### Códigos de error
 
 | HTTP | `code` | Cuándo |
@@ -418,6 +436,97 @@ tokens pendientes del usuario. Después se entra con `POST /auth/login`.
 | 410 | `token_used` | El token ya se usó: `"Token already used"` |
 | 410 | `token_expired` | El token ha caducado: `"Token expired"` |
 | 422 | `validation_error` | Email con formato incorrecto, campos desconocidos o `new_password` < 8 caracteres |
+
+## Verificación de email y recuperación de contraseña · HU-33
+
+La verificación es **informativa** (R-15): `email_verified` sale en `UserOut` y
+`POST /auth/login` no la comprueba. Ningún endpoint existente cambia su código de respuesta
+ni sus errores; `UserOut` solo gana el campo `email_verified` (aditivo, sin breaking-api).
+
+| Endpoint | Rol | Respuesta |
+|---|---|---|
+| `POST /auth/verify-email` | Público | `204` sin cuerpo |
+| `POST /auth/resend-verification` | Público | `202` |
+| `POST /auth/forgot-password` | Público | `202` |
+
+**Quién nace verificado** (`email_verified`):
+
+| Origen de la cuenta | `email_verified` |
+|---|---|
+| `POST /auth/register` | `false`; se envía el email de verificación |
+| `POST /users/` (admin) | `true` |
+| `POST /users/invite` | `false`; pasa a `true` con `POST /auth/set-password` |
+| Login social, cuenta nueva o vinculada | `true` |
+| `python -m app.scripts.create_admin` (también al promover una cuenta) | `true` |
+| Cuentas anteriores a la migración `0009` | `true` |
+
+Los enlaces llevan un token de un solo uso (R-09): solo se guarda su SHA-256 y nunca
+aparece en el log ni en una respuesta. Los emails se envían en segundo plano; con
+`EMAIL_ENABLED=false` solo se registra el envío, sin el enlace.
+
+| Email | Asunto | Enlace | Caduca |
+|---|---|---|---|
+| Verificación | "Verifica tu email de APIResto" | `{FRONTEND_URL}/verificar-email?token=…` | `EMAIL_VERIFY_EXPIRE_HOURS` (48 h) |
+| Recuperación | "Restablece tu contraseña de APIResto" | `{FRONTEND_URL}/restablecer-contrasena?token=…` | `PASSWORD_RESET_EXPIRE_HOURS` (1 h) |
+
+### Verificar el email (`POST /auth/verify-email`)
+
+```json
+{"token": "token-del-enlace-del-email"}
+```
+
+Lo llama la página `/verificar-email` del frontend. Marca `email_verified=true` y marca como
+usados ese token y los demás enlaces de verificación pendientes del usuario. Si la cuenta
+ya estaba verificada y el token es válido, responde `204` igualmente y lo consume.
+
+### Reenviar la verificación (`POST /auth/resend-verification`)
+
+```json
+{"email": "ana@example.com"}
+```
+
+Envía otro enlace si la cuenta no está verificada. No requiere token: sirve también a
+quien aún no ha iniciado sesión.
+
+### Olvidé mi contraseña (`POST /auth/forgot-password`)
+
+```json
+{"email": "ana@example.com"}
+```
+
+Envía un enlace con un `PasswordResetToken` que caduca a las `PASSWORD_RESET_EXPIRE_HOURS`
+horas (1 por defecto; la invitación de HU-52 sigue con `PASSWORD_TOKEN_EXPIRE_HOURS`). La
+contraseña nueva se fija con [`POST /auth/set-password`](#crear-la-contraseña-post-authset-password),
+sin cambios en su contrato. También llega a cuentas sin contraseña (solo login social o
+invitadas), que así pueden crear una.
+
+### Respuesta `202` idéntica y tiempo de espera
+
+`resend-verification` y `forgot-password` responden **siempre** `202` con el mismo cuerpo,
+exista o no la cuenta, para no revelar qué emails están registrados:
+
+```json
+{"detail": "If the account exists, an email has been sent"}
+```
+
+El email se compara en minúsculas (R-01). Solo se envía si la cuenta existe, está activa y
+no está borrada (R-04), y no está en el tiempo de espera; `resend-verification` exige además
+que no esté verificada. En cualquier otro caso no se envía nada y solo queda un log, sin
+el email.
+
+**Tiempo de espera:** no se emite otro token del mismo tipo si el último del usuario se
+creó hace menos de `TOKEN_RESEND_COOLDOWN_SECONDS` (60 por defecto). Es silencioso: no
+devuelve `429`, porque un `429` solo aparecería con emails registrados. El enlace de
+`POST /auth/register` cuenta como último envío; el de `PATCH /users/me` no espera.
+
+### Códigos de error
+
+| HTTP | `code` | Cuándo |
+|---|---|---|
+| 400 | `invalid_token` | `verify-email`: token desconocido, o usuario desactivado o borrado: `"Invalid token"` |
+| 410 | `token_used` | `verify-email`: el token ya se usó: `"Token already used"` |
+| 410 | `token_expired` | `verify-email`: el token ha caducado: `"Token expired"` |
+| 422 | `validation_error` | Falta `token` o `email`, email con formato incorrecto o campos de más |
 
 ## Pedidos (`/orders`) · HU-07, HU-05, HU-45
 

@@ -131,7 +131,7 @@ def diagram_1():
         arrow(ax, parent, spec)
 
     level(11.8, "NIVEL 3")
-    lead = box(ax, 8, 11.8, 5, 1.2, "specs/agents/HU-27/lead.md",
+    lead = box(ax, 8, 11.8, 5, 1.2, "docs/agents/HU-27/lead.md",
                "orquesta · no escribe .bru", YELLOW)
     arrow(ax, spec, lead)
 
@@ -210,6 +210,12 @@ TREE = [
     ("│   ├── ai-log.md", "bitácora"),
     ("│   └── agents/", None),
     ("│       └── HU-27/", None),
+    ("│           ├── lead.md", 3),
+    ("│           ├── agent-auth.md", 3),
+    ("│           ├── agent-menus.md", 3),
+    ("│           ├── agent-orders.md", 3),
+    ("│           ├── agent-reservations.md", 3),
+    ("│           ├── agent-cleanup.md", 3),
     ("│           ├── esquema-visual-detallado.png", "salida"),
     ("│           ├── mapa-dependencias-agentes.png", "salida"),
     ("│           └── esquema-archivos-por-nivel.png", "salida"),
@@ -217,15 +223,7 @@ TREE = [
     ("├── specs/", None),
     ("│   ├── ontology.md", 1),
     ("│   ├── HU-20-agents-ontologia.md", 1),
-    ("│   ├── HU-27-coleccion-bruno.md", 2),
-    ("│   └── agents/", None),
-    ("│       └── HU-27/", None),
-    ("│           ├── lead.md", 3),
-    ("│           ├── agent-auth.md", 3),
-    ("│           ├── agent-menus.md", 3),
-    ("│           ├── agent-orders.md", 3),
-    ("│           ├── agent-reservations.md", 3),
-    ("│           └── agent-cleanup.md", 3),
+    ("│   └── HU-27-coleccion-bruno.md", 2),
     ("│", None),
     ("├── bruno/", 4),
     ("│", None),

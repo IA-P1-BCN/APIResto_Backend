@@ -1,4 +1,8 @@
-"""Invitar a un usuario y que cree su propia contraseña con el enlace del email (HU-52)."""
+"""Invitar a un usuario y que cree su propia contraseña con el enlace del email (HU-52).
+
+También la recuperación de contraseña: `forgot-password` envía el enlace y la contraseña
+se fija con el mismo `set-password` (HU-33, decisión F).
+"""
 
 from typing import Annotated
 
@@ -9,9 +13,15 @@ from app.core.openapi import error_responses
 from app.core.permissions import USERS, CurrentUser, require_role
 from app.database import get_db
 from app.models.model_user import User
-from app.schemas.schema_password_token import SetPasswordRequest, UserInvite
+from app.schemas.schema_email_verification import EmailDispatchOut
+from app.schemas.schema_password_token import (
+    ForgotPasswordRequest,
+    SetPasswordRequest,
+    UserInvite,
+)
 from app.schemas.schema_user import UserOut
 from app.services import password_token_service
+from app.services.auth_emails import password_reset_email
 from app.services.notifications import send_email
 
 invite_router = APIRouter(
@@ -84,3 +94,31 @@ def set_password(data: SetPasswordRequest, db: DbSession) -> Response:
     """
     password_token_service.set_password(db, data)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post(
+    "/forgot-password",
+    response_model=EmailDispatchOut,
+    status_code=status.HTTP_202_ACCEPTED,
+    summary="Pedir un enlace para restablecer la contraseña",
+    responses=error_responses(
+        422,
+        descriptions={422: "Email mal formado o campos de más (`validation_error`)."},
+    ),
+)
+def forgot_password(
+    data: ForgotPasswordRequest,
+    db: DbSession,
+    background_tasks: BackgroundTasks,
+) -> EmailDispatchOut:
+    """Envía un enlace para fijar una contraseña nueva con `POST /auth/set-password` (HU-33).
+
+    Responde siempre 202 con el mismo cuerpo, exista o no la cuenta (decisión I). El enlace
+    es de un solo uso y caduca a las `PASSWORD_RESET_EXPIRE_HOURS` (R-09, decisión G).
+    Sirve también a cuentas sin contraseña (decisión N). No se envía otro enlace hasta
+    pasados `TOKEN_RESEND_COOLDOWN_SECONDS`, sin 429 (decisión M). Rol: público.
+    """
+    result = password_token_service.forgot_password(db, data.email)
+    if result is not None:
+        background_tasks.add_task(send_email, *password_reset_email(*result))
+    return EmailDispatchOut()

@@ -16,6 +16,7 @@ from app.core.security import create_access_token
 from app.database import Base, get_db
 from app.main import app
 from app.models.model_user import Role, User
+from app.routers import auth, router_email_verification, router_password, router_user
 
 engine = create_engine(
     "sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool
@@ -109,3 +110,15 @@ def waiter_token(auth_headers) -> str:
 @pytest.fixture
 def customer_token(auth_headers) -> str:
     return _token(auth_headers(Role.customer))
+
+
+@pytest.fixture
+def outbox(monkeypatch):
+    """Sustituye send_email en los routers que envían emails (HU-33): sin red ni Brevo.
+
+    Cada email queda en la lista como (to, subject, html).
+    """
+    emails = []
+    for module in (auth, router_email_verification, router_password, router_user):
+        monkeypatch.setattr(module, "send_email", lambda *email: emails.append(email))
+    return emails

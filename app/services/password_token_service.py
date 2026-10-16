@@ -2,12 +2,11 @@
 
 Reglas (R-09): el token es de un solo uso y caduca a las PASSWORD_TOKEN_EXPIRE_HOURS
 horas. Solo se guarda su SHA-256; el valor en claro va únicamente en el email y nunca
-se registra en el log.
+se registra en el log. HU-33 añade la recuperación (`forgot_password`), con caducidad
+PASSWORD_RESET_EXPIRE_HOURS, y `set_password` marca el email como verificado (R-15).
 """
 
-import hashlib
 import logging
-import secrets
 from datetime import UTC, datetime, timedelta
 from html import escape
 
@@ -16,6 +15,7 @@ from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.core.exceptions import AppError, ConflictError
+from app.core.one_time_tokens import generate_token, hash_token
 from app.core.security import hash_password
 from app.models.model_password_reset_token import PasswordResetToken
 from app.models.model_user import User
@@ -26,7 +26,6 @@ from app.services.user_service import normalize_email
 logger = logging.getLogger(__name__)
 
 SET_PASSWORD_PATH = "/crear-contrasena"
-TOKEN_BYTES = 32
 INVITATION_SUBJECT = "Crea tu contraseña de APIResto"
 
 
@@ -41,18 +40,18 @@ def _now() -> datetime:
     return datetime.now(UTC).replace(tzinfo=None)
 
 
-def hash_token(token: str) -> str:
-    return hashlib.sha256(token.encode("utf-8")).hexdigest()
+def _new_token(expire_hours: int | None = None) -> tuple[str, PasswordResetToken]:
+    """Valor en claro y registro del token. Creación y caducidad salen del mismo reloj.
 
-
-def _new_token() -> tuple[str, PasswordResetToken]:
-    """Valor en claro y registro del token. Creación y caducidad salen del mismo reloj."""
-    token = secrets.token_urlsafe(TOKEN_BYTES)
+    Sin `expire_hours` caduca a las PASSWORD_TOKEN_EXPIRE_HOURS (invitación, HU-52).
+    """
+    hours = settings.PASSWORD_TOKEN_EXPIRE_HOURS if expire_hours is None else expire_hours
+    token = generate_token()
     now = _now()
     record = PasswordResetToken(
         token_hash=hash_token(token),
         created_at=now,
-        expires_at=now + timedelta(hours=settings.PASSWORD_TOKEN_EXPIRE_HOURS),
+        expires_at=now + timedelta(hours=hours),
     )
     return token, record
 
@@ -63,6 +62,36 @@ def issue_token(db: Session, user: User) -> str:
     record.user_id = user.id
     password_reset_token_repository.add(db, record)
     return token
+
+
+def _in_cooldown(db: Session, user: User) -> bool:
+    """Decisión M: el último token del usuario se creó hace menos del tiempo de espera."""
+    latest = password_reset_token_repository.get_latest_for_user(db, user.id)
+    if latest is None or latest.created_at is None:
+        return False
+    return latest.created_at > _now() - timedelta(seconds=settings.TOKEN_RESEND_COOLDOWN_SECONDS)
+
+
+def forgot_password(db: Session, email: str) -> tuple[User, str] | None:
+    """Emite un token de recuperación (HU-33, decisiones F, G, I, M, N).
+
+    Devuelve `(user, token)` para enviar el email, o `None` si la cuenta no existe, está
+    inactiva o borrada (R-04), o está en el tiempo de espera. Sirve también a cuentas sin
+    contraseña. El router responde 202 igual en todos los casos.
+    """
+    user = user_repository.get_by_email(db, normalize_email(email))
+    if user is None or not user.is_active or user.deleted_at is not None:
+        logger.info("Password reset not sent", extra={"reason": "no_eligible_account"})
+        return None
+    if _in_cooldown(db, user):
+        logger.info("Password reset not sent", extra={"reason": "cooldown"})
+        return None
+
+    token, record = _new_token(settings.PASSWORD_RESET_EXPIRE_HOURS)
+    record.user_id = user.id
+    password_reset_token_repository.add(db, record)
+    logger.info("Password reset token issued", extra={"user_id": user.id})
+    return user, token
 
 
 def invite_user(db: Session, data: UserInvite, actor: User) -> tuple[User, str]:
@@ -121,7 +150,10 @@ def _gone(detail: str, code: str, user_id: int) -> TokenGoneError:
 
 
 def set_password(db: Session, data: SetPasswordRequest) -> None:
-    """Fija la contraseña con el token y marca como usados todos los pendientes del usuario."""
+    """Fija la contraseña con el token y marca como usados todos los pendientes del usuario.
+
+    Usar el token demuestra que el buzón es del usuario: `email_verified = true` (R-15, C).
+    """
     record = password_reset_token_repository.get_by_hash_for_update(db, hash_token(data.token))
     if record is None:
         raise _invalid_token()
@@ -136,6 +168,7 @@ def set_password(db: Session, data: SetPasswordRequest) -> None:
 
     now = _now()
     user.password_hash = hash_password(data.new_password)
+    user.email_verified = True
     user.updated_by = user.id
     for pending in password_reset_token_repository.list_pending_for_user(db, user.id):
         pending.used_at = now
