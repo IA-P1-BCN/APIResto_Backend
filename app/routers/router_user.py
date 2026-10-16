@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Path, Query, Response, status
+from fastapi import APIRouter, BackgroundTasks, Depends, Path, Query, Response, status
 from sqlalchemy.orm import Session
 
 from app.core.openapi import error_responses
@@ -15,7 +15,9 @@ from app.schemas.schema_user import (
     UserProfileUpdate,
     UserUpdate,
 )
-from app.services import user_service
+from app.services import email_verification_service, user_service
+from app.services.auth_emails import verification_email
+from app.services.notifications import send_email
 
 router = APIRouter(
     prefix="/users",
@@ -236,14 +238,24 @@ def restore_user(user_id: UserId, db: DbSession, actor: CurrentUser):
         },
     ),
 )
-def update_my_profile(data: UserProfileUpdate, db: DbSession, current_user: CurrentUser):
+def update_my_profile(
+    data: UserProfileUpdate,
+    db: DbSession,
+    current_user: CurrentUser,
+    background_tasks: BackgroundTasks,
+):
     """Edita `name`, `email` y `phone` del usuario autenticado, de cualquier rol.
 
     Solo se aplican los campos enviados. `role` e `is_active` no se pueden cambiar (422).
-    El email se guarda en minúsculas y debe ser único (R-01, 409).
+    El email se guarda en minúsculas y debe ser único (R-01, 409). Si el email cambia,
+    queda `email_verified=false`, se invalidan los enlaces pendientes y se envía uno nuevo
+    a la dirección nueva (R-15, decisión E); el usuario no pierde el acceso.
     Rol: cualquier usuario autenticado.
     """
-    return user_service.update_profile(db, current_user, data)
+    user, token = email_verification_service.update_profile(db, current_user, data)
+    if token is not None:
+        background_tasks.add_task(send_email, *verification_email(user, token))
+    return user
 
 
 @me_router.post(

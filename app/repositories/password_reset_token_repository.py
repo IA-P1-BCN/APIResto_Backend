@@ -41,3 +41,13 @@ def list_pending_for_user(db: Session, user_id: int) -> list[PasswordResetToken]
         .filter(PasswordResetToken.user_id == user_id, PasswordResetToken.used_at.is_(None))
         .all()
     )
+
+
+def get_latest_for_user(db: Session, user_id: int) -> PasswordResetToken | None:
+    """Último token emitido para el usuario (usado o no), o None si no tiene ninguno."""
+    return (
+        db.query(PasswordResetToken)
+        .filter(PasswordResetToken.user_id == user_id)
+        .order_by(PasswordResetToken.created_at.desc(), PasswordResetToken.id.desc())
+        .first()
+    )

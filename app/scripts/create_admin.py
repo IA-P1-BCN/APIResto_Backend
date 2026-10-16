@@ -14,12 +14,14 @@ from app.repositories import user_repository
 
 
 def create_admin(db: Session, email: str, password: str, name: str = "Admin") -> User:
+    """Crea o promueve el admin; nace con el email verificado (R-15, decisión P2)."""
     user = user_repository.get_by_email(db, email)
     if user is None:
         user = User(name=name, email=email, password_hash=hash_password(password))
         db.add(user)
     user.role = Role.admin.value
     user.is_active = True
+    user.email_verified = True
     db.commit()
     db.refresh(user)
     return user
