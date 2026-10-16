@@ -32,12 +32,16 @@ DEFAULT_DESCRIPTIONS: dict[int, str] = {
 
 
 class ValidationErrorResponse(ErrorResponse):
-    """Cuerpo del 422 de validación: el formato común más el detalle por campo."""
+    """Cuerpo del 422: el formato común más, en los de validación, el detalle por campo."""
 
     detail: str = Field(examples=[VALIDATION_ERROR_DETAIL])
     code: str = Field(examples=[VALIDATION_ERROR_CODE])
-    errors: list[dict[str, Any]] = Field(
-        description="Un elemento por campo no válido.",
+    errors: list[dict[str, Any]] | None = Field(
+        default=None,
+        description=(
+            f"Solo con `code` = `{VALIDATION_ERROR_CODE}`: un elemento por campo no válido. "
+            "Los 422 de reglas de negocio (por ejemplo `same_password`) no lo incluyen."
+        ),
         examples=[
             [{"type": "missing", "loc": ["body", "email"], "msg": "Field required"}]
         ],

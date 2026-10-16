@@ -44,6 +44,19 @@ def test_422_real_coincide_con_validation_error_response():
     assert parsed.errors
 
 
+def test_422_de_negocio_sin_errors_tambien_coincide_con_el_modelo():
+    client = TestClient(app)
+
+    body = client.post(
+        "/auth/social/google",
+        json={"code": "x", "redirect_uri": "https://no-permitido.example.com/cb"},
+    ).json()
+
+    parsed = ValidationErrorResponse.model_validate(body)
+    assert parsed.code == "redirect_uri_not_allowed"
+    assert parsed.errors is None
+
+
 def test_openapi_incluye_descripcion_general_y_tags_con_descripcion():
     spec = TestClient(app).get("/openapi.json").json()
 
