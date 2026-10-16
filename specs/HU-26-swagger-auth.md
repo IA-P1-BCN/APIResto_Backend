@@ -51,7 +51,9 @@ endpoint nuevo de `/auth` o `/users` llegue sin esa documentación.
 
 ## Implementation Decisions
 - **Alcance**: solo `/auth/*` y `/users/*`, incluidos `/users/me` y `/users/me/password`
-  (lo dice la issue). Los demás routers quedan fuera.
+  (lo dice la issue). Los demás routers quedan fuera. El 16/10, HU-52 (#137) añadió
+  `POST /auth/set-password` y `POST /users/invite` (`routers/router_password.py`): entran
+  también, y el alcance pasa de 13 a 15 endpoints.
 - **Solo documentación**: sin cambios de modelo ni migración de Alembic, y sin cambios de
   rutas, códigos HTTP, mensajes `detail` ni `code`. Lo único que cambia en runtime es
   `/openapi.json`. `response_model=TokenOut` devuelve las mismas dos claves que hoy.
@@ -73,9 +75,10 @@ endpoint nuevo de `/auth` o `/users` llegue sin esa documentación.
 - **Ejemplos**: `json_schema_extra={"examples": [...]}` en `UserRegister`, `UserCreate`,
   `UserUpdate` y `SocialLoginRequest`, y de respuesta en `UserOut`, con el patrón de
   `UserProfileUpdate`. `Path(description=..., examples=[...])` para `provider` y `user_id`.
-- **Roles**: cada `description` de `/users/*` termina con "Rol: admin."; `/users/me*` y
-  `/auth/me` con "Cualquier usuario autenticado."; `register`, `login` y `social` con
-  "Público."
+- **Roles**: cada `description` indica el rol con el formato `Rol: ...`: "Rol: admin." en
+  `/users/*` (incluido `/users/invite`); "Rol: cualquier usuario autenticado." en
+  `/users/me*` y `/auth/me`; "Rol: público." en `register`, `login`, `social` y
+  `set-password`.
 - **Errores por endpoint** (`code` tal como responde hoy la API; los 404, 409 y 403 de
   `user_service` usan los genéricos `not_found`, `conflict` y `forbidden`):
 
@@ -94,9 +97,12 @@ endpoint nuevo de `/auth` o `/users` llegue sin esa documentación.
 | `POST /users/{user_id}/restore` | 200 `UserOut` | 401, 403, 404, 409 (no está borrado), 422 |
 | `PATCH /users/me` | 200 `UserOut` | los de HU-25: 401, 409, 422 |
 | `POST /users/me/password` | 204 | los de HU-25: 400, 401, 403, 422 |
+| `POST /auth/set-password` | 204 | los de HU-52: 400 `invalid_token`, 410 (`token_used`, `token_expired`), 422 |
+| `POST /users/invite` | 201 `UserOut` | los de HU-52: 401, 403, 409, 422 |
 
-- **Capas afectadas**: `routers/auth.py`, `routers/router_user.py`, `schemas/` y
-  `core/openapi.py`, más dos argumentos en `main.py`. Sin tocar services ni repositories.
+- **Capas afectadas**: `routers/auth.py`, `routers/router_user.py`,
+  `routers/router_password.py`, `schemas/` y `core/openapi.py`, más dos argumentos en
+  `main.py`. Sin tocar services ni repositories.
 - **Idioma**: el texto de Swagger va en español (es documentación); los identificadores,
   en inglés. Los `detail` de runtime siguen en inglés.
 - **Documentación**: `docs/api.md` gana una sección corta sobre cómo usar Authorize y el
@@ -129,18 +135,17 @@ endpoint nuevo de `/auth` o `/users` llegue sin esa documentación.
 - [ ] En `/docs`, **Authorize** con el email y la contraseña de un usuario real permite
   llamar a `GET /auth/me` desde Swagger sin copiar el token a mano (comprobado a mano en
   local; el esquema `OAuth2PasswordBearer` con `tokenUrl=/auth/login` está cubierto por test).
-- [ ] Los 13 endpoints de `/auth` y `/users` tienen `tags`, `summary` y `description`, y la
-  descripción indica el rol permitido.
+- [ ] Los 15 endpoints de `/auth` y `/users` (los 13 auditados más los 2 de HU-52) tienen
+  `tags`, `summary` y `description`, y la descripción indica el rol permitido.
 - [ ] `POST /auth/login` y `POST /auth/social/{provider}` documentan el 200 como `TokenOut`
   (`access_token`, `token_type`) y el JSON real no cambia.
 - [ ] Cada endpoint declara todos los errores de la tabla, con `ErrorResponse` (`detail`,
   `code`) y una descripción que dice cuándo ocurre y con qué `code`.
-- [ ] El 422 de los endpoints de `/auth` y de `/users` (salvo `/users/me*`) se documenta con
+- [ ] El 422 de todos los endpoints de `/auth` y `/users` se documenta con
   `ValidationErrorResponse` (`detail`, `code`, `errors`), igual que el cuerpo real. Ningún
   endpoint de `/auth` o `/users` referencia `HTTPValidationError`.
-- [ ] Los cuerpos de `POST /auth/register`, `POST /auth/social/{provider}`, `POST /users/`,
-  `PUT /users/{user_id}`, `PATCH /users/me` y `POST /users/me/password` tienen ejemplo, y
-  `UserOut` y `TokenOut` tienen ejemplo de respuesta.
+- [ ] Todos los cuerpos JSON de `/auth` y `/users` tienen ejemplo, y `UserOut` y `TokenOut`
+  tienen ejemplo de respuesta.
 - [ ] Todos los parámetros de ruta y de query de `/auth` y `/users` tienen descripción;
   `provider` y `user_id` tienen además ejemplo.
 - [ ] `tests/test_openapi.py` comprueba todo lo anterior y falla si se añade un endpoint de
@@ -158,11 +163,8 @@ endpoint nuevo de `/auth` o `/users` llegue sin esa documentación.
 - Scopes OAuth2 por rol, refresh tokens y logout (otras HU de auth).
 - `persistAuthorization` y otros ajustes de Swagger UI: guardaría el token en el navegador
   de quien use la documentación de producción.
-- Alinear el 422 de `/users/me` y `/users/me/password` (HU-25, de Levi) con
-  `ValidationErrorResponse`, sustituyendo su `_me_errors` por el helper compartido con las
-  mismas descripciones. Aplazado a un último paso aparte, que solo se hace si Levi está de
-  acuerdo (consultado el 15/10, pendiente de respuesta). Si no, esos dos endpoints conservan
-  su `_me_errors` y su 422 como `ErrorResponse`, y la HU se cierra sin tocar su código.
+- Exigir 8 caracteres en `password` de `UserCreate` y `UserUpdate` (hoy un admin puede fijar
+  una contraseña más corta, contra R-02): cambia el comportamiento, va en una PR aparte.
 
 ## Preguntas abiertas
 Ninguna.
@@ -188,3 +190,14 @@ Sesión de 15/10/2026 (Rita, con Claude). Decidido al partir de la issue:
   condicionado a su respuesta** (Rita le escribió el 15/10) → no bloquea el resto de la HU y
   no se toca código ajeno sin aviso (`AGENTS.md`). Rechazado: esperar su respuesta antes de
   empezar.
+
+Sesión de 16/10/2026 (Rita, con Claude):
+- **Levi da el visto bueno** a tocar `/users/me*` (HU-25): su `_me_errors` pasa al helper
+  compartido con las mismas descripciones, en el paso 5. El criterio del 422 ya no exceptúa
+  `/users/me*`.
+- **Los 2 endpoints de HU-52 entran en HU-26** (decidido por Rita, se avisa a Anna) → el test
+  recorre todo `/auth` y `/users`, y así avisa si llega otro endpoint sin documentar. Su
+  `_errors` pasa al helper compartido y se añade la línea `Rol: ...`. Rechazado: dejarlos
+  fuera con una lista fija de 13 endpoints en el test (el test no avisaría de los nuevos).
+- **`password` sin mínimo en `UserCreate`/`UserUpdate`** (encontrado en el paso 3): queda
+  fuera por ser un cambio de comportamiento.
