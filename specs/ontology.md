@@ -20,6 +20,7 @@
 | `SocialAccount` | cuenta social | Vínculo de un usuario con Google/GitHub |
 | `jti` | identificador de token | Id único dentro del JWT |
 | `Station` | estación | Valor (`kitchen` / `bar`) de `Category.station` que decide a qué rol llega cada línea de un pedido (R-14); no es una entidad |
+| `OrderProgress` | progreso del pedido | Resumen calculado de las unidades preparadas, servidas y listas para servir de un pedido, total y por estación (R-16); no es una entidad |
 
 ## 2. Entidades
 
@@ -94,6 +95,7 @@ borra físicamente (R-04).
 | R-12 | C | Con `totp_enabled`, el login exige además un código TOTP válido |
 | R-13 | C | El login social crea o vincula un `User` (rol `customer`) |
 | R-14 | M | La estación de una línea de pedido es la `station` de la categoría de su plato (se deriva en vivo). `kitchen` ve y marca solo líneas `kitchen`; `bartender`, solo `bar`; `admin` y `waiter`, todas. Marcar una línea de otra estación → 403; un pedido sin líneas de su estación no existe para `kitchen`/`bartender` (404). `total` es siempre el del pedido completo |
+| R-16 | M | El progreso de un pedido se calcula en vivo sobre las líneas que ve el usuario (R-14). `ready_to_serve` de una línea = `prepared_quantity - served_quantity`, nunca menos de 0; el del pedido es la suma de sus líneas. `stage`: `all_served` si todo está servido; si no, `ready_to_serve` si hay unidades listas; si no, `waiting` si no hay nada preparado ni servido; si no, `preparing`. `by_station` repite el cálculo por estación. No cambia el `status` del pedido |
 
 ## 5. Pendientes
 Ninguno a nivel de ontología. Los parámetros numéricos (caducidad del refresh, límite del rate limiting) los fija la spec de su HU.
