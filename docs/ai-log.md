@@ -227,28 +227,6 @@ agente, la revisé y la commiteé primero.
   `origin/dev` y avisar al equipo; y citar en el prompt las reglas R-xx que afectan a
   la HU.
 
-#### 2026-10-16 · Preparar el registro de la app de Google · @ManonChab
-
-- **Herramienta y modelo:** Claude Code · Sonnet 5.5
-- **Issue y reglas:** #123 (Google), #115 (apps OAuth y secretos) · nada (no hay código)
-- **Prompt clave:** "let's start the next task HU-38, pull all current repo, read Kanban
-  and necessary info", con la captura de la guía de Render y proveedores.
-- **Resultado:** aceptado. No hay cambios de código: el agente comprobó que la HU-38 ya
-  estaba fusionada (#114, #116, frontend #43) y que solo faltaba registrar el cliente de
-  Google y cargar las variables en Render. Tradujo la guía al inglés. Sigue sin probarse
-  contra Google real.
-- **Errores o alucinaciones:** la guía de la captura usaba `restoapi.vercel.app`, que no
-  es nuestra URL; el agente lo detectó comparando con `docs/deploy.md` y la issue #40 y
-  propuso `apiresto-f5.vercel.app`. Además, el clon del backend estaba en una rama cuyo
-  remoto se había borrado; se pasó a `dev` antes de leer nada.
-- **Trabajo descartado:** nada
-- **Mi prompt o la spec:** el prompt no decía que la HU ya estaba fusionada ni que la
-  parte pendiente era externa al código; lo dedujo del Kanban.
-- **Decisiones humanas:** los datos para registrar el cliente de Google se pasaron a Anna
-  (DevOps y acceso a Render); sustituye lo anotado el 14/10 de que lo crearía Manon.
-- **Lección:** comparar las URLs de una guía externa con `docs/deploy.md` antes de
-  registrarlas como callback, y hacer `git branch -vv` para ver si la rama tiene remoto.
-
 ### HU-40 · Estación de barra en los pedidos
 
 #### 2026-10-15 · HU-40_Estación de barra en los pedidos  · @ManonChab
