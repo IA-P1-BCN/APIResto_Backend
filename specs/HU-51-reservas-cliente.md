@@ -130,3 +130,8 @@ Resueltas con Manon el 15/10/2026 (preguntas que estaban abiertas en la spec):
   asigna automáticamente (sin `table_id`). El flujo del personal con `table_id` no cambia.
   Se añade a los tests y a los criterios de aceptación.
 - **Prioridad: Must** → sin esto el cliente no puede reservar en la práctica.
+- **Zona horaria de `reservation_in_past`** → `reserved_at` es la hora del reloj del
+  restaurante (el frontend envía y muestra hora local sin zona), así que se compara con
+  la hora actual en `RESTAURANT_TIMEZONE` (por defecto `Europe/Madrid`) y no con UTC.
+  Propuesto por Anna el 16/10/2026. Añade la dependencia `tzdata` (la imagen
+  `python:3.12-slim` no trae la base de zonas horarias).
