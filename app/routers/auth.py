@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Path, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Path, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
@@ -11,7 +11,9 @@ from app.database import get_db
 from app.schemas.schema_auth import TokenOut
 from app.schemas.schema_social import SocialLoginRequest, SocialProvider
 from app.schemas.schema_user import UserOut, UserRegister
-from app.services import social_auth_service, user_service
+from app.services import email_verification_service, social_auth_service, user_service
+from app.services.auth_emails import verification_email
+from app.services.notifications import send_email
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -33,13 +35,17 @@ DbSession = Annotated[Session, Depends(get_db)]
         },
     ),
 )
-def register(data: UserRegister, db: DbSession):
+def register(data: UserRegister, db: DbSession, background_tasks: BackgroundTasks):
     """Crea una cuenta `customer` activa al instante (R-03).
 
     No emite token: el usuario inicia sesión después con `POST /auth/login`. El `role`
-    del payload se ignora. Rol: público.
+    del payload se ignora. La cuenta nace con `email_verified=false` y se le envía en
+    segundo plano un email con un enlace de verificación (R-15, decisión D). La
+    verificación es informativa: no impide iniciar sesión (decisión A). Rol: público.
     """
-    return user_service.register_user(db, data)
+    user, token = email_verification_service.register_user(db, data)
+    background_tasks.add_task(send_email, *verification_email(user, token))
+    return user
 
 
 @router.post(

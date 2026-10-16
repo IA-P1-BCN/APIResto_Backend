@@ -137,6 +137,7 @@ class UserOut(UserBase):
                     "phone": "600123456",
                     "role": "customer",
                     "is_active": True,
+                    "email_verified": False,
                     "created_at": "2026-10-14T10:15:00",
                     "updated_at": None,
                     "deleted_at": None,
@@ -150,6 +151,9 @@ class UserOut(UserBase):
     id: int
     role: Role
     is_active: bool
+    email_verified: bool = Field(
+        description="Si el email está verificado (R-15). Informativo: no impide iniciar sesión."
+    )
     created_at: datetime
     updated_at: datetime | None = None
     deleted_at: datetime | None = None

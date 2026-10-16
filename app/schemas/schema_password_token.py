@@ -42,3 +42,14 @@ class SetPasswordRequest(BaseModel):
         min_length=MIN_PASSWORD_LENGTH,
         description=f"Contraseña nueva, mínimo {MIN_PASSWORD_LENGTH} caracteres (R-02).",
     )
+
+
+class ForgotPasswordRequest(BaseModel):
+    """Email de la cuenta que ha olvidado su contraseña (HU-33, decisiones F e I)."""
+
+    model_config = ConfigDict(
+        extra="forbid",
+        json_schema_extra={"examples": [{"email": "ana@example.com"}]},
+    )
+
+    email: EmailStr = Field(description="Se compara en minúsculas (R-01).")
