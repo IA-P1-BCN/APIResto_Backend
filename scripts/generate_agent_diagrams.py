@@ -125,7 +125,7 @@ def diagram_1():
 
     level(14.0, "NIVEL 2")
     spec = box(ax, 8, 14.0, 7, 1.3, "specs/HU-27-coleccion-bruno.md",
-               "Issue #70 · 132 requests esperados · Swagger fuera de alcance",
+               "Issue #70 · 141 requests esperados · Swagger fuera de alcance",
                BLUE)
     for parent in (ontology, briefing, plan):
         arrow(ax, parent, spec)
@@ -153,7 +153,7 @@ def diagram_1():
     level(5.6, "NIVEL 4")
     bruno = box(ax, 8, 5.6, 14.5, 4.2, "", "", PINK)
     ax.text(8, 7.25, "bruno/", ha="center", fontsize=13, fontweight="bold")
-    ax.text(8, 6.65, "132 requests · 12 carpetas de dominio", ha="center",
+    ax.text(8, 6.65, "141 requests · 12 carpetas de dominio", ha="center",
             fontsize=10)
     folders = [
         "bruno.json", "README.md", "environments/", "00-health/",

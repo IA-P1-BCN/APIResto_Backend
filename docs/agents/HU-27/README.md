@@ -14,8 +14,8 @@ Directrices de los agentes: [`specs/agents/HU-27/`](../../../specs/agents/HU-27/
 
 ## Datos de la colección
 
-- **132 requests** en 12 carpetas (`00-health` … `11-cleanup`).
-- `app/routers/*.py` expone **48 endpoints HTTP**, de los que la colección cubre 42 (más `GET /` y `GET /health` en `app/main.py`, y el
+- **141 requests** en 12 carpetas (`00-health` … `11-cleanup`).
+- `app/routers/*.py` expone **48 endpoints HTTP**, de los que la colección cubre 44 (más `GET /` y `GET /health` en `app/main.py`, y el
   WebSocket `/ws/kitchen`, que se prueba a mano: ver `bruno/README.md`).
 
 ## Cómo regenerarlos

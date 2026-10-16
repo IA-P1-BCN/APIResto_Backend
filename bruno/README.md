@@ -1,13 +1,13 @@
 # Colección Bruno de RestoAPI (HU-27)
 
 Colección de pruebas de la API REST de RestoAPI para [Bruno](https://www.usebruno.com/).
-Cubre **42 de los 48 endpoints HTTP** de `app/routers/*.py` (más `/` y `/health` de `app/main.py`)
-con **132 requests**: el flujo completo de punta a punta y los casos de error y seguridad
+Cubre **44 de los 48 endpoints HTTP** de `app/routers/*.py` (más `/` y `/health` de `app/main.py`)
+con **141 requests**: el flujo completo de punta a punta y los casos de error y seguridad
 (401, 403, 404, 409 y 422).
 
-> Quedan fuera 6 endpoints (ver sección 9): `POST /auth/register` (HU-22),
+> Quedan fuera 4 endpoints (ver sección 9): `POST /auth/register` (HU-22),
 > `POST /auth/social/{provider}` (HU-38), `DELETE /users/{user_id}` y
-> `POST /users/{user_id}/restore` (HU-32), `PATCH /users/me` y `POST /users/me/password` (HU-25).
+> `POST /users/{user_id}/restore` (HU-32).
 > El WebSocket de cocina (`/ws/kitchen`) tampoco está en el runner (sección 8).
 
 - Documentación de la API: [`docs/api.md`](../docs/api.md)
@@ -102,7 +102,7 @@ crean sus datos, fallará.
 |---|---|---|
 | `00-health` | `GET /` y `GET /health` | 2 |
 | `01-auth` | Login admin (guarda `token`), `/auth/me` y errores 401/422 | 6 |
-| `02-users` | Crea un usuario waiter, kitchen, bartender y customer, login con cada uno (guarda `tokenWaiter`, `tokenKitchen`, `tokenBartender`, `tokenCustomer`), lista (paginado, `Page[UserOut]`), ve y edita. Errores 401/403/404/409/422 | 16 |
+| `02-users` | Crea un usuario waiter, kitchen, bartender y customer, login con cada uno (guarda `tokenWaiter`, `tokenKitchen`, `tokenBartender`, `tokenCustomer`), lista (paginado, `Page[UserOut]`), ve y edita. El customer edita su perfil (`PATCH /users/me`) y el bartender cambia su contraseña (`POST /users/me/password`) y entra con la nueva. Errores 401/403/404/409/422 | 25 |
 | `03-categories` | CRUD, incluido el borrado de una categoría temporal, y una categoría de barra (`station: "bar"`). Errores 401/403/404/409 | 11 |
 | `04-dishes` | CRUD, listado paginado con filtros, borrado de un plato temporal y un plato de barra. Errores 403/404/422 | 12 |
 | `05-tables` | CRUD, mesas disponibles, cambio de estado como waiter. Errores 403/404/409/422 | 14 |
@@ -124,6 +124,7 @@ token de un usuario desactivado = 401** (equivale al logout, que todavía no exi
 | `baseUrl` | entorno | URL de la API |
 | `adminEmail`, `adminPassword` | entorno (secretas) | Login del admin |
 | `runId`, `testPassword`, `tableNumber`, `tempTableNumber`, `today`, `reservedAt*` | pre-request de `01-login-admin` | Datos únicos de la ejecución |
+| `newBartenderPassword` | pre-request de `02-users/18-change-password-bartender` | Contraseña nueva aleatoria del bartender |
 | `token` | `01-auth/01-login-admin` | Bearer del admin |
 | `tokenWaiter`, `tokenKitchen`, `tokenBartender`, `tokenCustomer` | `02-users/05..08-login-*` | Casos por rol (403) |
 | `adminId`, `waiterId`, `kitchenId`, `bartenderId`, `customerId` y sus `*Email` | `01-auth/02-me`, `02-users/01..04-create-*` | Path params y bodies |
@@ -155,7 +156,7 @@ npx @usebruno/cli run -r --env Local --env-var adminEmail=TU_EMAIL_ADMIN --env-v
 - Para no dejar la contraseña en el historial de la shell, usa variables de tu terminal:
   `--env-var adminPassword="$RESTO_ADMIN_PASSWORD"` (bash) o `--env-var adminPassword=$env:RESTO_ADMIN_PASSWORD` (PowerShell).
 
-**Resultado esperado:** los 132 requests en verde, con todas sus aserciones pasando. Los casos de
+**Resultado esperado:** los 141 requests en verde, con todas sus aserciones pasando. Los casos de
 error **también salen en verde**, porque sus tests comprueban que la API devuelve el código de error
 esperado. Cada ejecución crea datos nuevos (sufijo `runId`), así que se puede repetir sin limpiar la BD.
 
@@ -177,7 +178,7 @@ respuestas posibles.
 
 ## 8. WebSocket (cocina/barra)
 
-`/ws/kitchen` no es HTTP: no tiene `.bru` y no forma parte del runner (los 132 requests son HTTP).
+`/ws/kitchen` no es HTTP: no tiene `.bru` y no forma parte del runner (los 141 requests son HTTP).
 Lo usan la cocina y la barra. Para probarlo a mano:
 
 1. Ejecuta `01-auth/01-login-admin` (o `02-users/06-login-kitchen` / `02-users/07-login-bartender`)
@@ -207,11 +208,12 @@ La verificación automática real del WebSocket vive en pytest:
   - `POST /auth/social/{provider}` (HU-38, login con Google o GitHub): necesita un `code` OAuth real
     del proveedor, así que no se puede automatizar en el runner tal cual.
   - `DELETE /users/{user_id}` (soft delete) y `POST /users/{user_id}/restore` (HU-32).
-  - `PATCH /users/me` y `POST /users/me/password` (HU-25): llegaron a `dev` después de la
-    verificación del 15/10 y todavía no tienen request.
 - **Ya en `dev` y cubiertos:** la paginación `Page` de `GET /users` (HU-24; los filtros `role`,
-  `is_active` y `q` no se prueban) y el filtro por estación de HU-40 (`07-orders/02-list-kitchen` y
-  `07-orders/03-get-bartender`).
+  `is_active` y `q` no se prueban), el filtro por estación de HU-40 (`07-orders/02-list-kitchen` y
+  `07-orders/03-get-bartender`) y el perfil propio de HU-25 (`02-users/17` a `25`). El cambio de
+  contraseña se hace con el bartender porque `11-cleanup/10` hace login del customer con
+  `testPassword` y espera 401 por estar desactivado. Cambiar la contraseña no revoca los tokens ya
+  emitidos: `tokenBartender` sigue sirviendo después.
 - **No existen todavía:** `/auth/refresh` y `/auth/logout` (HU-30). Los usuarios se crean con
   `POST /users/` (admin) y la colección los da de baja con `PATCH /users/{id}/deactivate` (carpeta
   `11-cleanup`).
@@ -244,13 +246,15 @@ La verificación automática real del WebSocket vive en pytest:
 |---|---|---|---|
 | `GET` | `/` | 1 | `00-health/01-root.bru` |
 | `GET` | `/health` | 1 | `00-health/02-health.bru` |
-| `POST` | `/auth/login` | 8 | `01-auth/01-login-admin.bru`<br>`01-auth/03-error-401-login-credenciales-invalidas.bru`<br>`01-auth/06-error-422-login-sin-password.bru`<br>`02-users/05-login-waiter.bru`<br>`02-users/06-login-kitchen.bru`<br>`02-users/07-login-bartender.bru`<br>`02-users/08-login-customer.bru`<br>`11-cleanup/10-error-401-login-usuario-desactivado.bru` |
+| `POST` | `/auth/login` | 10 | `01-auth/01-login-admin.bru`<br>`01-auth/03-error-401-login-credenciales-invalidas.bru`<br>`01-auth/06-error-422-login-sin-password.bru`<br>`02-users/05-login-waiter.bru`<br>`02-users/06-login-kitchen.bru`<br>`02-users/07-login-bartender.bru`<br>`02-users/08-login-customer.bru`<br>`11-cleanup/10-error-401-login-usuario-desactivado.bru`<br>`02-users/19-login-bartender-nueva-password.bru`<br>`02-users/20-error-401-login-password-antigua.bru` |
 | `GET` | `/auth/me` | 4 | `01-auth/02-me.bru`<br>`01-auth/04-error-401-me-sin-token.bru`<br>`01-auth/05-error-401-me-token-invalido.bru`<br>`11-cleanup/11-error-401-me-token-usuario-desactivado.bru` |
 | `POST` | `/users/` | 7 | `02-users/01-create-waiter.bru`<br>`02-users/02-create-kitchen.bru`<br>`02-users/03-create-bartender.bru`<br>`02-users/04-create-customer.bru`<br>`02-users/12-error-409-email-duplicado.bru`<br>`02-users/15-error-401-crear-sin-token.bru`<br>`02-users/16-error-422-email-invalido.bru` |
 | `GET` | `/users/` | 2 | `02-users/09-list-users.bru`<br>`02-users/13-error-403-listar-como-waiter.bru` |
 | `GET` | `/users/{user_id}` | 2 | `02-users/10-get-user.bru`<br>`02-users/14-error-404-usuario-inexistente.bru` |
 | `PUT` | `/users/{user_id}` | 1 | `02-users/11-update-user.bru` |
 | `PATCH` | `/users/{user_id}/deactivate` | 5 | `11-cleanup/05-desactivar-waiter.bru`<br>`11-cleanup/06-desactivar-kitchen.bru`<br>`11-cleanup/07-desactivar-bartender.bru`<br>`11-cleanup/08-desactivar-customer.bru`<br>`11-cleanup/09-error-404-desactivar-inexistente.bru` |
+| `PATCH` | `/users/me` | 4 | `02-users/17-update-me-customer.bru`<br>`02-users/23-error-422-me-campo-no-editable.bru`<br>`02-users/24-error-409-me-email-ocupado.bru`<br>`02-users/25-error-401-me-sin-token.bru` |
+| `POST` | `/users/me/password` | 3 | `02-users/18-change-password-bartender.bru`<br>`02-users/21-error-403-password-actual-incorrecta.bru`<br>`02-users/22-error-422-misma-password.bru` |
 | `POST` | `/categories/` | 5 | `03-categories/01-create.bru`<br>`03-categories/05-create-temporal.bru`<br>`03-categories/08-error-409-nombre-duplicado.bru`<br>`03-categories/09-error-403-crear-como-customer.bru`<br>`03-categories/11-create-barra.bru` |
 | `GET` | `/categories/` | 2 | `03-categories/02-list.bru`<br>`03-categories/10-error-401-listar-sin-token.bru` |
 | `GET` | `/categories/{category_id}` | 2 | `03-categories/03-get.bru`<br>`03-categories/07-error-404-categoria-borrada.bru` |
@@ -295,5 +299,3 @@ Sin cobertura en esta colección:
 | `POST` | `/auth/social/{provider}` | HU-38 |
 | `DELETE` | `/users/{user_id}` | HU-32 |
 | `POST` | `/users/{user_id}/restore` | HU-32 |
-| `PATCH` | `/users/me` | HU-25 |
-| `POST` | `/users/me/password` | HU-25 |

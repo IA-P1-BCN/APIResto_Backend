@@ -22,7 +22,7 @@ Sin una colección de pruebas común:
 Una **colección Bruno** versionada en `bruno/` (formato abierto, basado en
 archivos `.bru` de texto plano) que:
 
-1. Cubre los endpoints HTTP que hoy existen en `app/routers/*.py` (42 de 48),
+1. Cubre los endpoints HTTP que hoy existen en `app/routers/*.py` (44 de 48),
    salvo los que quedan fuera según "Alcance acotado a lo existente".
 2. Documenta el flujo completo por roles: login admin → alta de usuarios por
    rol → login por rol → CRUD de menú/mesas/reservas/pedidos → factura →
@@ -153,9 +153,9 @@ El agente líder debe:
       Google o GitHub y no se puede automatizar en el runner tal cual.
     - `DELETE /users/{user_id}` (soft delete) y `POST /users/{user_id}/restore`
       (HU-32).
-  - Llegaron a `dev` después de la verificación del 15/10 y **aún no tienen
-    request** (pendiente de decidir si entran en esta PR o en una aparte):
-    `PATCH /users/me` y `POST /users/me/password` (HU-25).
+  - Llegaron a `dev` después de la verificación del 15/10 y entran en esta
+    PR por decisión de Levi (PO) del 16/10/2026: `PATCH /users/me` y
+    `POST /users/me/password` (HU-25).
   - También llegaron después y ya están cubiertos: la paginación `Page` de
     `GET /users` (HU-24; los filtros `role`, `is_active` y `q` no se prueban)
     y el filtro por estación de HU-40 (R-14: el pedido lleva una línea de
@@ -179,7 +179,7 @@ El agente líder debe:
   no por lo que documenta.
 - **Punto de prueba único (seam)**: el Collection Runner de Bruno CLI
   (`npx @usebruno/cli run -r --env Local ...`).
-- **Criterio de verde**: 132/132 requests en local con la API levantada y el
+- **Criterio de verde**: 141/141 requests en local con la API levantada y el
   admin creado vía `python -m app.scripts.create_admin`.
 - **Orden de preparación en local**: primero levantar la API (`docker compose
   up -d --build db api`) para que Alembic cree el esquema y después crear el
@@ -198,8 +198,8 @@ El agente líder debe:
 - [x] `bruno/bruno.json` válido y la colección se importa en Bruno sin errores.
 - [x] Entornos `Local` y `Production` con `baseUrl` correcto.
 - [x] Todos los endpoints HTTP actuales de `app/routers/*.py` cubiertos por
-      al menos un request, salvo los 6 sin cubrir de "Alcance acotado a lo
-      existente" (42 de 48).
+      al menos un request, salvo los 4 sin cubrir de "Alcance acotado a lo
+      existente" (44 de 48).
 - [x] Flujo `login admin → alta usuarios por rol → login por rol → CRUD →
       factura → stats → cleanup → desactivación (401)` completo.
 - [x] Casos de error 401, 403, 404, 409 y 422 presentes donde la API los
@@ -210,14 +210,15 @@ El agente líder debe:
       entorno, configurar `adminEmail`/`adminPassword` como secretos, orden
       de ejecución, Collection Runner (app y CLI), WebSocket manual y tabla
       de cobertura.
-- [x] **132/132 requests en verde** en local con la API levantada y el admin
+- [x] **141/141 requests en verde** en local con la API levantada y el admin
       creado.
   > Verificado el 15/10/2026 con Docker Compose y la BD migrada con Alembic
   > hasta `0006`: 130/130 requests y 332/332 tests, antes y después de
   > integrar `dev` (HU-32, HU-38).
   >
   > Verificado de nuevo el 16/10/2026 tras rebasar sobre `dev` (HU-24, HU-25,
-  > HU-40; BD migrada hasta `0007`): 132/132 requests y 339/339 tests.
+  > HU-40; BD migrada hasta `0007`): 132/132 requests y 339/339 tests. Con los
+  > requests de `/users/me` (HU-25): 141/141 requests y 361/361 tests.
 - [x] Ninguna credencial real ni token hardcodeado en el repo.
 - [ ] El diff de la PR contra `dev` solo muestra cambios dentro de `bruno/`,
       `docs/agents/HU-27/`, `scripts/generate_agent_diagrams.py`,
@@ -256,7 +257,9 @@ El agente líder debe:
 > colección daba 128/130. Se adapta `02-users/09-list-users` a `Page[UserOut]`
 > y el pedido de `07-orders` lleva una línea de barra (categoría y plato
 > nuevos en `03-categories/11` y `04-dishes/12`) para probar R-14: 132/132.
-> `PATCH /users/me` y `POST /users/me/password` (HU-25) siguen sin request.
+> Después, por decisión de Levi (PO), se añaden `PATCH /users/me` y
+> `POST /users/me/password` (HU-25): 9 requests en `02-users/17` a `25`.
+> Colección final: 141/141.
 
 ## Further Notes
 - Referencias:
