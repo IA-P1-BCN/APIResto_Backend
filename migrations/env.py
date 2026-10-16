@@ -12,6 +12,7 @@ from app.models import (  # noqa: F401
     model_invoice,
     model_order,
     model_order_item,
+    model_password_reset_token,
     model_social_account,
     model_user,
     reservation,

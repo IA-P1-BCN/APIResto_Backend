@@ -67,8 +67,9 @@ def _get_visible_reservation(
 def _errors(*codes: int) -> dict[int | str, dict[str, Any]]:
     descriptions = {
         404: "La reserva, la mesa o el usuario no existen.",
-        409: "Conflicto: solapamiento con otra reserva o estado no válido.",
-        422: "Datos no válidos o party_size mayor que la capacidad de la mesa.",
+        409: "Conflicto: solapamiento, sin mesa libre o estado no válido.",
+        422: "Datos no válidos, party_size mayor que la capacidad de la mesa o "
+        "más de 8 personas para un customer.",
     }
     return {
         code: {"model": ErrorResponse, "description": descriptions[code]}
@@ -82,10 +83,14 @@ def _errors(*codes: int) -> dict[int | str, dict[str, Any]]:
     status_code=status.HTTP_201_CREATED,
     summary="Crear una reserva",
     description=(
-        "Crea una reserva confirmada. Valida que la mesa exista (404), que "
-        "`party_size` no supere su capacidad (422) y que no se solape con otra "
-        "reserva activa de la misma mesa (409). Un customer solo puede reservar "
-        "para sí mismo; admin y waiter pueden indicar `user_id`. Envía un email de "
+        "Crea una reserva confirmada. Con `table_id` valida que la mesa exista "
+        "(404), que `party_size` no supere su capacidad (422) y que no se solape "
+        "con otra reserva activa de la misma mesa (409). Sin `table_id` el "
+        "restaurante asigna la mesa libre más pequeña con sitio (409 "
+        "`no_table_available` si no hay ninguna; 422 `reservation_in_past` si la "
+        "fecha ya pasó). Un customer no puede reservar para más de 8 personas "
+        "(422 `party_size_too_large`) y solo puede reservar para sí mismo; admin y "
+        "waiter pueden indicar `user_id`. Envía un email de "
         "confirmación en segundo plano (si `EMAIL_ENABLED=false` solo se registra "
         "en el log). Roles: admin, waiter, customer."
     ),
@@ -102,7 +107,9 @@ def create_reservation(
         if not _is_staff(user):
             raise _forbidden("Solo puedes crear reservas a tu nombre")
         service.ensure_user_exists(db, owner_id)
-    reservation = service.create_reservation(db, data, owner_id)
+    reservation = service.create_reservation(
+        db, data, owner_id, is_customer=not _is_staff(user)
+    )
     email = service.confirmation_email(db, reservation)
     if email is not None:
         background_tasks.add_task(send_email, *email)
@@ -174,7 +181,9 @@ def update_reservation(
     reservation = _get_visible_reservation(db, reservation_id, user)
     if "status" in data.model_fields_set and not _is_staff(user):
         raise _forbidden("Solo admin y waiter pueden cambiar el estado de una reserva")
-    return service.update_reservation(db, reservation, data)
+    return service.update_reservation(
+        db, reservation, data, is_customer=not _is_staff(user)
+    )
 
 
 @router.patch(

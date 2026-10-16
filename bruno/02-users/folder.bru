@@ -1,0 +1,12 @@
+meta {
+  name: 02 · Users
+  seq: 3
+}
+
+docs {
+  CRUD de usuarios (solo admin). Crea un usuario de cada rol y hace login con cada uno para obtener `tokenWaiter`, `tokenKitchen`, `tokenBartender` y `tokenCustomer`. Después, el customer edita su perfil (`PATCH /users/me`) y el bartender cambia su contraseña (`POST /users/me/password`, HU-25).
+
+  `POST /auth/register` (HU-22), `DELETE /users/{id}` (soft delete) y `POST /users/{id}/restore` (HU-32) existen pero quedan fuera de esta colección. La colección da de baja a los usuarios con `PATCH /users/{id}/deactivate` (ver carpeta 11-cleanup).
+
+  Los emails de prueba usan `@restoapi.example.com`: `EmailStr` (email-validator) rechaza dominios reservados como `.test` con 422.
+}

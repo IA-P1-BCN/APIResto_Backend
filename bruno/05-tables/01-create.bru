@@ -1,0 +1,71 @@
+meta {
+  name: Crear mesa
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/tables
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "number": {{tableNumber}},
+    "capacity": 4,
+    "location": "terrace",
+    "status": "available"
+  }
+}
+
+script:post-response {
+  if (res.status === 201) {
+    bru.setVar("tableId", res.body.id);
+  }
+}
+
+tests {
+  test("status 201", function() {
+    expect(res.status).to.equal(201);
+  });
+
+  test("shape: id, number, capacity, location, status", function() {
+    expect(res.body).to.have.property("id");
+    expect(res.body).to.have.property("number");
+    expect(res.body).to.have.property("capacity");
+    expect(res.body).to.have.property("location");
+    expect(res.body).to.have.property("status");
+  });
+
+  test("datos de la mesa", function() {
+    expect(res.body.number).to.equal(bru.getVar("tableNumber"));
+    expect(res.body.status).to.equal("available");
+  });
+}
+
+docs {
+  **`POST /tables`**
+
+  Crea una mesa. `location`: `indoor` | `terrace` | `bar`. `status` (opcional, por defecto `available`): `available` | `occupied` | `reserved` | `out_of_service`. `number` es único (`{{tableNumber}}` se genera en cada ejecución). Guarda `tableId`.
+
+  **Roles permitidos:** admin
+
+  **Auth en este request:** Bearer `{{token}}` (admin)
+
+  **Respuestas posibles:**
+
+  - `201`: `DiningTableRead`
+  - `401`: sin token
+  - `403`: rol distinto de admin (`Not enough permissions`)
+  - `409`: `Table number <n> already exists` (code `conflict`)
+  - `422`: datos no válidos o campos extra (`extra=forbid`)
+}

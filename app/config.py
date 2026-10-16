@@ -14,10 +14,20 @@ class Settings(BaseSettings):
     EMAIL_ENABLED: bool = False
     BREVO_API_KEY: str = ""
     MAIL_FROM: str = ""
+    FRONTEND_URL: str = "http://localhost:5173"
+    PASSWORD_TOKEN_EXPIRE_HOURS: int = 48
     STATS_CACHE_TTL: int = 60
     GOOGLE_CLIENT_ID: str = ""
     GOOGLE_CLIENT_SECRET: str = ""
     GITHUB_CLIENT_ID: str = ""
     GITHUB_CLIENT_SECRET: str = ""
+
+    # Keep-awake estilo woke-dyno para el plan gratuito de Render (duerme
+    # tras ~15 min sin tráfico entrante). Un hilo pide la URL pública cada
+    # N min. Apagado por defecto: actívalo en producción con la URL real.
+    # Despierto 24/7 gasta ~720 h/mes de las 750 h gratuitas (un servicio).
+    KEEP_AWAKE_ENABLED: bool = False
+    KEEP_AWAKE_URL: str = ""
+    KEEP_AWAKE_MINUTES: int = 10
 
 settings = Settings()

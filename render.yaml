@@ -36,6 +36,8 @@ services:
         sync: false
       - key: MAIL_FROM
         sync: false
+      - key: FRONTEND_URL # URL de producción de Vercel, base del enlace de HU-52
+        sync: false
       - key: GOOGLE_CLIENT_ID
         sync: false
       - key: GOOGLE_CLIENT_SECRET
@@ -44,3 +46,12 @@ services:
         sync: false
       - key: GITHUB_CLIENT_SECRET
         sync: false
+      # Keep-awake estilo woke-dyno: un hilo pide la URL pública cada N min
+      # para que el plan gratuito no se duerma (~15 min sin tráfico). Solo
+      # la URL es secreta de este despliegue: se rellena a mano.
+      - key: KEEP_AWAKE_ENABLED
+        value: "false"
+      - key: KEEP_AWAKE_URL
+        sync: false # p.ej. https://restoapi-47sp.onrender.com/health
+      - key: KEEP_AWAKE_MINUTES
+        value: "10"

@@ -69,3 +69,69 @@ def test_disconnect_unknown_connection_does_nothing():
     manager.disconnect(FakeWebSocket())
 
     assert manager.active_connections == []
+
+
+def _order_event(*stations: str, event: str = "order_created") -> dict:
+    return {
+        "event": event,
+        "order": {
+            "id": 1,
+            "stations": sorted(set(stations)),
+            "items": [{"dish_id": n, "station": s} for n, s in enumerate(stations)],
+        },
+    }
+
+
+def _connect_with_role(manager: KitchenConnectionManager, ws: FakeWebSocket, role: str) -> None:
+    asyncio.run(manager.connect(ws, role))
+
+
+def test_broadcast_to_stations_filters_items_by_role():
+    manager = KitchenConnectionManager()
+    kitchen, bar, admin = FakeWebSocket(), FakeWebSocket(), FakeWebSocket()
+    _connect_with_role(manager, kitchen, "kitchen")
+    _connect_with_role(manager, bar, "bartender")
+    _connect_with_role(manager, admin, "admin")
+
+    asyncio.run(manager.broadcast_to_stations(_order_event("kitchen", "bar")))
+
+    stations = {
+        name: [i["station"] for i in json.loads(ws.sent[0])["order"]["items"]]
+        for name, ws in {"kitchen": kitchen, "bar": bar, "admin": admin}.items()
+    }
+    assert stations == {"kitchen": ["kitchen"], "bar": ["bar"], "admin": ["kitchen", "bar"]}
+
+
+def test_broadcast_to_stations_skips_stations_without_lines():
+    manager = KitchenConnectionManager()
+    kitchen, bar = FakeWebSocket(), FakeWebSocket()
+    _connect_with_role(manager, kitchen, "kitchen")
+    _connect_with_role(manager, bar, "bartender")
+
+    asyncio.run(manager.broadcast_to_stations(_order_event("bar")))
+
+    assert kitchen.sent == []
+    assert len(bar.sent) == 1
+
+
+def test_broadcast_to_stations_routes_status_events_by_order_stations():
+    manager = KitchenConnectionManager()
+    kitchen, bar = FakeWebSocket(), FakeWebSocket()
+    _connect_with_role(manager, kitchen, "kitchen")
+    _connect_with_role(manager, bar, "bartender")
+    event = {"event": "order_status_changed", "order": {"id": 1, "stations": ["kitchen"]}}
+
+    asyncio.run(manager.broadcast_to_stations(event))
+
+    assert len(kitchen.sent) == 1
+    assert bar.sent == []
+
+
+def test_broadcast_to_stations_drops_broken_connections():
+    manager = KitchenConnectionManager()
+    broken = FakeWebSocket(RuntimeError("cerrado"))
+    _connect_with_role(manager, broken, "admin")
+
+    asyncio.run(manager.broadcast_to_stations(_order_event("kitchen")))
+
+    assert manager.active_connections == []

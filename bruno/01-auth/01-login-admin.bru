@@ -1,0 +1,77 @@
+meta {
+  name: Login admin
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/auth/login
+  body: formUrlEncoded
+  auth: none
+}
+
+headers {
+  Content-Type: application/x-www-form-urlencoded
+}
+
+body:form-urlencoded {
+  username: {{adminEmail}}
+  password: {{adminPassword}}
+}
+
+script:pre-request {
+  // Datos únicos por ejecución para no chocar con datos ya existentes (emails, nombres, números de mesa).
+  const runId = Date.now();
+  bru.setVar("runId", runId);
+  // Contraseña aleatoria: no se puede deducir del email ni del runId.
+  bru.setVar("testPassword", "Bp-" + require("uuid").v4());
+  bru.setVar("tableNumber", 100000 + (runId % 900000));
+  bru.setVar("tempTableNumber", 1000000 + (runId % 900000));
+  const now = new Date();
+  bru.setVar("today", now.toISOString().slice(0, 10));
+  const day = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  bru.setVar("reservedAt", day + "T21:00:00");
+  bru.setVar("reservedAtCustomer", day + "T13:00:00");
+  bru.setVar("reservedAtOther", day + "T17:00:00");
+  bru.setVar("reservedAtCapacity", day + "T10:00:00");
+}
+
+script:post-response {
+  if (res.status === 200) {
+    bru.setVar("token", res.body.access_token);
+  }
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+
+  test("shape: access_token, token_type", function() {
+    expect(res.body).to.have.property("access_token");
+    expect(res.body).to.have.property("token_type");
+  });
+
+  test("token_type bearer", function() {
+    expect(res.body.token_type).to.equal("bearer");
+    expect(res.body.access_token).to.be.a("string").that.is.not.empty;
+  });
+}
+
+docs {
+  **`POST /auth/login`**
+
+  Login del admin con las credenciales de las variables secretas `adminEmail` y `adminPassword` del entorno. El body es **`application/x-www-form-urlencoded`** (OAuth2PasswordRequestForm): el email va en el campo `username`.
+
+  Guarda `token`. El pre-request genera `runId` y los datos únicos de la ejecución (contraseña de los usuarios de prueba, números de mesa y fechas).
+
+  **Roles permitidos:** público (el admin debe existir: `python -m app.scripts.create_admin`)
+
+  **Auth en este request:** ninguna
+
+  **Respuestas posibles:**
+
+  - `200`: `{access_token, token_type: "bearer"}`
+  - `401`: credenciales incorrectas o usuario desactivado (`unauthorized`)
+  - `422`: faltan `username` o `password` (`validation_error`)
+}

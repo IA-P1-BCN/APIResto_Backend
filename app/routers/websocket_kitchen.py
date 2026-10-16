@@ -55,7 +55,7 @@ async def kitchen_websocket(
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
         return
 
-    await kitchen_manager.connect(websocket)
+    await kitchen_manager.connect(websocket, user.role)
 
     try:
         while True:

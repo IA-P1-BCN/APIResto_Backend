@@ -1,0 +1,49 @@
+meta {
+  name: Listar mesas (waiter)
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/tables?page=1&size=20
+  body: none
+  auth: bearer
+}
+
+params:query {
+  page: 1
+  size: 20
+}
+
+auth:bearer {
+  token: {{tokenWaiter}}
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+
+  test("shape Page: items, total, page, size", function() {
+    expect(res.body.items).to.be.an("array");
+    expect(res.body.total).to.be.a("number");
+    expect(res.body.page).to.be.a("number");
+    expect(res.body.size).to.be.a("number");
+  });
+}
+
+docs {
+  **`GET /tables`**
+
+  Listado paginado por id: `{items, total, page, size}`.
+
+  **Roles permitidos:** admin, waiter
+
+  **Auth en este request:** Bearer `{{tokenWaiter}}` (waiter)
+
+  **Respuestas posibles:**
+
+  - `200`: `DiningTablePage`
+  - `401`: sin token
+  - `403`: rol no permitido
+}

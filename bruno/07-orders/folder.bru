@@ -1,0 +1,14 @@
+meta {
+  name: 07 · Orders
+  seq: 8
+}
+
+docs {
+  Pedidos. Crear: admin y waiter. Leer y cambiar estado: admin, waiter, kitchen, bartender.
+
+  Transiciones válidas: `pending → in_kitchen | cancelled`, `in_kitchen → served | cancelled`, `served → paid | cancelled`.
+
+  Pedir el mismo estado en el que ya está el pedido devuelve 200 sin cambios. Un plato no disponible o inexistente da 409 (no 404).
+
+  Marcas de línea (`PATCH /orders/{order_id}/items/{item_id}`): `prepared` lo marcan admin, kitchen y bartender; `served`, admin y waiter. Las líneas de pedidos `paid` o `cancelled` no se pueden cambiar (409).
+}

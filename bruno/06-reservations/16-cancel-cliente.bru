@@ -1,0 +1,60 @@
+meta {
+  name: Cancelar reserva (customer dueño)
+  type: http
+  seq: 16
+}
+
+patch {
+  url: {{baseUrl}}/reservations/:reservation_id/cancel
+  body: none
+  auth: bearer
+}
+
+params:path {
+  reservation_id: {{customerReservationId}}
+}
+
+auth:bearer {
+  token: {{tokenCustomer}}
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+
+  test("shape: id, user_id, table_id, reserved_at, duration_min, ends_at, party_size, status, notes, created_at", function() {
+    expect(res.body).to.have.property("id");
+    expect(res.body).to.have.property("user_id");
+    expect(res.body).to.have.property("table_id");
+    expect(res.body).to.have.property("reserved_at");
+    expect(res.body).to.have.property("duration_min");
+    expect(res.body).to.have.property("ends_at");
+    expect(res.body).to.have.property("party_size");
+    expect(res.body).to.have.property("status");
+    expect(res.body).to.have.property("notes");
+    expect(res.body).to.have.property("created_at");
+  });
+
+  test("cancelada", function() {
+    expect(res.body.status).to.equal("cancelled");
+  });
+}
+
+docs {
+  **`PATCH /reservations/{reservation_id}/cancel`**
+
+  Pasa la reserva a `cancelled` y libera el hueco. Envía un email de cancelación en segundo plano.
+
+  **Roles permitidos:** admin, waiter y el dueño
+
+  **Auth en este request:** Bearer `{{tokenCustomer}}` (customer)
+
+  **Respuestas posibles:**
+
+  - `200`: `ReservationRead`
+  - `401`: sin token o token no válido (`unauthorized`)
+  - `403`: rol sin acceso o reserva de otro usuario (`forbidden`)
+  - `404`: reserva inexistente (`reservation_not_found`)
+  - `409`: la reserva no está `confirmed` (`reservation_not_cancellable`)
+}

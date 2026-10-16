@@ -69,6 +69,34 @@ Copia este bloque en la sección de tu HU:
 
 <!-- Una sección por HU: "### HU-XX · Título de la HU", con sus entradas debajo. -->
 
+### HU-14 · Pantalla de facturas en el frontend
+
+#### 2026-10-14 · Facturas y CSV para Excel (Frontend #38) · @costanna
+
+- **Herramienta y modelo:** Claude Code · Opus 5.5
+- **Issue y reglas:** Frontend #32 · nada (UI sobre la API de la HU-14)
+- **Prompt clave:** hacer la pantalla de facturas que faltaba en el frontend con los endpoints de Rita; después, "el CSV pierde datos cuando lo abro en Excel"
+- **Resultado:** aceptado con cambios. Vista con pedidos por facturar, facturas emitidas con filtro de fechas y exportación CSV para el admin.
+- **Errores o alucinaciones:** el CSV de la API (comas y punto decimal) salía en una sola columna en Excel en catalán. Causa raíz: el agente no tuvo en cuenta la configuración regional de Excel. Se comprobó abriéndolo con Excel y se convierte al descargar: `;`, coma decimal, fecha local y BOM. Al escribir el BOM desde la terminal se coló el carácter literal y el lint falló; se cambió por `\uFEFF`.
+- **Trabajo descartado:** nada
+- **Mi prompt o la spec:** no dije que el CSV era para abrirlo en Excel con configuración española.
+- **Decisiones humanas:** no tocar el CSV de la API (es de Rita y sirve para contabilidad) y convertirlo solo en el frontend (Anna).
+- **Lección:** probar las exportaciones con el programa con el que se van a abrir.
+
+### HU-15 · Pantalla de estadísticas en el frontend
+
+#### 2026-10-14 · Estadísticas de ventas (Frontend #39) · @costanna
+
+- **Herramienta y modelo:** Claude Code · Opus 5.5
+- **Issue y reglas:** Frontend #33 · nada (UI sobre la API de la HU-15)
+- **Prompt clave:** añadir las estadísticas en el frontend
+- **Resultado:** aceptado. Total vendido, pedidos y ticket medio, ventas por día con su tabla, platos más vendidos y filtro de periodo.
+- **Errores o alucinaciones:** el color principal no pasaba el validador de color para gráficos (poca saturación) y se eligió `#00879e` / `#2fa3b0`. En la primera captura, las barras de 10, 8 y 7 unidades medían lo mismo por un `max-width`; se corrigió al ver la captura, los tests no lo detectaban. Las ventas de ejemplo del modo simulado incluían los pimientos y rompían el test de borrar un plato; se limitaron los platos del historial.
+- **Trabajo descartado:** nada
+- **Mi prompt o la spec:** nada
+- **Decisiones humanas:** nada
+- **Lección:** mirar una captura del gráfico además de pasar los tests.
+
 ### HU-21 · Configuración de OpenCode con modelos gratuitos
 
 #### 2026-10-14 · Configurar OpenCode y elegir modelos gratuitos · @costanna
@@ -82,6 +110,235 @@ Copia este bloque en la sección de tu HU:
 - **Mi prompt o la spec:** en `opencode run`, la opción `-f` se tragó el texto de la pregunta como si fuera otro fichero; el mensaje tiene que ir antes de `-f`.
 - **Decisiones humanas:** big-pickle por defecto para todo el equipo aunque yo uso mi propio proveedor (lo cambio con `/models`); documentar OpenCode en el README (Anna).
 - **Lección:** para consultas que no deben tocar ficheros, usar `--agent plan`, y adjuntar con `-f` todo lo que la pregunta necesita (por ejemplo, el modelo además de la migración).
+
+### HU-24 · Filtros admin de usuarios
+
+#### 2026-10-15 · Spec, filtros, búsqueda y paginación de GET /users · @arita-pereira
+
+- **Herramienta y modelo:** Claude (claude.ai, no Claude Code) · Opus 5.5
+- **Issue y reglas:** #67 · R-11 (`include_deleted` de HU-32)
+- **Prompt clave:** "empezamos el HU-24", con el estado del proyecto adjunto; la issue solo tenía la historia, sin criterios de aceptación
+- **Resultado:** aceptado. Spec en `specs/HU-24-filtros-admin.md` y `GET /users/` con `Page[UserOut]`, `role`, `is_active` y `q`. 589 tests en verde con SQLite y Postgres 16.
+- **Errores o alucinaciones:** en la cabecera de la spec puso "Aprueba: Levi (PO)", copiado de `specs/HU-TEMPLATE.md`. Causa raíz: la plantilla y la DoD de `AGENTS.md` aún dicen que aprueba Levi, pero el equipo ya no depende de él. Corregido a "Revisa y aprueba: Manon". Además, no preparó los comentarios de cada paso para el issue hasta que lo eché en falta.
+- **Trabajo descartado:** nada
+- **Mi prompt o la spec:** la issue no tenía criterios de aceptación; los fijó la spec con cuatro preguntas (formato, filtros, búsqueda y orden).
+- **Decisiones humanas:** `Page[UserOut]` aunque sea breaking-api, filtros `role` + `is_active`, un solo `q` en nombre o email, orden fijo por `id` (Rita).
+- **Lección:** leer `AGENTS.md` y `dev` antes de empezar funcionó otra vez: detectó que la PR #110 había vuelto a exigir spec por HU, y que HU-32 ya fijaba `include_deleted`.
+
+#### 2026-10-15 · Revisión de Manon: acentos, longitud de q y skip/limit · @arita-pereira
+
+- **Herramienta y modelo:** Claude (claude.ai, no Claude Code) · Opus 5.5
+- **Issue y reglas:** #67 (PR #126 ya integrada) · nada
+- **Prompt clave:** los tres comentarios de Manon en la PR #126
+- **Resultado:** aceptado. Búsqueda sin acentos con `translate()` (`app/core/text_search.py`), `q` con máximo 100 caracteres y casillas de la spec marcadas.
+- **Errores o alucinaciones:** en la PR #126 el agente afirmó que los tests pasaban "con SQLite y con Postgres 16", y era falso: `tests/conftest.py` usa siempre SQLite en memoria, aunque se le pase la URL de Postgres. Causa raíz: dio por bueno que cambiar `DATABASE_URL` cambiaba la base de datos de los tests, sin leer el `conftest.py`. Por eso no vio que el `lower()` no quita los acentos. Corregido probando la consulta directamente contra Postgres. Además, el primer intento (48 `replace()` anidados) desbordó la pila de SQLite.
+- **Trabajo descartado:** los `replace()` anidados; la extensión `unaccent` (migración y no existe en SQLite).
+- **Mi prompt o la spec:** la spec no decía nada de acentos, aunque el equipo trabaja con nombres en español y portugués.
+- **Decisiones humanas:** `translate()` sin migración; `skip`/`limit` sin 422, solo la etiqueta `breaking-api` (Rita).
+- **Lección:** antes de decir "probado en X", comprobar qué base de datos usan los tests de verdad.
+
+### HU-25 · Cambio de contraseña y edición del propio perfil                                                                                                                     
+                                                                                                                                                                                   
+#### 2026-10-15 · Perfil propio y cambio de contraseña con un equipo de agentes · @levifvy                                                                                       
+                                                                                                                                                                                   
+- **Herramienta y modelo:** Claude Code · Opus 5.5. Usé un agente líder que coordinaba a cinco ayudantes, cada uno con una parte del trabajo: los datos de entrada, las reglas,  
+los endpoints, los tests y la documentación.                                                                                                                                     
+- **Issue y reglas:** #68 · R-01, R-02, R-03, R-04, R-11                                                                                                                         
+- **Prompt clave:** le pedí que hiciera de líder del equipo para la HU-25 y que, antes de empezar, me confirmara qué campos del perfil se podían editar, cómo funcionaría el     
+cambio de contraseña y dónde irían los endpoints. Cada ayudante debía tocar solo sus archivos y esperar a que terminara el anterior.                                             
+- **Resultado:** aceptado. Ahora cualquier usuario puede editar su nombre, email y teléfono, y cambiar su contraseña indicando la actual. No hizo falta tocar la base de datos.  
+Al final todo pasaba los tests (620) y el lint estaba limpio. Commits principales: 95fc335 (spec), 97222c7 (código), be56010 (tests), f601792 (docs) y f01523b (merge con `dev`).
+- **Errores o alucinaciones:** el código salió bien a la primera. Lo que falló fue mi prompt, que no coincidía con el estado real del repo, y el agente me lo señaló al leerlo:  
+daba por borrada una carpeta antigua que aún tenía restos, mencionaba una spec y una colección Bruno que todavía no estaban en `dev`, y no tenía en cuenta que la sección        
+`/users` era solo para admins. Si se hubiera hecho tal cual, un cliente no habría podido editar su perfil; se resolvió con un router aparte. Además, el primer intento de commit 
+falló por un error de sintaxis en el comando, sin llegar a guardar nada, y se repitió bien.                                                                                      
+- **Trabajo descartado:** la colección Bruno, porque aún no se había subido al repositorio. Tampoco hizo falta migración.                                                        
+- **Mi prompt o la spec:** di por hecho cómo estaba `dev` sin comprobarlo (aún no se habían aceptado algunas pull requests) y no pensé en dos casos: usuarios que entran solo con
+Google o GitHub y no tienen contraseña, y alguien que "cambia" la contraseña por la misma. También olvidé que `AGENTS.md` pide escribir la spec antes del código; la redactó el  
+agente, la revisé y la commiteé primero.                                                                                                                                         
+- **Decisiones humanas:** las tomé yo y están en `specs/HU-25-cambio-password-perfil.md`:                                                                                        
+  - si la contraseña actual es incorrecta se devuelve 403 y no 401, para que no parezca que la sesión ha caducado;                                                               
+  - si alguien intenta cambiarse el rol o la activación desde su perfil, se rechaza con un error en vez de ignorarlo en silencio;
+  - una cuenta sin contraseña no puede usar este cambio (lo cubrirá la HU de recuperación);
+  - no se acepta como nueva la misma contraseña;
+  - los endpoints van en `/users/me`;
+  - equipo de cinco ayudantes, aunque el agente proponía tres;
+  - revisores de la spec: Ana, Carla, Manon y Rita.
+  - **Después del trabajo:** mientras trabajábamos se aceptó en `dev` la HU-24, que tocaba los mismos archivos. El agente unió los cambios de las dos historias sin perder nada y
+  volvió a pasar todos los tests. También dejé documentado cómo trabajó cada ayudante en `docs/agents/HU-25/`.
+  - **Lección:** comprobar el estado de `dev` antes de dar contexto al agente, y escribir la spec primero aunque la historia parezca pequeña.
+
+### HU-27 · Colección Bruno para pruebas de la API
+
+#### 2026-10-15 · Verificación end-to-end de la colección e integración de dev · @levifvy
+
+- **Herramienta y modelo:** Claude Code · Opus 5.5 (`claude-opus-5-5`); Bruno CLI (`npx @usebruno/cli`) para ejecutar la colección
+- **Issue y reglas:** #70 · R-02 (la colección comprueba que `password`/`password_hash` no salen), R-04 (baja lógica con `deactivate`)
+- **Prompt clave:** "Verificar HU-27 end-to-end y arreglar lo que impida el 130/130", con diagnóstico paso a paso (el agente propone un comando, yo lo ejecuto y le pego la salida) y sin tocar `app/`, `tests/` ni `migrations/`
+- **Resultado:** aceptado. La colección pasa 130/130 requests y 332/332 tests en local, antes y después de integrar `dev`. No hizo falta tocar código: el fallo era de entorno. Los commits están en la PR de HU-27 (colección, spec y diagramas); la rama se rebasó después sobre `dev`, así que no se citan hashes.
+- **Errores o alucinaciones:** nada inventado por el agente en esta sesión. El 130/130 en rojo no era de la colección: el contenedor `api` salía con `Exited (1)` porque `alembic upgrade head` fallaba con `DuplicateTable: relation "categories" already exists`. Causa raíz: el volumen de Postgres tenía las tablas creadas por `Base.metadata.create_all` (lo llaman `app/main.py` y `create_admin`) sin `alembic_version`, y el `set -e` de `docker-entrypoint.sh` paraba el arranque. Se corrigió con `docker compose down -v`, levantando la API antes de crear el admin. Además, el README y `collection.bru` decían que la colección cubría "los 43 endpoints", cuando cubría 42 (`/auth/register` ya estaba fuera); con `dev` son 46 y se cubren 42.
+- **Trabajo descartado:** `alembic stamp head` sobre las tablas existentes, porque el esquema de `create_all` podía no coincidir con el de las migraciones y la BD local habría quedado distinta de CI y producción.
+- **Mi prompt o la spec:** la spec no decía en qué orden preparar el entorno local (API migrada antes que `create_admin`); se ha añadido en "Testing Decisions". Tampoco preveía qué hacer con endpoints que llegan de `dev` a mitad de la HU.
+- **Decisiones humanas:** borrar el volumen local en vez de hacer `stamp` (Levi); dejar fuera de la colección `POST /auth/social/{provider}` (HU-38), `DELETE /users/{id}` y `POST /users/{id}/restore` (HU-32), que se añadirán en la PR de su HU, y solo actualizar los textos (Levi); no subir `docs/Briefing del Proyecto.md` (Levi).
+- **Lección:** cuando el runner falla al 100 % en pocos milisegundos, revisar antes `docker compose ps -a` y los logs de `api` que la colección; y volver a ejecutar Bruno cada vez que se integra `dev`.
+
+#### 2026-10-16 · Correcciones tras la revisión de Ana · @levifvy
+
+- **Herramienta y modelo:** Claude Code · Opus 5.5 (`claude-opus-5-5`); Bruno CLI 4.2.1
+- **Issue y reglas:** #70 · R-01, R-02, R-04, R-11, R-14
+- **Prompt clave:** revisar la rama punto por punto contra la revisión de Ana (con archivo y línea, sin tocar nada) y luego aplicar las correcciones en commits atómicos, sin entrar en `app/`, `tests/`, `migrations/` ni CI.
+- **Resultado:** aceptado. Ana acertaba: Production no tenía freno y la contraseña de prueba se deducía del email. Al rebasar salió lo que ella no vio: la colección daba 128/130 porque `09-list-users` esperaba un array y `GET /users/` ya es `Page[UserOut]` (HU-24), y `03-get-bartender` daba 404 porque el pedido solo tenía líneas de cocina (R-14, HU-40). Con eso resuelto y 9 requests nuevos para `/users/me`, cierra en 141/141 requests, 361/361 tests y 44 de 48 endpoints. Production queda de solo lectura, la contraseña es un uuid v4, la spec se llama ya `HU-27-coleccion-bruno.md` y `bruno/` sale de la imagen Docker.
+- **Errores o alucinaciones:** el 130/130 del 15/10 se midió sobre un `dev` sin HU-24, HU-25 ni HU-40; y la documentación daba por inexistentes endpoints que ya estaban mergeados. Al generar los requests de error de `/users/me`, una sustitución de shell rompió un `{{tokenCustomer}}`; el agente lo vio al revisar el diff antes del commit. También quedó anotado que cambiar la contraseña no revoca los tokens ya emitidos: ninguna regla lo exige.
+- **Trabajo descartado:** marcar el 404 del bartender como esperado (no probaba el caso feliz de R-14), `crypto.randomUUID()` porque no existe en el sandbox `safe`, y quitar el `create_all` de `app/` aquí porque se sale de HU-27.
+- **Mi prompt o la spec:** la spec no obligaba a re-ejecutar la colección tras un rebase, y la excepción de alcance del diff no contemplaba `.dockerignore`. Lo añadimos con fecha.
+- **Decisiones humanas (Levi):** Production de solo lectura; contraseña aleatoria; opción A para el bartender (una línea de barra de verdad, no un 404 esperado); sacar `bruno/` y `scripts/generate_agent_diagrams.py` de la imagen; citar la PR en vez de hashes, porque con squash quedarían huérfanos; incluir los dos requests de HU-25 aquí; y abrir issues aparte para el job de Bruno en CI y para el `create_all` de `app/main.py`. La PR se integra con squash.
+- **Lección:** volver a ejecutar la colección después de cada rebase, no solo cuando mergea `dev`. Y sin un job de Bruno en CI, cualquier cambio de contrato la rompe sin que nadie se entere.
+
+### HU-35 · Comandos y subagentes de OpenCode
+
+#### 2026-10-15 · Comandos /tests, /seguridad y /migracion · @costanna
+
+- **Herramienta y modelo:** Claude Code para escribir los comandos, el subagente y la documentación; OpenCode 1.18.34 con `opencode/big-pickle` para probarlos
+- **Issue y reglas:** #78 · R-02 (contraseñas), R-13 (vinculación social) en la revisión de seguridad
+- **Prompt clave:** `/seguridad c8f0ca1^..c8f0ca1` sobre el login social de la #116; `/tests` sobre `PATCH /orders/{order_id}/items/{item_id}` con unidades; `/migracion` sin argumentos para ver el número libre
+- **Resultado:** aceptado con cambios. `/seguridad` dio 3 hallazgos medios y 6 bajos sin tocar ficheros; comprobé cuatro (sin longitud máxima en `code` y `redirect_uri`, `get_by_id` sin comprobar en la línea 59, `downgrade` de la 0005 con `password_hash = ''` y `UserUpdate.password` sin mínimo) y son ciertos. `/tests` generó 24 tests que pasan con ruff limpio. `/migracion` respondió 0007, que es correcto.
+- **Errores o alucinaciones:** la primera versión de `/migracion` se inventó la variable `ALCHEMY_DATABASE_URL` (es `DATABASE_URL`), escribió mal el nombre de la 0006 y no se paró en el paso 3 sin argumentos; el prompt no decía qué variable usar ni prohibía describir los pasos siguientes. Una ejecución de `/tests` terminó vacía y la siguiente funcionó. `opencode run` se quedaba esperando cuando la entrada estándar no se cerraba.
+- **Trabajo descartado:** los 24 tests de `/tests`, que eran solo una prueba del comando; mis cambios no los necesitan.
+- **Mi prompt o la spec:** en `/migracion` faltaba decir que sin argumentos no se ejecuta ningún comando y que los nombres se copian de la lista; se añadió.
+- **Decisiones humanas:** el subagente de seguridad solo puede leer y usar `git diff`, `git log` y `git show`; los hallazgos de la #116 se pasan a Manon en lugar de arreglarlos, porque es su código (Anna).
+- **Lección:** en un comando, decir cuándo parar y qué variables y ficheros existen; y en scripts, lanzar `opencode run` con `< /dev/null`.
+
+### HU-40 · Estación de barra en los pedidos
+
+#### 2026-10-15 · HU-40_Estación de barra en los pedidos  · @ManonChab
+
+- **Herramienta y modelo:** Claude Code with Sonnet 5.5
+- **Issue y reglas:** #83
+- **Prompt clave:**  "Read the necessary doc, the repo back and front, the kanban and let's start the new       H-40U,starting by spec definition"
+- **Resultado:** aceptado 
+- **Errores o alucinaciones:**
+  - The one-line issue: I found the real gap by reading the code, and invented nothing.
+  - The empty WebSocket assertion I wrote and then replaced.
+  - The lazy="joined" draft I changed.
+  - The two old tests that R-14 broke. I changed their data and didn't weaken them.
+- **Trabajo descartado:** //
+- **Mi prompt o la spec:**
+    · ¿Qué entrega el backend en HU-40? Hoy el filtro por estación solo existe en el frontend (StationBoard); el  backend manda todo a cocina y a barra. → Filtrar en el backend (Recomendado)
+    · El `status` del pedido es único (pending → in_kitchen → served) y hoy lo mueve cualquiera de cocina/barra. Con dos estaciones, ¿qué hacemos en esta HU? → Dejarlo como está (Recomendado)
+    · En el pedido filtrado que ve `kitchen`/`bartender`, ¿qué se devuelve en `total`? → El del pedido completo (Recomendado)
+    · Si el admin cambia la `station` de una categoría con pedidos abiertos, ¿qué pasa con las líneas ya creadas? → Se derivan en vivo (Recomendado)
+    · Producción (Neon): las categorías existentes quedaron `kitchen` por defecto. ¿Cómo pasan Bebidas y Postres a `bar`? → Migración de datos
+    · El enrutado por estación no está en la ontología (solo se cita como referencia externa). ¿Añadimos una regla R-14 a specs/ontology.md en el mismo PR? → Sí, R-14 (Recomendado)
+- **Decisiones humanas:**
+
+```text
+   Tema     │                            Decisión                            │
+├──────────────┼────────────────────────────────────────────────────────────────┤
+│              │ El backend filtra según el rol: kitchen ve y marca solo líneas │
+│ Alcance      │  kitchen, bartender solo bar, y admin/waiter ven todo. Esto    │
+│              │ vale para GET /orders, GET /orders/{id}, PATCH .../items/{id}  │
+│              │ y el WebSocket.                                                │
+├──────────────┼────────────────────────────────────────────────────────────────┤
+│ Contrato     │ Cada línea del pedido expone station. No hay parámetro         │
+│              │ ?station=. total sigue siendo el del pedido completo.          │
+├──────────────┼────────────────────────────────────────────────────────────────┤
+│ Estado del   │ Sin cambios. El estado por producto o estación es HU-45 de     │
+│ pedido       │ Rita, que toca el mismo router, así que hay que avisarla.      │
+├──────────────┼────────────────────────────────────────────────────────────────┤
+│ Estación de  │ Se deriva en vivo de la categoría actual del plato. No hay     │
+│ una línea    │ columna nueva.                                                 │
+├──────────────┼────────────────────────────────────────────────────────────────┤
+│ Datos de     │ Migración 0007 que marca Bebidas y Postres como bar. Elegí     │
+│ producción   │ esto frente a la opción recomendada, que era que el admin las  │
+│              │ marcara.                                                       │
+├──────────────┼────────────────────────────────────────────────────────────────┤
+│ Ontología    │ Se añade la regla R-14 a specs/ontology.md en el mismo PR.     │
+│              │ Necesita el visto bueno de Levi.
+```
+
+- **Lección:** //
+
+### HU-41 · Pantalla de barra en tiempo real
+
+#### 2026-10-14 · Pantalla de barra (Frontend #37) · @costanna
+
+- **Herramienta y modelo:** Claude Code · Opus 5.5
+- **Issue y reglas:** #85 · nada
+- **Prompt clave:** empezar la HU-41: pantalla de barra en tiempo real como la de cocina
+- **Resultado:** aceptado con cambios. Cocina y Barra comparten pantalla y cada plato va a una según el campo `station` de su categoría.
+- **Errores o alucinaciones:** la primera versión daba por hecho que `station` llegaría con la HU-40; llegó antes con la #99 y encajó. Faltaba que el admin pudiera elegir la estación: en producción todas las categorías quedarían en cocina y Barra vacía. Se añadió el selector en Gestionar categorías.
+- **Trabajo descartado:** nada
+- **Mi prompt o la spec:** no pensé en cómo se rellenaría `station` en una BD que ya existe.
+- **Decisiones humanas:** el estado del pedido lo lleva cocina salvo en los pedidos solo de barra (Anna).
+- **Lección:** comprobar cómo queda una función nueva con los datos que ya hay en producción.
+
+### HU-46 · Estilo de la vista de pedidos del camarero
+
+#### 2026-10-14 · Carta sin viñetas y aviso al repetir un plato (Frontend #34) · @costanna
+
+- **Herramienta y modelo:** Claude Code · Opus 5.5
+- **Issue y reglas:** Frontend #26 · nada
+- **Prompt clave:** quitar las viñetas al hacer un pedido y avisar al añadir otra vez el mismo producto
+- **Resultado:** aceptado. Carta en rejilla y aviso dentro de la app al repetir un plato; los botones + y − no preguntan.
+- **Errores o alucinaciones:** nada
+- **Trabajo descartado:** nada
+- **Mi prompt o la spec:** la HU-47 (#27) pide quitar una de las dos formas de añadir platos; este cambio solo avisa.
+- **Decisiones humanas:** aviso en lugar de quitar una forma de añadir (Anna).
+- **Lección:** nada
+
+### HU-48 · Paleta de restaurante con modo noche/día
+
+#### 2026-10-14 · Colores, modo claro y oscuro, accesibilidad y botones táctiles (Frontend #36) · @costanna
+
+- **Herramienta y modelo:** Claude Code · Opus 5.5
+- **Issue y reglas:** Frontend #28 · nada
+- **Prompt clave:** colores de restaurante con modo oscuro, que pasen el filtro para personas con discapacidad visual y botones pensados para pantalla táctil
+- **Resultado:** aceptado con cambios. Primero se hizo en crema y burdeos y el cliente pidió azules y verdes; se cambió.
+- **Errores o alucinaciones:** simulando deuteranopia, los fondos de los estados verde y rojo casi no se distinguían; se añadió un símbolo a cada estado y bordes distintos en las mesas. Los textos se comprobaron con un script de contraste (AAA, 7:1) y de daltonismo.
+- **Trabajo descartado:** la primera paleta en crema y burdeos.
+- **Mi prompt o la spec:** no sabía los colores que quería el cliente hasta ver la primera versión.
+- **Decisiones humanas:** azules y verdes en los dos modos (Anna, a petición del cliente).
+- **Lección:** medir el contraste y simular el daltonismo con un script en vez de mirarlo a ojo.
+
+### HU-49 · Pop-ups en lugar de menús desplegables para editar
+
+#### 2026-10-14 · Formularios en ventana modal (Frontend #35) · @costanna
+
+- **Herramienta y modelo:** Claude Code · Opus 5.5
+- **Issue y reglas:** Frontend #29 · nada
+- **Prompt clave:** usar modales en el frontend
+- **Resultado:** aceptado. Pedido, reservas, platos, categorías y mesas se editan en un modal con el foco dentro y Escape para cerrar.
+- **Errores o alucinaciones:** un test pulsaba Nuevo plato antes de que se cargaran las categorías (el botón estaba desactivado). Al juntar ramas, colores y modales chocaban en `index.css` porque las dos añadían estilos al final; se movieron junto a sus reglas.
+- **Trabajo descartado:** nada
+- **Mi prompt o la spec:** "usa los modales" podía ser solo para los avisos; se aclaró que eran los formularios.
+- **Decisiones humanas:** nada
+- **Lección:** no añadir estilos al final de un CSS que tocan varias ramas a la vez.
+
+### HU-51 · Reservas hechas por el cliente
+
+#### 2026-10-15 · Asignación automática de mesa y límite de 8 personas (Backend #136) · @ManonChab
+
+- **Herramienta y modelo:** Claude Code · Sonnet 5.5
+- **Issue y reglas:** #106 · nada (la ontología no tiene reglas de reservas)
+- **Prompt clave:** "let's start HU-51. review repos and contexto, we already have defined some specs in Spec de reservas hechas por el cliente- #124"
+- **Resultado:** aceptado. Revisé el código a mano, sobre todo la comprobación de rol (`is_customer`) y la asignación de mesa. 22 tests nuevos (16 de integración y 6 unitarios), escritos primero y en rojo, y después el código. CI en verde en la PR #136 (Postgres). Commits: 6793260 (spec), 34acf7a (tests), 4ba9e46 (código) y 5320795 (docs).
+- **Errores o alucinaciones:**
+  - Ejecutó `ruff format tests` sobre toda la carpeta y reformateó unos 30 archivos ajenos. Causa raíz: formateó un directorio en vez de sus dos archivos. Se revirtió antes de commitear y la PR solo toca archivos de la HU.
+  - Instaló `requirements.txt` en el Python global (3.14) en vez de usar el `.venv` del proyecto. Causa raíz: no comprobó si ya existía un entorno virtual (el proyecto usa Python 3.12).
+  - El primer comando para aplicar los cambios falló por un error de comillas en el shell y no escribió nada; se repitió desde un archivo.
+  - Los tests de HU-10 usan la fecha 10/10/2026, que ya es pasado, y con `reservation_in_past` habrían fallado. Lo vio al diseñar y usó fechas futuras (hoy + 30 días) en los tests nuevos.
+- **Trabajo descartado:** el reformateo de los ~30 archivos de tests ajenos.
+- **Mi prompt o la spec:**
+  - La spec de #124 aún tenía tres `[NEEDS CLARIFICATION]` (si el cliente puede enviar `table_id`, si se rechaza el pasado y la prioridad). `AGENTS.md` pide cerrarlas antes de programar, así que se cerraron primero.
+  - La spec no decía cómo sabe el servicio que el usuario es cliente (el agente añadió `is_customer`) ni cuántas mesas candidatas probar (límite de 100).
+  - La spec no mencionaba que `reservation_in_past` rompe las fechas de los tests de HU-10.
+  - Riesgo abierto: `reserved_at` se guarda sin zona horaria y se compara con la hora UTC actual. Si el frontend envía la hora local de España, una reserva cercana a "ahora" podría rechazarse por error (hasta 2 h). Sin comprobar: preguntar a Anna qué envía el frontend.
+- **Decisiones humanas:** (Manon)
+  - El `customer` puede seguir enviando `table_id`, para no romper el contrato ni los tests de HU-10.
+  - Una reserva en el pasado se rechaza solo cuando la mesa se asigna automáticamente (422 `reservation_in_past`); con `table_id` no cambia.
+  - Prioridad: Must.
+  - Ya estaban acordadas por todo el equipo, Levi incluido, el 15/10: el cliente no elige mesa y el máximo es de 8 personas.
+- **Lección:** pedir al agente que formatee y edite solo los archivos de la HU, nunca carpetas enteras, y que use el `.venv` del proyecto.
 
 ### HU-53 · Bitácora de IA
 
@@ -97,4 +354,34 @@ Copia este bloque en la sección de tu HU:
 - **Decisiones humanas:** separar HU-21 en HU-21 (OpenCode, Anna) y HU-53 (bitácora, Rita), decidido por mí.
 - **Lección:** antes de pedir una propuesta, pedir al agente que lea `AGENTS.md` y el estado de `dev`.
 
+<<<<<<< HEAD
 >>>>>>> 27711f50e5988202260aa8fc7a37551c78cb32e4
+=======
+### Tarea #117 · Unidades preparadas y servidas
+
+#### 2026-10-14 · Contar unidades (Backend #118 y #119, Frontend #42) · @costanna
+
+- **Herramienta y modelo:** Claude Code · Opus 5.5
+- **Issue y reglas:** #117 · relacionado con la HU-45 (#89)
+- **Prompt clave:** "si hay 2 paellas se marcan como entregadas las 2 de golpe, ¿estaría bien para un restaurante?"
+- **Resultado:** aceptado con cambios. `prepared_quantity` y `served_quantity` con migración que convierte los datos, compatible con `prepared` y `served`, y contador − 1/2 + en la web.
+- **Errores o alucinaciones:** la migración de unidades entró con el número 0005 a la vez que la de login social (#116): dos cabezas y el CI de `dev` en rojo. Causa raíz: no se comprobó qué números usaban las PRs abiertas. Se renumeró a 0006 en la #119. Antes, la #108 de Manon movió `update_item` a otro fichero y hubo conflicto; se mantuvieron sus líneas y solo se cambió el bucle, con permiso de Anna.
+- **Trabajo descartado:** la rama con la 0003 de `station`, que ya había entrado con la #109.
+- **Mi prompt o la spec:** nada
+- **Decisiones humanas:** contar unidades aunque solapa con la HU-45 de Rita; resolver el conflicto con el código de Manon sin tocar sus líneas (Anna).
+- **Lección:** antes de mergear una migración, mirar los números de las PRs abiertas (de aquí sale el comando `/migracion`).
+
+### Tarea #40 · Nombre APIResto y nueva URL
+
+#### 2026-10-14 · Nombre visible y URL de producción (Frontend #41, Backend #120) · @costanna
+
+- **Herramienta y modelo:** Claude Code · Opus 5.5
+- **Issue y reglas:** Frontend #40 · nada
+- **Prompt clave:** cambiar en la app la parte visible de RestoAPI a APIResto y la URL de Vercel
+- **Resultado:** aceptado. Título, cabecera y login con APIResto y enlaces a `apiresto-f5.vercel.app`.
+- **Errores o alucinaciones:** al cambiar la URL, `ALLOWED_ORIGINS` quedó mal escrito en Render y el backend rechazaba todos los orígenes, también los antiguos; se detectó probando el CORS desde la terminal y se dejó con las dos URLs separadas por comas. La guía de la HU-38 usaba `restoapi.vercel.app`, que no es nuestra: registrarla como callback habría dejado los códigos de login en manos de quien la registrara.
+- **Trabajo descartado:** nada
+- **Mi prompt o la spec:** nada
+- **Decisiones humanas:** mantener la URL antigua activa y aceptar las dos en `ALLOWED_ORIGINS` (Anna).
+- **Lección:** después de tocar variables en Render, probar el login desde las dos URLs.
+>>>>>>> d8234f2fd7a241e75adc948bc02bdc1d5f95eb35

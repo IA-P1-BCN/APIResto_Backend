@@ -42,6 +42,7 @@ Pasos (por si hay que recrearlo):
    | `DATABASE_URL` | Neon, rama `main` (pooled), empezando por `postgresql+psycopg://` (no `postgresql://`: ver paso 3 de Neon) |
    | `ALLOWED_ORIGINS` | URLs de producción de Vercel, exactas, sin `/` final y separadas por comas sin espacios. Ahora: `https://resto-api-f5.vercel.app,https://apiresto-f5.vercel.app` |
    | `BREVO_API_KEY`, `MAIL_FROM` | Vacías hasta HU-19 (D7) |
+   | `FRONTEND_URL` | URL de producción de Vercel, sin `/` final: `https://apiresto-f5.vercel.app`. Es la base del enlace del email para crear la contraseña (HU-52). `PASSWORD_TOKEN_EXPIRE_HOURS` (48 por defecto) no hace falta tocarla |
    | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET` | Login social (HU-38). Vacías = ese proveedor responde `503`. Se crean en Google Cloud Console y en GitHub (OAuth App) con la callback `<URL de Vercel>/auth/callback`; los secretos solo en Render |
 
    `JWT_SECRET_KEY` la genera Render automáticamente.
@@ -212,7 +213,7 @@ docker compose down -v           # parar y BORRAR los datos de la BD
 
 ## 8. Migraciones con Alembic (HU-23)
 
-Los cambios en el modelo de datos se hacen con migraciones de Alembic (`migrations/versions/`), nunca a mano en la BD. La primera migración (`0001_esquema_inicial`) crea las 8 tablas tal como están en P2; después, la `0002` añade `prepared` y `served` a `order_items`, la `0003` añade `station` (`kitchen` o `bar`) a `categories`, la `0004` el soft delete y la auditoría de usuarios, la `0005` las cuentas de login social, y la `0006` cambia `prepared` y `served` por el número de unidades preparadas y servidas de cada línea.
+Los cambios en el modelo de datos se hacen con migraciones de Alembic (`migrations/versions/`), nunca a mano en la BD. La primera migración (`0001_esquema_inicial`) crea las 8 tablas tal como están en P2; después, la `0002` añade `prepared` y `served` a `order_items`, la `0003` añade `station` (`kitchen` o `bar`) a `categories`, la `0004` el soft delete y la auditoría de usuarios, la `0005` las cuentas de login social, la `0006` cambia `prepared` y `served` por el número de unidades preparadas y servidas de cada línea, y la `0007` marca como `bar` las categorías `Bebidas` y `Postres` (por nombre, sin distinguir mayúsculas; si en la BD se llaman distinto, hay que ponerlas en `bar` con `PUT /categories/{id}`).
 
 ```bash
 alembic upgrade head        # aplicar las migraciones pendientes

@@ -1,0 +1,66 @@
+meta {
+  name: Crear segundo pedido (queda pending)
+  type: http
+  seq: 8
+}
+
+post {
+  url: {{baseUrl}}/orders/
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{tokenWaiter}}
+}
+
+body:json {
+  {
+    "table_id": {{tableId}},
+    "items": [
+      {
+        "dish_id": {{dishId}},
+        "quantity": 1
+      }
+    ]
+  }
+}
+
+script:post-response {
+  if (res.status === 201) {
+    bru.setVar("pendingOrderId", res.body.id);
+  }
+}
+
+tests {
+  test("status 201", function() {
+    expect(res.status).to.equal(201);
+  });
+
+  test("pending", function() {
+    expect(res.body.status).to.equal("pending");
+  });
+}
+
+docs {
+  **`POST /orders/`**
+
+  Pedido que se queda `pending` para el caso 409 `order_not_served` de facturas. Guarda `pendingOrderId`.
+
+  **Roles permitidos:** admin, waiter
+
+  **Auth en este request:** Bearer `{{tokenWaiter}}` (waiter)
+
+  **Respuestas posibles:**
+
+  - `201`: `OrderOut`
+  - `401`: sin token (`unauthorized`)
+  - `403`: rol no permitido, solo admin y waiter (`forbidden`)
+  - `404`: `Table not found` (`not_found`)
+  - `409`: `Dish <id> not available`, también si el plato no existe (`conflict`)
+  - `422`: datos no válidos (`validation_error`)
+}

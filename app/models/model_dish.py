@@ -1,4 +1,5 @@
 from sqlalchemy import Boolean, Column, ForeignKey, Integer, Numeric, String, Text
+from sqlalchemy.orm import relationship
 
 from app.database import Base
 
@@ -13,4 +14,5 @@ class Dish(Base):
     price = Column(Numeric(8, 2), nullable=False)
     allergens = Column(String(255))
     is_available = Column(Boolean, default=True, nullable=False)
-    
+
+    category = relationship("Category")

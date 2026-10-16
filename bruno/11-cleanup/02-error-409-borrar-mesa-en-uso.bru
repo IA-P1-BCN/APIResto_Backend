@@ -1,0 +1,44 @@
+meta {
+  name: Error 409 · borrar mesa con pedidos
+  type: http
+  seq: 2
+}
+
+delete {
+  url: {{baseUrl}}/tables/:table_id
+  body: none
+  auth: bearer
+}
+
+params:path {
+  table_id: {{tableId}}
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+tests {
+  test("status 409", function() {
+    expect(res.status).to.equal(409);
+  });
+
+  test("error {detail, code} con code table_in_use", function() {
+    expect(res.body.detail).to.be.a("string");
+    expect(res.body.code).to.equal("table_in_use");
+  });
+}
+
+docs {
+  **`DELETE /tables/{table_id}`**
+
+  Una mesa con pedidos o reservas no se borra.
+
+  **Roles permitidos:** admin
+
+  **Auth en este request:** Bearer `{{token}}` (admin)
+
+  **Respuestas posibles:**
+
+  - `409`: `table_in_use` (`Table <id> has orders and cannot be deleted`; sin pedidos pero con reservas: `... has reservations ...`)
+}

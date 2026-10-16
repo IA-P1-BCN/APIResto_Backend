@@ -1,0 +1,58 @@
+meta {
+  name: Estado → served (waiter)
+  type: http
+  seq: 7
+}
+
+patch {
+  url: {{baseUrl}}/orders/:order_id/status
+  body: json
+  auth: bearer
+}
+
+params:path {
+  order_id: {{orderId}}
+}
+
+headers {
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{tokenWaiter}}
+}
+
+body:json {
+  {
+    "status": "served"
+  }
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+
+  test("served", function() {
+    expect(res.body.status).to.equal("served");
+  });
+}
+
+docs {
+  **`PATCH /orders/{order_id}/status`**
+
+  Pedido servido: ya se puede facturar (08-invoices).
+
+  **Roles permitidos:** admin, waiter, kitchen, bartender
+
+  **Auth en este request:** Bearer `{{tokenWaiter}}` (waiter)
+
+  **Respuestas posibles:**
+
+  - `200`: `OrderOut` (pedir el mismo estado devuelve 200 sin cambios)
+  - `401`: sin token (`unauthorized`)
+  - `403`: rol no permitido (`forbidden`)
+  - `404`: `Order not found` (`not_found`)
+  - `409`: `Cannot change status from '<actual>' to '<nuevo>'` (`conflict`)
+  - `422`: `status` fuera de `pending|in_kitchen|served|paid|cancelled` (`validation_error`)
+}

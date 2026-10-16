@@ -129,7 +129,7 @@ GET /tables/available?reserved_at=2026-10-10T21:00:00&party_size=4
 }
 ```
 
-## Reservas (`/reservations`) · HU-10, HU-19
+## Reservas (`/reservations`) · HU-10, HU-19, HU-51
 
 Roles: `admin` y `waiter` operan sobre todas las reservas; `customer` solo sobre las suyas
 (`403` si intenta tocar una ajena); `kitchen` no tiene acceso (`403`).
@@ -151,6 +151,17 @@ Roles: `admin` y `waiter` operan sobre todas las reservas; `customer` solo sobre
   Si se solapan → `409` con `code="reservation_conflict"`.
 - **Aforo:** `party_size` no puede superar `dining_tables.capacity` → `422` con
   `code="party_size_exceeds_capacity"`.
+- **Asignación automática (HU-51):** `table_id` es opcional. Sin él, el backend elige la
+  mesa libre más pequeña con sitio para `party_size` en ese hueco (la primera de
+  `GET /tables/available`) y la devuelve en `table_id`. Vale para todos los roles. Si no hay
+  ninguna → `409` con `code="no_table_available"` y el mensaje
+  "No hay mesa libre para N personas el DD/MM/AAAA a las HH:MM". Sin `table_id`, una
+  `reserved_at` en el pasado → `422` con `code="reservation_in_past"`; con `table_id` no se
+  valida, como antes.
+- **Máximo de 8 personas para el cliente (HU-51):** un `customer` que crea o edita una reserva
+  con `party_size` mayor que 8 → `422` con `code="party_size_too_large"` y el mensaje
+  "Para reservas de más de 8 personas, llama al restaurante". `admin` y `waiter` no tienen
+  este límite.
 - **Cancelar libera el hueco:** una reserva cancelada deja de contar para el solapamiento.
 - `reserved_at` se guarda **sin zona horaria**. Si se envía con zona
   (`2026-10-10T22:00:00+02:00`), se convierte a UTC (`2026-10-10T20:00:00`).
@@ -163,6 +174,16 @@ Roles: `admin` y `waiter` operan sobre todas las reservas; `customer` solo sobre
   "table_id": 3,
   "reserved_at": "2026-10-10T21:00:00",
   "duration_min": 90,
+  "party_size": 4,
+  "notes": "Cumpleaños, trona para un bebé"
+}
+```
+
+Un `customer` normalmente no envía `table_id`:
+
+```json
+{
+  "reserved_at": "2026-10-10T21:00:00",
   "party_size": 4,
   "notes": "Cumpleaños, trona para un bebé"
 }
@@ -193,7 +214,7 @@ Respuesta `201` (también la de `GET`, `PATCH` y `/cancel`):
 ### Editar (`PATCH /reservations/{id}`)
 
 Se cambian solo los campos enviados: `table_id`, `reserved_at`, `duration_min`, `party_size`,
-`notes` y `status`. Si cambia la mesa, la hora, la duración o las personas, se revalidan el aforo
+`notes` y `status`. Un `customer` no puede subir `party_size` por encima de 8. No se reasigna la mesa sola. Si cambia la mesa, la hora, la duración o las personas, se revalidan el aforo
 y el solapamiento. `status` solo lo pueden cambiar `admin` y `waiter`, y solo a `confirmed`,
 `completed` o `no_show`. Para cancelar se usa `/cancel`, que es el que envía el email.
 
@@ -231,14 +252,16 @@ así que no retrasa la respuesta. Con `EMAIL_ENABLED=false` solo se escribe en e
 | 422 | `party_size_exceeds_capacity` | `party_size` supera la capacidad de la mesa |
 | 422 | `validation_error` | Validación de Pydantic (campos que faltan, `party_size <= 0`, campos desconocidos…) |
 
-## Usuarios (`/users`) · HU-32
+## Usuarios (`/users`) · HU-32, HU-24
 
-Todos los endpoints son solo `admin` (otro rol → `403`).
+Todos los endpoints son solo `admin` (otro rol → `403`), salvo los del propio perfil
+(`PATCH /users/me` y `POST /users/me/password`), abiertos a cualquier rol autenticado: ver
+[Perfil propio](#perfil-propio-usersme--hu-25).
 
 | Endpoint | Descripción |
 |---|---|
 | `POST /users/` | Crea un usuario; guarda `created_by` y `updated_by` (el admin que lo crea) |
-| `GET /users/` | Lista los usuarios no borrados. `?include_deleted=true` incluye los borrados |
+| `GET /users/` | Lista paginada (`Page[UserOut]`) de los usuarios no borrados. `?include_deleted=true` incluye los borrados. Filtros y búsqueda: ver abajo (HU-24) |
 | `GET /users/{id}` | Un borrado → `404`, salvo con `?include_deleted=true` |
 | `PUT /users/{id}` | Edita; actualiza `updated_by` y `updated_at` |
 | `PATCH /users/{id}/deactivate` | `is_active=false`: suspensión temporal, sigue en los listados y no puede iniciar sesión |
@@ -253,20 +276,141 @@ Todos los endpoints son solo `admin` (otro rol → `403`).
 | `404` | Usuario inexistente o ya borrado |
 | `409` | Email ya registrado; `restore` sobre un usuario no borrado |
 
+### Filtrar, buscar y paginar (`GET /users/`) · HU-24
+
+**Breaking-api**: la respuesta pasa de una lista a `{"items", "total", "page", "size"}` y se quitan `skip`/`limit`.
+
+| Parámetro | Tipo | Efecto |
+|---|---|---|
+| `page` | int ≥ 1 (por defecto 1) | Página |
+| `size` | int 1-100 (por defecto 20) | Elementos por página |
+| `role` | `admin`, `waiter`, `kitchen`, `bartender`, `customer` | Solo ese rol. Otro valor → `422` |
+| `is_active` | bool | `true` solo activos, `false` solo desactivados. Sin valor: todos |
+| `q` | texto, máx. 100 caracteres (más → `422`) | Búsqueda parcial, sin distinguir mayúsculas ni acentos (`jose` encuentra "José"), en `name` o `email`. Vacío o solo espacios: no filtra. `%` y `_` cuentan como texto |
+| `include_deleted` | bool (por defecto `false`) | Incluye los borrados (HU-32) |
+
+Los parámetros se combinan entre sí; `total` cuenta los usuarios que cumplen todos los filtros. Orden fijo por `id` ascendente. Ejemplo: `GET /users/?role=waiter&q=ana&page=1&size=20`.
+
+## Perfil propio (`/users/me`) · HU-25
+
+Cualquier rol autenticado (`admin`, `waiter`, `kitchen`, `bartender`, `customer`) sobre sus
+propios datos. Requiere `Authorization: Bearer <token>`; sin token o con un token no
+válido → `401`. Para ver los datos se usa `GET /auth/me`.
+
+| Método | Ruta | Qué hace | Éxito |
+|---|---|---|---|
+| `PATCH` | `/users/me` | Edita el `name`, el `email` y el `phone` propios | `200` |
+| `POST` | `/users/me/password` | Cambia la propia contraseña indicando la actual | `204` |
+
+### Editar mi perfil (`PATCH /users/me`)
+
+Edición parcial: solo se aplican los campos enviados.
+
+```json
+{"name": "Ana López", "email": "Ana@Example.com", "phone": "600123456"}
+```
+
+- **Campos editables:** `name` (1..100 caracteres), `email` y `phone` (máx. 20 caracteres).
+  `{"phone": null}` borra el teléfono; `name` y `email` no admiten `null` (`422`).
+- **Nada más se puede cambiar:** cualquier otro campo (`role`, `is_active`, `password`…) →
+  `422` `validation_error`. El rol y la activación siguen siendo cosa de un admin (R-03, R-04).
+- **Email** guardado en minúsculas y único sin distinguir mayúsculas (R-01). Si ya es de
+  otro usuario, incluidos los borrados → `409`. Enviar el mismo email que ya tienes es válido.
+- Guarda `updated_by` con el propio id (R-11) y actualiza `updated_at`.
+
+Respuesta `200` (`UserOut`; nunca incluye `password_hash`):
+
+```json
+{"id": 7, "name": "Ana López", "email": "ana@example.com", "phone": "600123456",
+ "role": "customer", "is_active": true, "created_at": "2026-10-14T10:15:00",
+ "updated_at": "2026-10-15T09:30:00", "deleted_at": null, "created_by": null,
+ "updated_by": 7}
+```
+
+### Cambiar mi contraseña (`POST /users/me/password`)
+
+```json
+{"current_password": "OldPassw0rd", "new_password": "NewPassw0rd"}
+```
+
+Respuesta `204` sin cuerpo. La nueva contraseña debe tener al menos 8 caracteres (R-02) y
+se guarda hasheada con bcrypt; nunca se devuelve ni se escribe en el log. A partir de ese
+momento `POST /auth/login` funciona con la nueva y deja de funcionar con la anterior.
+
+> **Nota:** cambiar la contraseña no cierra las otras sesiones abiertas: los tokens ya
+> emitidos siguen siendo válidos hasta que caducan. Invalidarlos queda para la HU de
+> refresh/logout (R-06/R-07).
+
+### Códigos de error
+
+| HTTP | `code` | Cuándo |
+|---|---|---|
+| 400 | `password_not_set` | La cuenta no tiene contraseña (solo login social): `"Password not set for this account"` |
+| 401 | `unauthorized` | Sin token o token no válido o caducado |
+| 403 | `invalid_current_password` | `current_password` no es la contraseña actual: `"Current password is incorrect"` |
+| 409 | `conflict` | `PATCH /users/me`: el email ya pertenece a otro usuario: `"Email already registered"` (R-01) |
+| 422 | `validation_error` | Campos no editables o desconocidos (`role`, `is_active`…), `name` vacío, `null` en `name`/`email`, email con formato incorrecto o `new_password` < 8 caracteres |
+| 422 | `same_password` | `new_password` es igual a la actual: `"New password must be different from the current one"` |
+
+## Invitación y crear la contraseña · HU-52
+
+El admin da de alta a un usuario **sin contraseña** y este la crea con el enlace que le
+llega por email. El enlace lleva un `PasswordResetToken` de un solo uso que caduca a las
+`PASSWORD_TOKEN_EXPIRE_HOURS` horas (48 por defecto) (R-09). Solo se guarda el SHA-256 del
+token, y el token nunca aparece en el log.
+
+| Endpoint | Rol | Respuesta |
+|---|---|---|
+| `POST /users/invite` | `admin` | `201` con `UserOut`. Envía el email en segundo plano |
+| `POST /auth/set-password` | Público | `204` sin cuerpo |
+
+### Invitar (`POST /users/invite`)
+
+```json
+{"name": "Lucía Gómez", "email": "lucia@example.com", "phone": "600123456", "role": "customer"}
+```
+
+`phone` es opcional y `role` vale `customer` por defecto. El usuario se crea con
+`password_hash` nulo, así que no puede iniciar sesión hasta crear su contraseña. El email
+("Crea tu contraseña de APIResto") lleva el enlace
+`{FRONTEND_URL}/crear-contrasena?token=…`; con `EMAIL_ENABLED=false` solo se registra en
+el log, sin el enlace.
+
+### Crear la contraseña (`POST /auth/set-password`)
+
+```json
+{"token": "token-del-enlace-del-email", "new_password": "MiClave2026"}
+```
+
+Guarda la contraseña (bcrypt, mínimo 8 caracteres, R-02) y marca como usados todos los
+tokens pendientes del usuario. Después se entra con `POST /auth/login`.
+
+### Códigos de error
+
+| HTTP | `code` | Cuándo |
+|---|---|---|
+| 400 | `invalid_token` | Token desconocido, o usuario desactivado o borrado: `"Invalid token"` |
+| 401 | `unauthorized` | `POST /users/invite` sin token o con token no válido |
+| 403 | `forbidden` | `POST /users/invite` con un rol que no es `admin` |
+| 409 | `conflict` | `POST /users/invite`: el email ya está registrado (R-01) |
+| 410 | `token_used` | El token ya se usó: `"Token already used"` |
+| 410 | `token_expired` | El token ha caducado: `"Token expired"` |
+| 422 | `validation_error` | Email con formato incorrecto, campos desconocidos o `new_password` < 8 caracteres |
+
 ## Pedidos (`/orders`) · HU-07, HU-05
 
 | Endpoint | Roles |
 |---|---|
 | `POST /orders/` | `admin`, `waiter`. El pedido guarda en `waiter_id` el usuario que lo crea |
-| `GET /orders/`, `GET /orders/{id}` | `admin`, `waiter`, `kitchen`, `bartender` |
-| `PATCH /orders/{id}/status` | `admin`, `waiter`, `kitchen`, `bartender` |
-| `PATCH /orders/{id}/items/{item_id}` | Marca cuántas unidades de una línea están preparadas o servidas: `{"prepared_quantity": 1}` (de 0 a `quantity`; si es mayor, 422). `{"prepared": true}` marca todas y `false`, ninguna. `prepared` / `prepared_quantity`: `admin`, `kitchen`, `bartender`. `served` / `served_quantity`: `admin`, `waiter`. La respuesta trae `prepared_quantity`, `served_quantity` y `prepared` / `served` (true si están todas) |
+| `GET /orders/`, `GET /orders/{id}` | `admin`, `waiter`, `kitchen`, `bartender`. Cada línea trae `station` (`kitchen` / `bar`, la de la categoría de su plato). `kitchen` y `bartender` solo reciben las líneas de su estación y no ven los pedidos que no tienen ninguna (`404` en `GET /orders/{id}`); `total` es el del pedido completo (R-14) |
+| `PATCH /orders/{id}/status` | `admin`, `waiter`, `kitchen`, `bartender`. `kitchen` y `bartender` solo sobre pedidos con líneas de su estación (si no, `404`); la respuesta trae solo esas líneas |
+| `PATCH /orders/{id}/items/{item_id}` | Marca cuántas unidades de una línea están preparadas o servidas: `{"prepared_quantity": 1}` (de 0 a `quantity`; si es mayor, 422). `{"prepared": true}` marca todas y `false`, ninguna. `prepared` / `prepared_quantity`: `admin`, `kitchen`, `bartender`. `served` / `served_quantity`: `admin`, `waiter`. `kitchen` y `bartender` solo sobre líneas de su estación; otra estación → `403`. La respuesta trae `prepared_quantity`, `served_quantity` y `prepared` / `served` (true si están todas) |
 
 Sin token → `401`. `customer` en cualquier endpoint, `kitchen` o `bartender` creando un pedido o marcando `served`, o `waiter` marcando `prepared` → `403`.
 
 Cada línea de `items` lleva `prepared` (cocina o barra la tiene lista) y `served` (sala la ha llevado a la mesa), las dos `false` al crear el pedido. Marcar una línea de otro pedido o que no existe → `404`; de un pedido `paid` o `cancelled` → `409`; sin `prepared` ni `served` en el cuerpo → `422`.
 
-El WebSocket de cocina (`/ws/kitchen`) admite `admin`, `kitchen` y `bartender`.
+El WebSocket de cocina (`/ws/kitchen`) admite `admin`, `kitchen` y `bartender`. Cada evento (`order_created`, `order_status_changed`) trae `order.stations` y, en `order_created`, `items` con su `station`; `kitchen` y `bartender` solo reciben los pedidos con líneas de su estación y con esas líneas, `admin` recibe todo.
 
 ## Facturas y exportación CSV · HU-14
 

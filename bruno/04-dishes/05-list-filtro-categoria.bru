@@ -1,0 +1,55 @@
+meta {
+  name: Listar platos por categoría (customer)
+  type: http
+  seq: 5
+}
+
+get {
+  url: {{baseUrl}}/dishes/?category_id={{categoryId}}&page=1&size=10
+  body: none
+  auth: bearer
+}
+
+params:query {
+  category_id: {{categoryId}}
+  page: 1
+  size: 10
+}
+
+auth:bearer {
+  token: {{tokenCustomer}}
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+
+  test("shape Page: items, total, page, size", function() {
+    expect(res.body.items).to.be.an("array");
+    expect(res.body.total).to.be.a("number");
+    expect(res.body.page).to.be.a("number");
+    expect(res.body.size).to.be.a("number");
+  });
+
+  test("solo platos de la categoría (2: el temporal ya está borrado)", function() {
+    expect(res.body.total).to.equal(2);
+    res.body.items.forEach(d => expect(d.category_id).to.equal(bru.getVar("categoryId")));
+  });
+}
+
+docs {
+  **`GET /dishes/`**
+
+  Listado paginado (`Page[DishOut]`). Filtros: `category_id`, `is_available`, `max_price` (≥ 0). Paginación: `page` (≥ 1) y `size` (1-100).
+
+  **Roles permitidos:** todos
+
+  **Auth en este request:** Bearer `{{tokenCustomer}}` (customer)
+
+  **Respuestas posibles:**
+
+  - `200`: `Page[DishOut]`
+  - `401`: sin token
+  - `422`: parámetros no válidos
+}

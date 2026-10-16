@@ -1,0 +1,35 @@
+meta {
+  name: Raíz de la API
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/
+  body: none
+  auth: none
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+
+  test("shape: message", function() {
+    expect(res.body).to.have.property("message");
+  });
+}
+
+docs {
+  **`GET /`**
+
+  Comprueba que la API responde.
+
+  **Roles permitidos:** público
+
+  **Auth en este request:** ninguna
+
+  **Respuestas posibles:**
+
+  - `200`: `{"message": "API Resto working"}`
+}

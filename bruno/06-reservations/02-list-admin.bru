@@ -1,0 +1,55 @@
+meta {
+  name: Listar reservas de la mesa (admin)
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/reservations?table_id={{tableId}}&page=1&size=20
+  body: none
+  auth: bearer
+}
+
+params:query {
+  table_id: {{tableId}}
+  page: 1
+  size: 20
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+
+  test("shape Page: items, total, page, size", function() {
+    expect(res.body.items).to.be.an("array");
+    expect(res.body.total).to.be.a("number");
+    expect(res.body.page).to.be.a("number");
+    expect(res.body.size).to.be.a("number");
+  });
+
+  test("incluye la reserva creada", function() {
+    expect(res.body.items.map(r => r.id)).to.include(bru.getVar("reservationId"));
+  });
+}
+
+docs {
+  **`GET /reservations`**
+
+  Listado paginado por fecha. Filtros: `status`, `table_id`, `date` (AAAA-MM-DD) y `user_id`.
+
+  **Roles permitidos:** admin, waiter, customer (solo las suyas)
+
+  **Auth en este request:** Bearer `{{token}}` (admin)
+
+  **Respuestas posibles:**
+
+  - `200`: `Page[ReservationRead]`
+  - `401`: sin token o token no válido (`unauthorized`)
+  - `403`: rol sin acceso, kitchen o bartender (`forbidden`); customer que filtra por el `user_id` de otro usuario (`reservation_forbidden`)
+  - `422`: query params no válidos, p. ej. `size` > 100 (`validation_error`)
+}

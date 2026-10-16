@@ -1,0 +1,57 @@
+meta {
+  name: Cambiar estado a available (waiter)
+  type: http
+  seq: 7
+}
+
+patch {
+  url: {{baseUrl}}/tables/:table_id/status
+  body: json
+  auth: bearer
+}
+
+params:path {
+  table_id: {{tableId}}
+}
+
+headers {
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{tokenWaiter}}
+}
+
+body:json {
+  {
+    "status": "available"
+  }
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+
+  test("estado available", function() {
+    expect(res.body.status).to.equal("available");
+  });
+}
+
+docs {
+  **`PATCH /tables/{table_id}/status`**
+
+  Devuelve la mesa a `available`.
+
+  **Roles permitidos:** admin, waiter
+
+  **Auth en este request:** Bearer `{{tokenWaiter}}` (waiter)
+
+  **Respuestas posibles:**
+
+  - `200`: `DiningTableRead`
+  - `401`: sin token
+  - `403`: rol no permitido (solo admin, waiter)
+  - `404`: `Table <id> not found`
+  - `422`: `status` no válido o campos extra (`extra=forbid`)
+}
