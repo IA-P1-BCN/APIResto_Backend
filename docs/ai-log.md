@@ -186,6 +186,18 @@ agente, la revisé y la commiteé primero.
 - **Decisiones humanas:** guard de solo lectura en Production, contraseña aleatoria, excluir `bruno/` y `scripts/generate_agent_diagrams.py` de la imagen Docker y citar la PR en vez de hashes, una de las dos opciones que dio Levi, porque con squash cualquier hash de la rama quedaría huérfano (Levi). Incluir `PATCH /users/me` y `POST /users/me/password` (HU-25) en esta PR (Levi). El cambio de contraseña se prueba con el bartender, no con el customer, porque `11-cleanup/10` espera un 401 del customer por estar desactivado y con otra contraseña ese 401 saldría por el motivo equivocado.
 - **Lección:** volver a ejecutar la colección después de cada rebase, no solo después de cada merge de `dev`.
 
+#### 2026-10-16 · Correcciones tras nueva revision · @levifvy
+
+- **Herramienta y modelo:** Claude Code · Opus 5.5 (`claude-opus-5-5`); Bruno CLI 4.2.1
+- **Issue y reglas:** #70 · R-01, R-02, R-04, R-11, R-14
+- **Prompt clave:** revisar la rama punto por punto contra la revisión de Ana (con archivo y línea, sin tocar nada) y luego aplicar las correcciones en commits atómicos, sin entrar en `app/`, `tests/`, `migrations/` ni CI.
+- **Resultado:** aceptado. Ana acertaba: Production no tenía freno y la contraseña de prueba se deducía del email. Al rebasar salió lo que ella no vio: la colección daba 128/130 porque `09-list-users` esperaba un array y `GET /users/` ya es `Page[UserOut]` (HU-24), y `03-get-bartender` daba 404 porque el pedido solo tenía líneas de cocina (R-14, HU-40). Con eso resuelto y 9 requests nuevos para `/users/me`, cierra en 141/141 requests, 361/361 tests y 44 de 48 endpoints. Production queda de solo lectura, la contraseña es un uuid v4, la spec se llama ya `HU-27-coleccion-bruno.md` y `bruno/` sale de la imagen Docker.
+- **Errores o alucinaciones:** el 130/130 del 15/10 se midió sobre un `dev` sin HU-24, HU-25 ni HU-40; y la documentación daba por inexistentes endpoints que ya estaban mergeados. Al generar los requests de error de `/users/me`, una sustitución de shell rompió un `{{tokenCustomer}}`; el agente lo vio al revisar el diff antes del commit. También quedó anotado que cambiar la contraseña no revoca los tokens ya emitidos: ninguna regla lo exige.
+- **Trabajo descartado:** marcar el 404 del bartender como esperado (no probaba el caso feliz de R-14), `crypto.randomUUID()` porque no existe en el sandbox `safe`, y quitar el `create_all` de `app/` aquí porque se sale de HU-27.
+- **Mi prompt o la spec:** la spec no obligaba a re-ejecutar la colección tras un rebase, y la excepción de alcance del diff no contemplaba `.dockerignore`. Lo añadimos con fecha.
+- **Decisiones humanas (Levi):** Production de solo lectura; contraseña aleatoria; opción A para el bartender (una línea de barra de verdad, no un 404 esperado); sacar `bruno/` y `scripts/generate_agent_diagrams.py` de la imagen; citar la PR en vez de hashes, porque con squash quedarían huérfanos; incluir los dos requests de HU-25 aquí; y abrir issues aparte para el job de Bruno en CI y para el `create_all` de `app/main.py`. La PR se integra con squash.
+- **Lección:** volver a ejecutar la colección después de cada rebase, no solo cuando mergea `dev`. Y sin un job de Bruno en CI, cualquier cambio de contrato la rompe sin que nadie se entere.
+
 ### HU-35 · Comandos y subagentes de OpenCode
 
 #### 2026-10-15 · Comandos /tests, /seguridad y /migracion · @costanna
