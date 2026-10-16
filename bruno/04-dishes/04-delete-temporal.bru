@@ -1,0 +1,43 @@
+meta {
+  name: Borrar plato temporal
+  type: http
+  seq: 4
+}
+
+delete {
+  url: {{baseUrl}}/dishes/:dish_id
+  body: none
+  auth: bearer
+}
+
+params:path {
+  dish_id: {{tempDishId}}
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+tests {
+  test("status 204", function() {
+    expect(res.status).to.equal(204);
+  });
+}
+
+docs {
+  **`DELETE /dishes/{dish_id}`**
+
+  Borra un plato que no está en ningún pedido. Si lo está devuelve 409 (ver 11-cleanup).
+
+  **Roles permitidos:** admin
+
+  **Auth en este request:** Bearer `{{token}}` (admin)
+
+  **Respuestas posibles:**
+
+  - `204`: sin contenido
+  - `401`: sin token
+  - `403`: rol distinto de admin (`Not enough permissions`)
+  - `404`: `Dish not found`
+  - `409`: plato usado en pedidos (`Dish is used in orders and cannot be deleted...`)
+}

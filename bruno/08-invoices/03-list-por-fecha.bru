@@ -1,0 +1,56 @@
+meta {
+  name: Listar facturas de hoy
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/invoices?date_from={{today}}&date_to={{today}}&page=1&size=100
+  body: none
+  auth: bearer
+}
+
+params:query {
+  date_from: {{today}}
+  date_to: {{today}}
+  page: 1
+  size: 100
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+
+  test("shape Page: items, total, page, size", function() {
+    expect(res.body.items).to.be.an("array");
+    expect(res.body.total).to.be.a("number");
+    expect(res.body.page).to.be.a("number");
+    expect(res.body.size).to.be.a("number");
+  });
+
+  test("todas emitidas hoy", function() {
+    res.body.items.forEach(i => expect(i.issued_at.slice(0, 10)).to.equal(bru.getVar("today")));
+  });
+}
+
+docs {
+  **`GET /invoices`**
+
+  Filtro por fecha de emisión (`{{today}}` en UTC).
+
+  **Roles permitidos:** admin, waiter
+
+  **Auth en este request:** Bearer `{{token}}` (admin)
+
+  **Respuestas posibles:**
+
+  - `200`: `Page[InvoiceOut]`
+  - `401`: sin token (`unauthorized`)
+  - `403`: rol no permitido (`forbidden`)
+  - `422`: `invalid_date_range` si `date_from > date_to`; `validation_error` si `page < 1` o `size` fuera de 1..100
+}

@@ -1,0 +1,53 @@
+meta {
+  name: Error 403 · customer reserva para otro usuario
+  type: http
+  seq: 9
+}
+
+post {
+  url: {{baseUrl}}/reservations
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{tokenCustomer}}
+}
+
+body:json {
+  {
+    "table_id": {{tableId}},
+    "reserved_at": "{{reservedAtOther}}",
+    "party_size": 2,
+    "user_id": {{waiterId}}
+  }
+}
+
+tests {
+  test("status 403", function() {
+    expect(res.status).to.equal(403);
+  });
+
+  test("error {detail, code} con code reservation_forbidden", function() {
+    expect(res.body.detail).to.be.a("string");
+    expect(res.body.code).to.equal("reservation_forbidden");
+  });
+}
+
+docs {
+  **`POST /reservations`**
+
+  Un customer solo puede crear reservas a su nombre.
+
+  **Roles permitidos:** admin, waiter, customer
+
+  **Auth en este request:** Bearer `{{tokenCustomer}}` (customer)
+
+  **Respuestas posibles:**
+
+  - `403`: `Solo puedes crear reservas a tu nombre`
+}

@@ -1,0 +1,58 @@
+meta {
+  name: Listar platos disponibles por precio
+  type: http
+  seq: 6
+}
+
+get {
+  url: {{baseUrl}}/dishes/?is_available=true&max_price=100&page=1&size=20
+  body: none
+  auth: bearer
+}
+
+params:query {
+  is_available: true
+  max_price: 100
+  page: 1
+  size: 20
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+
+  test("shape Page: items, total, page, size", function() {
+    expect(res.body.items).to.be.an("array");
+    expect(res.body.total).to.be.a("number");
+    expect(res.body.page).to.be.a("number");
+    expect(res.body.size).to.be.a("number");
+  });
+
+  test("todos disponibles y ≤ 100", function() {
+    res.body.items.forEach(d => {
+      expect(d.is_available).to.equal(true);
+      expect(Number(d.price)).to.be.at.most(100);
+    });
+  });
+}
+
+docs {
+  **`GET /dishes/`**
+
+  Filtro combinado `is_available` + `max_price`.
+
+  **Roles permitidos:** todos
+
+  **Auth en este request:** Bearer `{{token}}` (admin)
+
+  **Respuestas posibles:**
+
+  - `200`: `Page[DishOut]`
+  - `401`: sin token
+  - `422`: parámetros no válidos (p. ej. `max_price` < 0)
+}

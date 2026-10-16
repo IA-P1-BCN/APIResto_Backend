@@ -1,0 +1,10 @@
+meta {
+  name: 06 · Reservations
+  seq: 7
+}
+
+docs {
+  Reservas. admin y waiter operan sobre todas; customer solo sobre las suyas; kitchen y bartender no tienen acceso.
+
+  Comportamiento actual de HU-43: un customer **sí** puede crear reservas a su nombre (201); el 403 solo salta si indica el `user_id` de otro usuario.
+}

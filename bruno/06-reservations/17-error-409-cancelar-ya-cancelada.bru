@@ -1,0 +1,44 @@
+meta {
+  name: Error 409 · cancelar una reserva ya cancelada
+  type: http
+  seq: 17
+}
+
+patch {
+  url: {{baseUrl}}/reservations/:reservation_id/cancel
+  body: none
+  auth: bearer
+}
+
+params:path {
+  reservation_id: {{customerReservationId}}
+}
+
+auth:bearer {
+  token: {{tokenCustomer}}
+}
+
+tests {
+  test("status 409", function() {
+    expect(res.status).to.equal(409);
+  });
+
+  test("error {detail, code} con code reservation_not_cancellable", function() {
+    expect(res.body.detail).to.be.a("string");
+    expect(res.body.code).to.equal("reservation_not_cancellable");
+  });
+}
+
+docs {
+  **`PATCH /reservations/{reservation_id}/cancel`**
+
+  Solo se cancelan reservas `confirmed`.
+
+  **Roles permitidos:** admin, waiter y el dueño
+
+  **Auth en este request:** Bearer `{{tokenCustomer}}` (customer)
+
+  **Respuestas posibles:**
+
+  - `409`: `reservation_not_cancellable`
+}

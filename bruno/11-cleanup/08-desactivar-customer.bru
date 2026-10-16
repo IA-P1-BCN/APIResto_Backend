@@ -1,0 +1,61 @@
+meta {
+  name: Desactivar usuario customer
+  type: http
+  seq: 8
+}
+
+patch {
+  url: {{baseUrl}}/users/:user_id/deactivate
+  body: none
+  auth: bearer
+}
+
+params:path {
+  user_id: {{customerId}}
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+
+  test("shape: id, name, email, phone, role, is_active, created_at", function() {
+    expect(res.body).to.have.property("id");
+    expect(res.body).to.have.property("name");
+    expect(res.body).to.have.property("email");
+    expect(res.body).to.have.property("phone");
+    expect(res.body).to.have.property("role");
+    expect(res.body).to.have.property("is_active");
+    expect(res.body).to.have.property("created_at");
+  });
+
+  test("no expone password ni password_hash", function() {
+    expect(JSON.stringify(res.body)).to.not.match(/"password(_hash)?"/);
+  });
+
+  test("desactivado", function() {
+    expect(res.body.is_active).to.equal(false);
+  });
+}
+
+docs {
+  **`PATCH /users/{user_id}/deactivate`**
+
+  Baja lógica (`is_active=false`, R-04). Es distinta de `DELETE /users/{id}` (soft delete con `deleted_at`, HU-32, R-11), que esta colección todavía no cubre.
+
+  **Roles permitidos:** admin
+
+  **Auth en este request:** Bearer `{{token}}` (admin)
+
+  **Respuestas posibles:**
+
+  - `200`: `UserOut`
+  - `401`: sin token (`Not authenticated`) o token inválido / de usuario desactivado (`Invalid or expired token`)
+  - `403`: el rol no es admin (`forbidden`)
+  - `404`: `not_found` (`User not found`)
+  - `422`: `user_id` no entero (`validation_error`)
+}

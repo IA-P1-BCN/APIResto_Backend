@@ -1,0 +1,51 @@
+meta {
+  name: Platos más vendidos
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/stats/top-dishes?limit=5
+  body: none
+  auth: bearer
+}
+
+params:query {
+  limit: 5
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+
+  test("devuelve una lista", function() {
+    expect(res.body).to.be.an("array");
+  });
+
+  test("como mucho 5, con shape TopDishOut", function() {
+    expect(res.body.length).to.be.at.most(5);
+    res.body.forEach(d => expect(d).to.include.keys("dish_id", "name", "quantity", "revenue"));
+  });
+}
+
+docs {
+  **`GET /stats/top-dishes`**
+
+  Platos por unidades vendidas con sus ingresos. Filtros `from`, `to` y `limit` (1-50, por defecto 5).
+
+  **Roles permitidos:** admin
+
+  **Auth en este request:** Bearer `{{token}}` (admin)
+
+  **Respuestas posibles:**
+
+  - `200`: `list[TopDishOut]`
+  - `401`: sin token (`Not authenticated`) o token inválido / de usuario desactivado (`Invalid or expired token`)
+  - `403`: el rol no es admin
+  - `422`: `from` posterior a `to` (`invalid_date_range`) o `limit` fuera de 1-50
+}

@@ -1,0 +1,44 @@
+meta {
+  name: Listar categorías (bartender)
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/categories/
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{tokenBartender}}
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+
+  test("devuelve una lista", function() {
+    expect(res.body).to.be.an("array");
+  });
+
+  test("incluye la categoría creada", function() {
+    expect(res.body.map(c => c.id)).to.include(bru.getVar("categoryId"));
+  });
+}
+
+docs {
+  **`GET /categories/`**
+
+  Lista simple, sin paginación. Se lanza con `tokenBartender` para demostrar que la lectura del menú está abierta a todos los roles.
+
+  **Roles permitidos:** admin, waiter, kitchen, bartender, customer
+
+  **Auth en este request:** Bearer `{{tokenBartender}}` (bartender)
+
+  **Respuestas posibles:**
+
+  - `200`: `list[CategoryOut]`
+  - `401`: sin token
+}

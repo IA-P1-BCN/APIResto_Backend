@@ -1,0 +1,60 @@
+meta {
+  name: Mesas disponibles para un hueco
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/tables/available?reserved_at={{reservedAt}}&party_size=2&duration_min=90&page=1&size=100
+  body: none
+  auth: bearer
+}
+
+params:query {
+  reserved_at: {{reservedAt}}
+  party_size: 2
+  duration_min: 90
+  page: 1
+  size: 100
+}
+
+auth:bearer {
+  token: {{tokenWaiter}}
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+
+  test("shape Page: items, total, page, size", function() {
+    expect(res.body.items).to.be.an("array");
+    expect(res.body.total).to.be.a("number");
+    expect(res.body.page).to.be.a("number");
+    expect(res.body.size).to.be.a("number");
+  });
+
+  test("capacidad suficiente y fuera de servicio excluidas", function() {
+    res.body.items.forEach(m => {
+      expect(m.capacity).to.be.at.least(2);
+      expect(m.status).to.not.equal("out_of_service");
+    });
+  });
+}
+
+docs {
+  **`GET /tables/available`**
+
+  Mesas con capacidad ≥ `party_size`, que no están `out_of_service` y sin reservas activas que solapen `[reserved_at, reserved_at + duration_min)`. Ordenadas por capacidad. `reserved_at` y `party_size` son obligatorios.
+
+  **Roles permitidos:** admin, waiter
+
+  **Auth en este request:** Bearer `{{tokenWaiter}}` (waiter)
+
+  **Respuestas posibles:**
+
+  - `200`: `DiningTablePage`
+  - `401`: sin token
+  - `403`: rol no permitido (solo admin, waiter)
+  - `422`: faltan `reserved_at` o `party_size`, o no son válidos
+}

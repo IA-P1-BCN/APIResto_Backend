@@ -1,0 +1,79 @@
+meta {
+  name: Crear reserva (admin para el customer)
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/reservations
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "table_id": {{tableId}},
+    "reserved_at": "{{reservedAt}}",
+    "duration_min": 90,
+    "party_size": 4,
+    "notes": "Cumpleaños, trona para un bebé",
+    "user_id": {{customerId}}
+  }
+}
+
+script:post-response {
+  if (res.status === 201) {
+    bru.setVar("reservationId", res.body.id);
+  }
+}
+
+tests {
+  test("status 201", function() {
+    expect(res.status).to.equal(201);
+  });
+
+  test("shape: id, user_id, table_id, reserved_at, duration_min, ends_at, party_size, status, notes, created_at", function() {
+    expect(res.body).to.have.property("id");
+    expect(res.body).to.have.property("user_id");
+    expect(res.body).to.have.property("table_id");
+    expect(res.body).to.have.property("reserved_at");
+    expect(res.body).to.have.property("duration_min");
+    expect(res.body).to.have.property("ends_at");
+    expect(res.body).to.have.property("party_size");
+    expect(res.body).to.have.property("status");
+    expect(res.body).to.have.property("notes");
+    expect(res.body).to.have.property("created_at");
+  });
+
+  test("confirmada y a nombre del customer", function() {
+    expect(res.body.status).to.equal("confirmed");
+    expect(res.body.user_id).to.equal(bru.getVar("customerId"));
+  });
+}
+
+docs {
+  **`POST /reservations`**
+
+  Crea una reserva `confirmed`. admin y waiter pueden indicar `user_id`; si se omite, la reserva es del usuario autenticado. Envía un email de confirmación en segundo plano (con `EMAIL_ENABLED=false` solo se registra en el log). Guarda `reservationId`.
+
+  **Roles permitidos:** admin, waiter, customer
+
+  **Auth en este request:** Bearer `{{token}}` (admin)
+
+  **Respuestas posibles:**
+
+  - `201`: `ReservationRead` (incluye `ends_at`)
+  - `401`: sin token o token no válido (`unauthorized`)
+  - `403`: rol sin acceso, kitchen o bartender (`forbidden`); customer que indica el `user_id` de otro usuario (`reservation_forbidden`)
+  - `404`: mesa inexistente (`table_not_found`); usuario inexistente cuando admin o waiter indican `user_id` (`user_not_found`)
+  - `409`: solapamiento con otra reserva activa de la mesa (`reservation_conflict`)
+  - `422`: datos no válidos, p. ej. campo extra o `party_size` <= 0 (`validation_error`); `party_size` > capacidad de la mesa (`party_size_exceeds_capacity`)
+}

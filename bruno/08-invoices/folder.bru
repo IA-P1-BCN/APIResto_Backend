@@ -1,0 +1,12 @@
+meta {
+  name: 08 · Invoices
+  seq: 9
+}
+
+docs {
+  Facturas. Solo de pedidos `served`, una por pedido. Precios con IVA del 10 % incluido. Roles: admin y waiter.
+
+  El conflicto es **por pedido** (`invoice_already_exists`, `order_not_served`), no por mesa.
+
+  Facturar no cambia el estado del pedido: sigue `served` y se marca `paid` aparte. En caso de carrera al numerar la factura, la API puede devolver 409 `invoice_conflict` (reintentar).
+}

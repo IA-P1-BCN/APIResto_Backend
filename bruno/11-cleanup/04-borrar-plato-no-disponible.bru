@@ -1,0 +1,44 @@
+meta {
+  name: Borrar plato no disponible
+  type: http
+  seq: 4
+}
+
+delete {
+  url: {{baseUrl}}/dishes/:dish_id
+  body: none
+  auth: bearer
+}
+
+params:path {
+  dish_id: {{unavailableDishId}}
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+tests {
+  test("status 204", function() {
+    expect(res.status).to.equal(204);
+  });
+}
+
+docs {
+  **`DELETE /dishes/{dish_id}`**
+
+  El plato no disponible no llegó a usarse en pedidos, así que se puede borrar.
+
+  **Roles permitidos:** admin
+
+  **Auth en este request:** Bearer `{{token}}` (admin)
+
+  **Respuestas posibles:**
+
+  - `204`: sin contenido
+  - `401`: sin token (`Not authenticated`) o token inválido / de usuario desactivado (`Invalid or expired token`)
+  - `403`: rol distinto de admin (`forbidden`)
+  - `404`: `not_found` (`Dish not found`)
+  - `409`: `conflict`, plato usado en pedidos
+  - `422`: `dish_id` no entero (`validation_error`)
+}

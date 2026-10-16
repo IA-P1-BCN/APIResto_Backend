@@ -1,0 +1,70 @@
+meta {
+  name: Reemplazar mesa
+  type: http
+  seq: 5
+}
+
+put {
+  url: {{baseUrl}}/tables/:table_id
+  body: json
+  auth: bearer
+}
+
+params:path {
+  table_id: {{tableId}}
+}
+
+headers {
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "number": {{tableNumber}},
+    "capacity": 6,
+    "location": "indoor",
+    "status": "available"
+  }
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+
+  test("shape: id, number, capacity, location, status", function() {
+    expect(res.body).to.have.property("id");
+    expect(res.body).to.have.property("number");
+    expect(res.body).to.have.property("capacity");
+    expect(res.body).to.have.property("location");
+    expect(res.body).to.have.property("status");
+  });
+
+  test("aplica los cambios", function() {
+    expect(res.body.capacity).to.equal(6);
+    expect(res.body.location).to.equal("indoor");
+  });
+}
+
+docs {
+  **`PUT /tables/{table_id}`**
+
+  Reemplazo completo: los 4 campos son obligatorios. La capacidad queda en 6.
+
+  **Roles permitidos:** admin
+
+  **Auth en este request:** Bearer `{{token}}` (admin)
+
+  **Respuestas posibles:**
+
+  - `200`: `DiningTableRead`
+  - `401`: sin token
+  - `403`: rol distinto de admin (`Not enough permissions`)
+  - `404`: `Table <id> not found`
+  - `409`: `Table number <n> already exists` (número de otra mesa)
+  - `422`: datos no válidos, campos que faltan o campos extra (`extra=forbid`)
+}

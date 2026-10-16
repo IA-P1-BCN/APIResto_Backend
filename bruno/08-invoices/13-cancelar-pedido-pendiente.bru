@@ -1,0 +1,58 @@
+meta {
+  name: Cancelar el segundo pedido
+  type: http
+  seq: 13
+}
+
+patch {
+  url: {{baseUrl}}/orders/:order_id/status
+  body: json
+  auth: bearer
+}
+
+params:path {
+  order_id: {{pendingOrderId}}
+}
+
+headers {
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{tokenWaiter}}
+}
+
+body:json {
+  {
+    "status": "cancelled"
+  }
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+
+  test("cancelled", function() {
+    expect(res.body.status).to.equal("cancelled");
+  });
+}
+
+docs {
+  **`PATCH /orders/{order_id}/status`**
+
+  Cierra el pedido auxiliar (`pending → cancelled`).
+
+  **Roles permitidos:** admin, waiter, kitchen, bartender
+
+  **Auth en este request:** Bearer `{{tokenWaiter}}` (waiter)
+
+  **Respuestas posibles:**
+
+  - `200`: `OrderOut` (pedir el mismo estado devuelve 200 sin cambios)
+  - `401`: sin token (`unauthorized`)
+  - `403`: rol no permitido (`forbidden`)
+  - `404`: `Order not found` (`not_found`)
+  - `409`: `Cannot change status from '<actual>' to '<nuevo>'` (`conflict`)
+  - `422`: `status` fuera de `pending|in_kitchen|served|paid|cancelled` (`validation_error`)
+}

@@ -1,0 +1,74 @@
+meta {
+  name: Crear plato de barra
+  type: http
+  seq: 12
+}
+
+post {
+  url: {{baseUrl}}/dishes/
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "category_id": {{barCategoryId}},
+    "name": "Bebida Bruno {{runId}}",
+    "description": "Bebida de prueba creada por la colección Bruno",
+    "price": 3,
+    "is_available": true
+  }
+}
+
+script:post-response {
+  if (res.status === 201) {
+    bru.setVar("barDishId", res.body.id);
+  }
+}
+
+tests {
+  test("status 201", function() {
+    expect(res.status).to.equal(201);
+  });
+
+  test("shape: id, category_id, name, description, price, allergens, is_available", function() {
+    expect(res.body).to.have.property("id");
+    expect(res.body).to.have.property("category_id");
+    expect(res.body).to.have.property("name");
+    expect(res.body).to.have.property("description");
+    expect(res.body).to.have.property("price");
+    expect(res.body).to.have.property("allergens");
+    expect(res.body).to.have.property("is_available");
+  });
+
+  test("precio y categoría de barra", function() {
+    expect(Number(res.body.price)).to.equal(3);
+    expect(res.body.category_id).to.equal(bru.getVar("barCategoryId"));
+  });
+}
+
+docs {
+  **`POST /dishes/`**
+
+  Crea un plato en la categoría de barra (`barCategoryId`). El pedido de `07-orders` lo usa como línea `bar`. Guarda `barDishId`.
+
+  **Roles permitidos:** admin
+
+  **Auth en este request:** Bearer `{{token}}` (admin)
+
+  **Respuestas posibles:**
+
+  - `201`: `DishOut`
+  - `401`: sin token
+  - `403`: rol distinto de admin (`Not enough permissions`)
+  - `404`: `Category not found` (`category_id` inexistente)
+  - `422`: datos no válidos (p. ej. `price` < 0)
+}
