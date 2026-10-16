@@ -56,7 +56,7 @@ Añadir a la respuesta de los pedidos un resumen calculado, sin tocar el modelo:
 
   | `stage` | Condición |
   |---|---|
-  | `all_served` | `served_quantity == quantity` |
+  | `all_served` | `quantity > 0` y `served_quantity == quantity` (un pedido sin líneas queda `waiting`) |
   | `ready_to_serve` | `ready_to_serve > 0` |
   | `waiting` | `prepared_quantity == 0` y `served_quantity == 0` |
   | `preparing` | cualquier otro caso (algo hecho, nada pendiente de llevar) |
