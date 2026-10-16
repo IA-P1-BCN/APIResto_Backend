@@ -156,7 +156,9 @@ Roles: `admin` y `waiter` operan sobre todas las reservas; `customer` solo sobre
   `GET /tables/available`) y la devuelve en `table_id`. Vale para todos los roles. Si no hay
   ninguna → `409` con `code="no_table_available"` y el mensaje
   "No hay mesa libre para N personas el DD/MM/AAAA a las HH:MM". Sin `table_id`, una
-  `reserved_at` en el pasado → `422` con `code="reservation_in_past"`; con `table_id` no se
+  `reserved_at` en el pasado (respecto a la hora local del restaurante, variable
+  `RESTAURANT_TIMEZONE`, por defecto `Europe/Madrid`) → `422` con
+  `code="reservation_in_past"`; con `table_id` no se
   valida, como antes.
 - **Máximo de 8 personas para el cliente (HU-51):** un `customer` que crea o edita una reserva
   con `party_size` mayor que 8 → `422` con `code="party_size_too_large"` y el mensaje

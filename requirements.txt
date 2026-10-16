@@ -20,6 +20,7 @@ bcrypt==5.0.0
 # --- Servicios externos (Brevo) y caché ---
 httpx==0.28.1
 cachetools==7.2.0
+tzdata==2026.5
 
 # --- Tests y calidad ---
 pytest==9.1.1
