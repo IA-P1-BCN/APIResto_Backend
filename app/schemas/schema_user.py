@@ -19,6 +19,19 @@ class UserCreate(UserBase):
 class UserRegister(UserBase):
     """Datos del auto-registro (R-03). El `role` del payload se ignora."""
 
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "name": "Ana Gómez",
+                    "email": "ana@example.com",
+                    "phone": "600123456",
+                    "password": "secreto123",
+                }
+            ]
+        }
+    )
+
     password: str = Field(
         min_length=MIN_PASSWORD_LENGTH,
         description=f"Contraseña, mínimo {MIN_PASSWORD_LENGTH} caracteres (R-02).",
@@ -86,7 +99,26 @@ class PasswordChange(BaseModel):
     )
 
 class UserOut(UserBase):
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(
+        from_attributes=True,
+        json_schema_extra={
+            "examples": [
+                {
+                    "id": 7,
+                    "name": "Ana Gómez",
+                    "email": "ana@example.com",
+                    "phone": "600123456",
+                    "role": "customer",
+                    "is_active": True,
+                    "created_at": "2026-10-14T10:15:00",
+                    "updated_at": None,
+                    "deleted_at": None,
+                    "created_by": None,
+                    "updated_by": None,
+                }
+            ]
+        },
+    )
 
     id: int
     role: Role
