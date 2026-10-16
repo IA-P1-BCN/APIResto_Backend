@@ -46,7 +46,6 @@ Base.metadata.create_all(bind=engine)
 
 @asynccontextmanager
 async def lifespan(_: FastAPI) -> AsyncIterator[None]:
-    # Keep-awake estilo woke-dyno (solo si KEEP_AWAKE_ENABLED + KEEP_AWAKE_URL).
     if keep_awake_configured(settings.KEEP_AWAKE_ENABLED, settings.KEEP_AWAKE_URL):
         start_keep_awake(settings.KEEP_AWAKE_URL, settings.KEEP_AWAKE_MINUTES)
     yield
