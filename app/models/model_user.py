@@ -1,6 +1,15 @@
 import enum
 
-from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String, func
+from sqlalchemy import (
+    Boolean,
+    Column,
+    DateTime,
+    ForeignKey,
+    Integer,
+    String,
+    false,
+    func,
+)
 
 from app.database import Base
 
@@ -23,6 +32,7 @@ class User(Base):
     phone = Column(String(20))
     role = Column(String(20), nullable=False, default=Role.customer.value, server_default=Role.customer.value)
     is_active = Column(Boolean, default=True)
+    email_verified = Column(Boolean, nullable=False, default=False, server_default=false())
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
     deleted_at = Column(DateTime, nullable=True)

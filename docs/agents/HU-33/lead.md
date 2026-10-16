@@ -44,11 +44,11 @@ Cada especialista empieza **solo** cuando el anterior ha entregado y tú has rev
 
 | # | Agente | Tarea única | Archivos exclusivos |
 |---|---|---|---|
-| 1 | [`agent-model`](agent-model.md) | Modelo, migración, helper de tokens y configuración | `app/config.py`, `app/models/model_user.py`, `app/models/model_email_verification_token.py`, `app/models/__init__.py`, `migrations/versions/0009_*.py`, `app/core/one_time_tokens.py` |
+| 1 | [`agent-model`](agent-model.md) | Modelo, migración, helper de tokens y configuración | `app/config.py`, `app/models/model_user.py`, `app/models/model_email_verification_token.py`, `migrations/versions/0009_*.py`, `app/core/one_time_tokens.py`, y la línea del modelo nuevo en los imports de modelos de `app/main.py` y `migrations/env.py` |
 | 2 | [`agent-repository`](agent-repository.md) | Consultas a la BD | `app/repositories/email_verification_token_repository.py`, `app/repositories/password_reset_token_repository.py` (solo añadir) |
 | 3 | [`agent-email`](agent-email.md) | Emails (asunto + HTML) | `app/services/auth_emails.py` |
 | 4 | [`agent-service`](agent-service.md) | Reglas de negocio | `app/services/email_verification_service.py`, `app/services/password_token_service.py`, `app/services/user_service.py`, `app/services/social_auth_service.py`, `app/scripts/create_admin.py` |
-| 5 | [`agent-endpoints`](agent-endpoints.md) | HTTP, schemas y Swagger | `app/routers/router_email_verification.py`, `app/routers/router_password.py`, `app/routers/auth.py`, `app/routers/router_user.py`, `app/schemas/schema_email_verification.py`, `app/schemas/schema_password_token.py`, `app/schemas/schema_user.py`, `app/main.py` |
+| 5 | [`agent-endpoints`](agent-endpoints.md) | HTTP, schemas y Swagger | `app/routers/router_email_verification.py`, `app/routers/router_password.py`, `app/routers/auth.py`, `app/routers/router_user.py`, `app/schemas/schema_email_verification.py`, `app/schemas/schema_password_token.py`, `app/schemas/schema_user.py`, `app/main.py` (solo `include_router`) |
 | 6 | [`agent-tests`](agent-tests.md) | Tests | `tests/**` |
 | 7 | [`agent-docs`](agent-docs.md) | Documentación | `docs/api.md`, `docs/deploy.md`, `.env.example`, borrador del ai-log (en su informe, no en el archivo) |
 

@@ -33,7 +33,8 @@ empiezas cuando el líder ha aceptado a `agent-service`.
    - `login` **no se toca** (decisión A).
 5. `router_user.py` (`PATCH /users/me`): si el servicio devuelve un token, encola el email
    a la dirección nueva.
-6. `main.py`: registra el router nuevo y el modelo nuevo en el import de modelos.
+6. `main.py`: registra el router nuevo (`include_router`). El import del modelo ya lo añadió
+   `agent-model`.
 7. Cada endpoint: `summary`, tag, `responses` con `ErrorResponse` para cada 4xx, y el
    email con `background_tasks.add_task(send_email, …)`.
 

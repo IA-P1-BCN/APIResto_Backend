@@ -13,14 +13,16 @@ Eres el especialista en el modelo de datos de HU-33. Paso 1 del equipo (ver `lea
 
 ## Archivos exclusivos
 `app/config.py`, `app/models/model_user.py`, `app/models/model_email_verification_token.py` (nuevo),
-`app/models/__init__.py`, `migrations/versions/0009_verificacion_email.py` (nuevo),
+`migrations/versions/0009_verificacion_email.py` (nuevo), la línea del modelo nuevo en los
+imports de modelos de `app/main.py` y `migrations/env.py`,
 `app/core/one_time_tokens.py` (nuevo).
 
 ## Tareas
 1. Añade `email_verified` a `User`: no nulo, `default=False`, `server_default` falso.
 2. Crea `EmailVerificationToken` (tabla `email_verification_tokens`) con la misma forma y
    los mismos índices que `PasswordResetToken`. Docstring breve citando R-09.
-3. Expórtalo en `app/models/__init__.py`.
+3. Regístralo en la lista explícita de imports de modelos de `app/main.py` y
+   `migrations/env.py`, como los demás (decisión del líder en la revisión del paso 1).
 4. Migración `0009` (`down_revision = "0008"`):
    - añade la columna con `server_default` falso;
    - **backfill**: pone `true` en todas las filas existentes (decisión B);

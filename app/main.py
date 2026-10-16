@@ -14,6 +14,7 @@ from app.models import (  # noqa: F401
     dining_table,
     model_category,
     model_dish,
+    model_email_verification_token,
     model_invoice,
     model_order,
     model_order_item,
@@ -27,6 +28,7 @@ from app.routers import (
     reservations,
     router_category,
     router_dish,
+    router_email_verification,
     router_export,
     router_invoice,
     router_order,
@@ -71,6 +73,7 @@ register_exception_handlers(app)
 
 app.include_router(auth.router)
 app.include_router(router_password.router)
+app.include_router(router_email_verification.router)
 app.include_router(router_password.invite_router)
 app.include_router(router_user.me_router)
 app.include_router(router_user.router)
