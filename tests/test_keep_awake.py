@@ -67,7 +67,7 @@ def test_start_spawns_one_daemon_thread_pinging_the_url():
 
     def fake_ping(url):
         calls.append(url)
-        stop.set()  # el hilo real seguiría; en tests paramos tras el primer ping
+        stop.set()
         return True
 
     def fake_sleep(seconds):
@@ -80,7 +80,6 @@ def test_start_spawns_one_daemon_thread_pinging_the_url():
     assert thread.daemon is True
     thread.join(timeout=5)
     assert calls == ["https://api.example.com/health"]
-    # Segunda llamada no duplica el hilo.
     assert (
         start_keep_awake("https://api.example.com/health", 10, ping=fake_ping, sleep=fake_sleep) is None
     )

@@ -219,6 +219,25 @@ agente, la revisé y la commiteé primero.
 - **Decisiones humanas:** el subagente de seguridad solo puede leer y usar `git diff`, `git log` y `git show`; los hallazgos de la #116 se pasan a Manon en lugar de arreglarlos, porque es su código (Anna).
 - **Lección:** en un comando, decir cuándo parar y qué variables y ficheros existen; y en scripts, lanzar `opencode run` con `< /dev/null`.
 
+### HU-36 · Revisión automática de PRs
+
+#### 2026-10-16 · Revisión de cada PR con OpenCode en GitHub Actions (Backend #138) · @costanna
+
+- **Herramienta y modelo:** Claude Code · Opus 5.5 para la spec, el workflow, el subagente `revisor` y el script del comentario; OpenCode 1.18.34 en GitHub Actions, primero con `opencode/big-pickle` y al final con `opencode/deepseek-v4.1-flash-free`
+- **Issue y reglas:** #79 · nada
+- **Prompt clave:** "haz la HU-36", con tres decisiones previas: el motor (OpenCode y un modelo gratuito), cuándo revisar (al abrir y en cada push) y si se podía nombrar OpenCode en el repo
+- **Resultado:** aceptado con cambios. La revisión tarda unos 2-3 minutos y deja un único comentario que se actualiza en cada push; en la propia #138 se actualizó tres veces sin poner nunca la CI en rojo.
+- **Errores o alucinaciones:**
+  - La primera prueba en local agotó los 10 minutos: el agente recorría todo el repositorio. Causa raíz: sin límite de pasos y sin el diff adjunto. Se añadieron `steps: 12` y el diff como fichero.
+  - En Actions, `big-pickle` se quedaba más de 10 minutos escribiendo la respuesta final. Con el mismo diff se probaron cuatro modelos gratuitos: `deepseek-v4.1-flash-free` (2 min 29 s), `space-bunny-free` (3 min 8 s, con frases en inglés) y `mimo-v2.6-flash-free` (no terminó en 7 min). Se eligió `deepseek`.
+  - Al probar el script del comentario con un `gh` falso, en Windows se ejecutó el `gh.exe` real: solo hizo una lectura de una PR inexistente (404) y no escribió nada. Se repitió con `gh` definido como función.
+  - El propio revisor encontró fallos reales en el workflow: tomaba la configuración del agente de la PR (podía ampliar sus permisos), no denegaba `task`, el paso del comentario podía poner la CI en rojo, había tuberías con `head` que `pipefail` podía cortar y variables en español (`AGENTS.md` pide inglés). Se corrigieron todos.
+  - Al reescribir el YAML con un script se perdieron los `\` de continuación de línea y los `\n`; se arreglaron a mano y se validó con `bash -n`.
+- **Trabajo descartado:** `big-pickle` como modelo; la acción oficial `anomalyco/opencode/github` (de terceros, con permisos de escritura); GitHub Models (no es OpenCode y puede necesitar que un admin de la organización lo active).
+- **Mi prompt o la spec:** la spec no preveía cuánto tarda un modelo gratuito ni que, con `pull_request`, GitHub ejecuta el workflow de la propia PR; el segundo queda documentado como límite asumido.
+- **Decisiones humanas:** OpenCode con un modelo gratuito; revisar al abrir y en cada push con un único comentario que solo informa; nombrar OpenCode y el modelo en el workflow, el README y la spec; cambiar a `deepseek` tras la prueba en GitHub (Anna).
+- **Lección:** antes de elegir modelo para CI, medirlo con un diff real y un límite de tiempo, y limitar los pasos del agente.
+
 ### HU-38 · Inicio de sesión con Google y GitHub
 
 #### 2026-10-14 · Spec e implementación del login social · @ManonChab
@@ -400,6 +419,35 @@ agente, la revisé y la commiteé primero.
   - Comparar `reservation_in_past` con la hora del restaurante y no con UTC (Anna, 16/10).
 - **Lección:** pedir al agente que formatee y edite solo los archivos de la HU, nunca carpetas enteras, y que use el `.venv` del proyecto.
 
+#### 2026-10-16 · Reserva del cliente en la web (Frontend #51 y #52) · @costanna
+
+- **Herramienta y modelo:** Claude Code · Opus 5.5
+- **Issue y reglas:** Frontend #51 (parte de frontend de #106) · nada
+- **Prompt clave:** "he visto que el cliente no puede crear una nueva reserva" y después "comprueba si el apartado de reservas es igual al spec en back como en front"
+- **Resultado:** aceptado con cambios. "+ Nueva reserva" para el cliente con día, hora, personas y notas, sin `table_id` y con hora local sin zona; aviso con más de 8 personas; el modo simulado aplica las mismas reglas que la API. 11 tests nuevos y probado contra la API de `dev` como cliente, camarero y en la demo.
+- **Errores o alucinaciones:** la primera versión enseñaba al cliente "Mesa (id 3)", el id interno, porque el cliente no puede leer `/tables`. Salió al comparar con la historia 4 de la spec y se cambió por "Asignada por el restaurante", o "Mesa N" si la API devuelve `table_number`.
+- **Trabajo descartado:** nada
+- **Mi prompt o la spec:** la historia 4 ("ver la mesa que me han asignado") necesita el número de mesa, que la API no devuelve; se pidió `table_number` a Levi y Manon. Los criterios de aceptación de la spec eran solo de backend.
+- **Decisiones humanas:** enviar la hora local sin zona, acordado con Manon el 16/10; mostrar "Asignada por el restaurante" hasta que la API envíe el número (Anna).
+- **Lección:** comprobar cada historia de usuario de la spec, no solo los criterios de aceptación.
+
+### HU-52 · Email para que el usuario cree su propia contraseña
+
+#### 2026-10-15 · Invitación por email y página para crear la contraseña (Backend #137, Frontend #48) · @costanna
+
+- **Herramienta y modelo:** Claude Code · Opus 5.5; el subagente `revisor` de OpenCode para revisar la PR del backend
+- **Issue y reglas:** #107 · R-01, R-02, R-09
+- **Prompt clave:** "haz mi issue pero no hagas PR, tráete antes todos los cambios que hay en dev"
+- **Resultado:** aceptado con cambios. Spec primero; `POST /users/invite` y `POST /auth/set-password`; `PasswordResetToken` de un solo uso que caduca a las 48 h y del que solo se guarda el SHA-256; migración 0008; página `/crear-contrasena`. 19 tests de backend y 12 de frontend; la migración, probada en un Postgres temporal (sube, baja y vuelve a subir).
+- **Errores o alucinaciones:**
+  - El revisor encontró tres fallos de severidad baja: dos peticiones a la vez podían usar el mismo token, usuario y token se guardaban en dos transacciones y la creación y la caducidad salían de relojes distintos. Se corrigieron (bloqueo de la fila con `FOR UPDATE`, una sola transacción y el mismo reloj) y la carrera se comprobó en Postgres: la primera petición da 204 y la segunda 410.
+  - Tras traer `dev`, un test del frontend fallaba porque su `vi.mock` de `config` no definía `GOOGLE_CLIENT_ID` (lo lee el login desde la HU-38); se añadió.
+  - Probando en local, invitar daba 500: la copia de la base de datos tenía la 0005 marcada pero sin aplicar (`password_hash` no nulo). Era un fallo de la copia, no del código.
+- **Trabajo descartado:** hacer opcional la contraseña de `POST /users/` (cambiaba el contrato y el código de la HU-32).
+- **Mi prompt o la spec:** la spec no hablaba de concurrencia, transacciones ni de qué reloj usar para la caducidad.
+- **Decisiones humanas:** endpoint nuevo `POST /users/invite` para cualquier rol, 48 h de validez, reutilizar `PasswordResetToken` y dejar fuera "he olvidado mi contraseña" y reenviar la invitación (Anna).
+- **Lección:** pasar el revisor automático antes de pedir la revisión humana; aquí encontró tres fallos reales.
+
 ### HU-53 · Bitácora de IA
 
 #### 2026-10-14 · Creación de la bitácora · @arita-pereira
@@ -441,3 +489,45 @@ agente, la revisé y la commiteé primero.
 - **Mi prompt o la spec:** nada
 - **Decisiones humanas:** mantener la URL antigua activa y aceptar las dos en `ALLOWED_ORIGINS` (Anna).
 - **Lección:** después de tocar variables en Render, probar el login desde las dos URLs.
+
+### Tarea Frontend #46 · La barra no lleva el estado de un pedido con platos de cocina
+
+#### 2026-10-15 · Pedidos mixtos en la pantalla de barra (Frontend #49) · @costanna
+
+- **Herramienta y modelo:** Claude Code · Opus 5.5
+- **Issue y reglas:** Frontend #46 · R-14
+- **Prompt clave:** "soluciona en otra rama el error de la barra pero no lo subas a PR"
+- **Resultado:** aceptado. La barra solo lleva el estado si sus líneas suman el `total` del pedido, que el backend sigue enviando completo. Probado en la app: en un pedido mixto sale "Cocina lleva el estado del pedido" y en uno solo de bebidas, "Empezar".
+- **Errores o alucinaciones:** nada. Causa raíz del fallo: desde la HU-40 el backend solo envía a cada estación sus líneas, y la pantalla comparaba el número de líneas.
+- **Trabajo descartado:** pedir `stations` en `OrderOut`, porque es código de Manon; queda como mejora.
+- **Mi prompt o la spec:** nada
+- **Decisiones humanas:** arreglarlo solo en el frontend sin tocar el backend de la HU-40 (Anna).
+- **Lección:** cuando el backend cambia lo que envía a un rol, revisar la lógica del frontend que deduce cosas de esos datos.
+
+### Tarea Frontend #47 · Probar la demo también en el despliegue
+
+#### 2026-10-16 · Demo con los cambios guardados en el navegador (Frontend #50) · @costanna
+
+- **Herramienta y modelo:** Claude Code · Opus 5.5
+- **Issue y reglas:** Frontend #47 · nada
+- **Prompt clave:** "quiero que esté siempre la opción de demo, aunque esté en deploy" y "que la gente que entre en versión demo, una vez salga de la sesión, vuelva a estar como estaba"
+- **Resultado:** aceptado con cambios. "Probar la demo" activa el modo simulado solo en ese navegador, sin llamar a la API; los cambios se guardan en el `localStorage` con versión, con "Empezar de cero" y "Salir de la demo". Probado con el build de producción.
+- **Errores o alucinaciones:** un test fallaba porque guardaba un token antes de abrir el login y la app daba la sesión por iniciada; se guarda justo antes del clic.
+- **Trabajo descartado:** usuarios demo reales en producción (la contraseña del admin sería pública) y recordar la demo por IP (en clase todos salen por la misma IP, en el móvil cambia y es un dato personal).
+- **Mi prompt o la spec:** "según el IP" no encajaba con el objetivo; se planteó con tres opciones y se eligió por navegador.
+- **Decisiones humanas:** demo por navegador y no por IP (Anna).
+- **Lección:** cuando un requisito propone el cómo (la IP), preguntar por el qué antes de implementarlo.
+
+### Tarea Frontend #54 · Botones de los pedidos y "Enviar a cocina" siempre a la vista
+
+#### 2026-10-16 · Pedidos en tarjetas y barra de botones fija (Frontend #53) · @costanna
+
+- **Herramienta y modelo:** Claude Code · Opus 5.5
+- **Issue y reglas:** Frontend #54 · nada
+- **Prompt clave:** "el camarero, al querer marcar el pedido, tiene que bajar hasta abajo del todo" y después "el botón enviar a cocina sigue bajando"
+- **Resultado:** aceptado con cambios. Pedidos en tarjetas con la mesa, el estado y los botones arriba; barra de botones fija en las ventanas de formulario. Medido en 1366×600 y 390×700: el botón se ve arriba y a media carta.
+- **Errores o alucinaciones:** el primer arreglo solo cubría la lista de pedidos y no la ventana de "Nuevo pedido"; lo detectó Anna al probarlo. Las capturas no lo mostraban porque la herramienta agranda la ventana a la página entera; se comprobó midiendo la posición del botón.
+- **Trabajo descartado:** nada
+- **Mi prompt o la spec:** nada
+- **Decisiones humanas:** aplicar la barra fija a todas las ventanas de formulario, no solo a la de pedidos (Anna).
+- **Lección:** probar la interfaz en pantallas bajas y medir, no solo mirar capturas.
