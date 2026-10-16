@@ -279,6 +279,27 @@ agente, la revisé y la commiteé primero.
 - **Decisiones humanas:** OpenCode con un modelo gratuito; revisar al abrir y en cada push con un único comentario que solo informa; nombrar OpenCode y el modelo en el workflow, el README y la spec; cambiar a `deepseek` tras la prueba en GitHub (Anna).
 - **Lección:** antes de elegir modelo para CI, medirlo con un diff real y un límite de tiempo, y limitar los pasos del agente.
 
+### HU-37 · Verificación en dos pasos (TOTP)
+
+#### 2026-10-16 · 2FA con TOTP en el backend y en la web (Backend #149, Frontend #56) · @costanna
+
+- **Herramienta y modelo:** Claude Code · Opus 5.5
+- **Issue y reglas:** #80 · R-02, R-12
+- **Prompt clave:** "hazlo" (sobre la issue "Como usuario quiero autenticación en dos pasos (TOTP)"), después de elegir las opciones de la spec
+- **Resultado:** aceptado con cambios. Spec primero; `POST /auth/2fa/verify` y `/users/me/2fa` (estado, `setup` con QR, `enable` con 8 códigos de recuperación y `disable`); el login y el login social devuelven `{mfa_required, mfa_token}` si el usuario tiene `totp_enabled`; secreto cifrado con Fernet y códigos guardados con SHA-256; migración 0010. En la web, el paso del código tras el login y la página Seguridad para todos los roles, también en el modo simulado (código `123456`). 26 tests de backend y 10 de frontend; la migración, probada en un Postgres temporal (sube, baja y vuelve a subir), y el flujo completo, en el navegador contra la API local con códigos TOTP reales.
+- **Errores o alucinaciones:**
+  - Cambiar el `response_model` del login a `TokenOut | TwoFactorChallengeOut` rompía `test_openapi.py` de la HU-26, que exige `TokenOut`. Se dejó `TokenOut` y el reto sale como `JSONResponse`: así no hubo que tocar ni esas líneas ni el test.
+  - El QR no se veía en la web: `svg_inline()` de `segno` genera el SVG sin `xmlns`, y el navegador no lo muestra como imagen `data:`. El test solo miraba que empezara por `<svg`; se vio en la prueba con el navegador. Se genera el SVG completo y el test comprueba el `xmlns`.
+  - En la página Seguridad, tras un código incorrecto el campo no se vaciaba y el siguiente código se pegaba detrás. Lo encontró el test del modo simulado.
+  - Un test del login social con 2FA fallaba porque la sesión del fixture devolvía el usuario guardado en caché, sin la 2FA activada; se refresca antes de usarlo.
+  - Mientras se preparaba la PR entró la HU-33 con su propia migración `0009`. La de esta HU pasó a ser la `0010`, y los conflictos en `auth.py`, `config.py` y `docs/api.md` se resolvieron solo añadiendo líneas (un import aparte en lugar de ampliar la línea de imports de otra persona).
+  - La revisión automática de la PR señaló que los códigos de recuperación eran cortos (unos 48 bits, guardados con SHA-256 sin sal), que `totp_enabled` admitía `NULL` y que un test podía fallar por azar al usar `000000` como código incorrecto. Se corrigieron: códigos de 80 bits (`xxxxxxxxxx-xxxxxxxxxx`, con el límite del campo subido a 32 en la API y en la web), `nullable=False` con `false` por defecto y un código que seguro no es válido. Que el mismo código sirva varias veces en los 5 minutos del reto queda fuera, con el límite de intentos.
+  - En la segunda pasada, el revisor vio que dos peticiones a la vez podían gastar el mismo código de recuperación. Se gasta con la fila del usuario bloqueada (`FOR UPDATE`, como en la HU-52) y se comprobó en Postgres: la segunda petición espera y después lo rechaza. También quitó los separadores `# ---` de los tests y pidió comprobar el 409 de `setup`.
+- **Trabajo descartado:** la unión de tipos en el `response_model` y el import de `TwoFactorChallengeOut` en `auth.py`.
+- **Mi prompt o la spec:** la spec decía que el secreto nunca sale en la API, pero `setup` tiene que devolverlo para teclearlo a mano; se corrigió. No tuvo en cuenta el test de Swagger de la HU-26.
+- **Decisiones humanas:** login en dos pasos con un token temporal, 8 códigos de recuperación de un solo uso, que el login social también pida el código y hacer backend y frontend en la misma HU; los cambios en `auth.py`, `model_user.py` y la ontología, con el visto bueno del grupo (Anna).
+- **Lección:** probar el flujo real en el navegador antes de la PR (los tests no vieron el QR roto) y comprobar el número de migración contra `dev` justo antes de subir.
+
 ### HU-38 · Inicio de sesión con Google y GitHub
 
 #### 2026-10-14 · Spec e implementación del login social · @ManonChab
