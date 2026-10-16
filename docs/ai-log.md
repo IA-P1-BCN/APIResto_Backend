@@ -1,3 +1,4 @@
+
 # Bitácora de IA (ai-log)
 
 Registro de cómo usa el equipo los agentes de IA (Claude Code, OpenCode) para desarrollar
