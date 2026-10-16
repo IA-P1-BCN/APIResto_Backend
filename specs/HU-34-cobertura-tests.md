@@ -66,7 +66,7 @@ Postgres).
 Ninguna de `app/`. Si un test nuevo revela un bug real, se para y se avisa a Levi.
 
 ## Testing Decisions
-Tests nuevos, archivo a archivo (12 ejecuciones nuevas en pytest):
+Tests nuevos, archivo a archivo (10 ejecuciones nuevas en pytest: 746 → 756):
 
 | Archivo | Test | Cubre | Assert |
 |---|---|---|---|
