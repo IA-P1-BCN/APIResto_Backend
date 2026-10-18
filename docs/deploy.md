@@ -8,7 +8,7 @@
 | API | Render (Web Service, free) | `restochino-dev/backend` | Push a `main` → `deploy.yml` → tests en verde → deploy hook |
 | Web | Vercel (Hobby) | `restochino-dev/frontend` | Push a `main` (producción) · cada PR genera una Preview URL |
 
-El equipo trabaja en `IA-P1-BCN/Resto-API_Backend` y `IA-P1-BCN/Resto-API_Frontend`. Se despliega desde los repos de `restochino-dev`: lo que está en `main` de IA-P1-BCN se sube con una PR a `main` de `restochino-dev` (ver [sección 5](#5-paso-a-producción-d5-y-d9)).
+El equipo trabaja en `IA-P1-BCN/APIResto_Backend` y `IA-P1-BCN/APIResto_Frontend` (hasta el 18/10/2026 se llamaban `Resto-API_Backend` y `Resto-API_Frontend`; GitHub redirige los nombres antiguos). Se despliega desde los repos de `restochino-dev`: lo que está en `main` de IA-P1-BCN se sube con una PR a `main` de `restochino-dev` (ver [sección 5](#5-paso-a-producción-d5-y-d9)).
 
 ## 1. Neon (base de datos)
 
@@ -216,7 +216,7 @@ P2_Resto/
 └── Resto-API_Frontend/
 ```
 
-Si el frontend está en otra ruta, añadir `FRONTEND_PATH=/ruta/al/frontend` en el `.env` del backend.
+Si el frontend está en otra ruta, añadir `FRONTEND_PATH=/ruta/al/frontend` en el `.env` del backend. Por ejemplo, si se ha clonado con el nombre nuevo del repo: `FRONTEND_PATH=../APIResto_Frontend`.
 
 ```bash
 cd Resto-API_Backend
