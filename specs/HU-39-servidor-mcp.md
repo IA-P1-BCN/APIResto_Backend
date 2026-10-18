@@ -124,12 +124,24 @@ Solo lectura con **varias capas**: si una falla, la siguiente sigue protegiendo.
      `totp_recovery_codes`. Tablas secretas: `refresh_tokens`, `revoked_tokens`,
      `email_verification_tokens`, `password_reset_tokens`. Mencionarlas en el texto →
      `ToolError` (`secret_not_allowed`).
+   - Un identificador con escapes Unicode de Postgres (`U&"…"`, sin distinguir
+     mayúsculas ni espacios entre `U&` y la comilla) también → `secret_not_allowed`:
+     permitiría escribir `password_hash` sin que aparezca en el texto (decisión 5).
    - Aun así, si el resultado trae una columna con uno de esos nombres (por ejemplo con
      `SELECT * FROM users`), su valor se sustituye por `"***"` y la columna se lista en
      `redacted_columns`.
+   - Dentro de un valor JSON del resultado (dict o lista, a cualquier profundidad), el
+     valor de una clave con nombre de columna secreta se sustituye por `"***"`. Cubre
+     `SELECT row_to_json(u) FROM users u` en Postgres (decisión 5).
    - Por último, cualquier texto del resultado que contenga un hash bcrypt
-     (`$2a$`/`$2b$`/`$2y$` + 53 caracteres) o un token Fernet (`gAAAAA…`) se sustituye
-     por `"***"`. Cubre trucos como `SELECT row_to_json(u) FROM users u`.
+     (`$2a$`/`$2b$`/`$2y$` + 53 caracteres), un token Fernet (`gAAAAA…`) o un SHA-256 en
+     hexadecimal (64 caracteres `[0-9a-fA-F]` seguidos, como palabra completa) se
+     sustituye por `"***"`. Cubre `totp_recovery_codes` y `token_hash` aunque salgan
+     dentro de la fila entera (`SELECT u::text FROM users u`) (decisión 5).
+   - Riesgo residual aceptado: trucos que transforman la fila (por ejemplo, pasarla a
+     base64 o cortarla en trozos con `substr`) se saltan las regex. Lo cierra un usuario
+     de Postgres con solo `SELECT` y permisos por columna; se explica en
+     `mcp_server/README.md`.
 5. **Respuesta**:
    `{"columns": [...], "rows": [[...]], "row_count": n, "truncated": bool,
    "redacted_columns": [...]}`. Fechas en ISO 8601, `Decimal` como texto, `bytes` como
@@ -231,7 +243,9 @@ Sin Postgres ni red. Tres archivos nuevos en `tests/`:
   - Capa 2: aunque se salte la validación del texto (llamando a la función interna de
     ejecución), una escritura en SQLite falla por `query_only`.
   - Redacción: `SELECT * FROM users` → `password_hash` = `"***"` y en
-    `redacted_columns`; un valor con formato bcrypt en otra columna → `"***"`.
+    `redacted_columns`; un valor con formato bcrypt, Fernet o SHA-256 hex en otra
+    columna → `"***"`; un JSON con la clave `totp_recovery_codes` (también anidada) →
+    su valor `"***"`; `U&"…"` → `secret_not_allowed`.
   - Rama de Postgres: con una conexión falsa (mock), se ejecutan `SET TRANSACTION READ
     ONLY` y `SET LOCAL statement_timeout` antes de la consulta y siempre `rollback`.
   - Error de la BD (tabla inexistente) → `query_failed` sin la cadena de conexión.
@@ -335,3 +349,14 @@ propuso el agente y Levi las aprobó el mismo día.
   `row_to_json(u)`), sin añadir dependencias.
 - **Alternativas rechazadas**: prohibir la tabla `users` entera (demasiado estricto);
   solo enmascarar columnas (demasiado laxo).
+
+### 5 · Refuerzo de la decisión 4 tras la revisión de la oleada 1
+- **Decisión** (Levi, 18/10/2026): tres capas más en `query_database`: patrón de
+  SHA-256 en hexadecimal en los valores, enmascarar las claves secretas dentro de los
+  valores JSON y rechazar los identificadores `U&"…"` con `secret_not_allowed`.
+- **Por qué**: en Postgres, `row_to_json(u)` o `u::text` devuelven la fila entera sin
+  nombrar ninguna columna. bcrypt y Fernet ya se tapaban, pero `totp_recovery_codes`
+  (SHA-256 en hex) salía. Lo detectó el líder al revisar `database.py`; `U&"…"` lo
+  detectó `agent-tools-db`.
+- **Alternativas rechazadas**: aceptar el riesgo y solo documentarlo; un parser SQL
+  (dependencia nueva).

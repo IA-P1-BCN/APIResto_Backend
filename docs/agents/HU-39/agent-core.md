@@ -44,5 +44,52 @@ arranque. Oleada 1, en paralelo con `agent-tools-db` y `agent-tools-dev`.
 - No uses git ni instales paquetes. Sin comentarios `#`.
 
 ## Informe de desempeño
-_(Rellénalo al terminar: qué hiciste, archivos, comandos y resultados, errores que
-cometiste y cómo los solucionaste, dudas abiertas.)_
+**Qué hice.** Leí `AGENTS.md`, la spec, `lead.md` y este archivo, y comprobé la API del
+SDK instalado (`mcp/server/mcpserver/server.py`, `mcp_types._types.ToolAnnotations`)
+antes de escribir: `MCPServer(name, instructions=...)`, `server.tool(name, description,
+annotations)` devuelve un decorador que llama a `add_tool`, `run()` usa stdio por defecto y
+`ToolAnnotations` acepta `read_only_hint` o el alias `readOnlyHint` (en el cable sale como
+`readOnlyHint`).
+
+**Archivos.**
+- `mcp_server/__init__.py`, `mcp_server/tools/__init__.py`: solo docstring.
+- `mcp_server/config.py`: `REPO_ROOT: Path`, `class McpSettings(BaseSettings)` con los seis
+  campos del contrato, propiedad `database_url` y `get_settings()` con `lru_cache`.
+- `mcp_server/server.py`: `build_server() -> MCPServer` con nombre `"resto-api-dev"`,
+  `instructions` en inglés y las tres herramientas registradas con
+  `server.tool(name=..., description=..., annotations=...)(func)`;
+  `ToolAnnotations(read_only_hint=True)` en `query_database` y `get_ontology`, ninguna en
+  `run_pytest`. No crea el motor ni lee archivos.
+- `mcp_server/__main__.py`: `main() -> int` y `raise SystemExit(main())` bajo
+  `if __name__ == "__main__"`; `logging.basicConfig(stream=sys.stderr)`; con
+  `ENVIRONMENT=production` escribe un mensaje en `stderr` y devuelve 1.
+- `.dockerignore`: añadida solo la línea `mcp_server/` al final.
+
+**Diferencias con el contrato (pequeñas, para que el líder decida).**
+- `env_file` es `REPO_ROOT / ".env"` y no `".env"`: así se lee el mismo `.env` de la API
+  aunque el cliente MCP lance el servidor desde otra carpeta.
+- En `main()`, `build_server` se importa dentro de la función, después de la comprobación
+  de `production`: así esa comprobación funciona aunque falle una herramienta o el SDK.
+- La comparación con `production` ignora mayúsculas y espacios.
+
+**Comandos y resultados.**
+- `ruff check` de mis cinco archivos: `All checks passed!`.
+- Script en la scratchpad que carga `get_settings()` (devuelve `development`, 100 y URL no
+  vacía) y llama a `build_server()` con un stub para `tools/database.py`, que aún no
+  existía; `ontology.py` y `pytest_runner.py` eran los reales. Con
+  `mcp.Client(build_server())`: `list_tools` da las tres herramientas con descripción y
+  `read_only_hint=True` donde toca; `call_tool("get_ontology", {"rule_id": "R-02"})`
+  devuelve la fila de R-02 sin error.
+- `ENVIRONMENT=production python -m mcp_server`: sale con 1, stdout vacío y el mensaje en
+  stderr.
+
+**Errores míos.** En la prueba, el `print` del resultado falló por la codificación cp1252 de
+la consola de Windows (caracteres `≥` y `→` de R-02). Lo arreglé con
+`PYTHONIOENCODING=utf-8`; era un fallo del script de prueba, no del servidor.
+
+**Dudas abiertas.**
+- Las herramientas devuelven `dict` sin tipo concreto, así que el SDK las registra como
+  no estructuradas: el resultado llega como `TextContent` con el JSON y
+  `structured_content=None`. Cumple la spec; los tests deben leer `content[0].text`.
+- Falta probar el arranque real por stdio con `tools/database.py` real. Queda para el
+  handoff del líder.

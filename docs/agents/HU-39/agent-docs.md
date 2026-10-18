@@ -48,5 +48,44 @@ líder ha aceptado la oleada 1. Trabajas en paralelo con `agent-tests`.
 - No añadas `docs/Briefing del Proyecto.md` a Git. No uses git.
 
 ## Informe de desempeño
-_(Rellénalo al terminar: qué hiciste, archivos, comandos y resultados, errores que
-cometiste y cómo los solucionaste, dudas abiertas.)_
+**Qué hice.** Leí `AGENTS.md`, la spec (decisiones 1–5), `lead.md`, este archivo, los
+informes de la oleada 1, todo `mcp_server/` (solo lectura), `docs/api.md`, `.env.example`,
+el principio y el final de `docs/ai-log.md`, `app/models/` (para el ejemplo de permisos por
+columna), `docker-compose.yml` y `opencode.json` (solo lectura). Documenté a partir del
+código, no de la spec, y comprobé las respuestas reales con un cliente en proceso.
+
+**Archivos.**
+- `mcp_server/README.md` (nuevo): requisitos (API 2.x, `MCPServer`, por qué `mcp_server/`),
+  arranque por stdio, registro en Claude Code (`claude mcp add`, `.mcp.json` de ejemplo sin
+  commitear) y en OpenCode (bloque `mcp`, tipo `local`, `command` como lista, con enlace a
+  su documentación), variables `MCP_*`, las tres herramientas con respuesta y `code` de
+  error, las capas de `query_database` (incluida la decisión 5), el riesgo residual, el SQL
+  de ejemplo del usuario de solo lectura con permisos por columna y el aviso del `.env` con
+  Postgres apagado en `run_pytest`.
+- `docs/api.md`: solo la sección nueva al final, "Servidor MCP para agentes (local) ·
+  HU-39". `docs/api.md` no tiene índice, así que no hubo que añadir ninguna entrada.
+- `.env.example`: solo el bloque `MCP_*` comentado al final, con los valores por defecto.
+
+**Comandos y resultados.**
+- Script en la scratchpad con `mcp.Client(build_server())` y un SQLite temporal:
+  `list_tools` da las tres herramientas con sus parámetros y `read_only_hint=True` en
+  `query_database` y `get_ontology`; `get_ontology("r-02")` devuelve la fila de R-02;
+  `query_database("select 1 as a, 'x' as b")` devuelve el JSON documentado. Un `ToolError`
+  llega con `isError: true` y el texto `Error executing tool get_ontology: invalid_rule_id:
+  ...` (el prefijo lo pone el SDK; está documentado así).
+- `.venv/Scripts/python -m ruff check .` → `All checks passed!`.
+
+**Errores y cómo los solucioné.**
+- Primer borrador del ejemplo de respuesta de `query_database` con `password_hash` en las
+  columnas sin decir de qué consulta salía: nombrar esa columna se rechaza. Lo cambié a "por
+  ejemplo, para `SELECT * FROM users LIMIT 1`".
+- Había escrito que con SQLite sin archivo "la consulta falla"; `SELECT 1` funciona. Lo
+  precisé: fallan las consultas a tablas.
+
+**Dudas abiertas (para el líder; no he cambiado código ni spec).**
+- `.mcp.json` no está en `.gitignore`: con `claude mcp add --scope project` alguien podría
+  commitearlo. El README lo advierte.
+- Un error imprevisto de una herramienta (por ejemplo, que falte `specs/ontology.md`) llega
+  al cliente solo como `Error executing tool <nombre>`, sin detalle.
+- El docstring de `_contains_secret_value` en `database.py` aún dice "bcrypt o Fernet",
+  aunque también comprueba SHA-256.

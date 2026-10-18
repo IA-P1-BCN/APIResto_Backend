@@ -757,3 +757,69 @@ Platos más vendidos (`GET /stats/top-dishes?limit=2`):
 | 403 | `forbidden` | El usuario no es `admin` |
 | 422 | `invalid_date_range` | `from` es posterior a `to` |
 | 422 | `validation_error` | Fecha con formato incorrecto o `limit` fuera de 1..50 |
+## Servidor MCP para agentes (local) · HU-39
+
+Servidor [MCP](https://modelcontextprotocol.io) propio (`resto-api-dev`) en `mcp_server/`
+para los agentes de código (Claude Code, OpenCode). **No es un endpoint HTTP y no cambia
+ninguno** (sin breaking-api): se ejecuta solo en local, por stdio, sin puertos abiertos.
+**No se despliega**: `mcp_server/` está en `.dockerignore` y el servidor no arranca con
+`ENVIRONMENT=production`. SDK `mcp==2.3.0` (API 2.x, `MCPServer`); arranque con
+`python -m mcp_server` (nada por `stdout`; logs a `stderr`). Cómo registrarlo, variables
+`MCP_*` y seguridad: [`mcp_server/README.md`](../mcp_server/README.md).
+
+| Herramienta | Parámetros | Qué hace |
+|---|---|---|
+| `query_database` | `sql` (str), `limit` (int, opcional; por defecto y máximo `MCP_QUERY_MAX_ROWS` = 100) | Una sola consulta `SELECT`/`WITH` de solo lectura contra la BD local (`MCP_DATABASE_URL` o `DATABASE_URL`), sin datos secretos (R-02). Anotada `readOnlyHint` |
+| `run_pytest` | `target` (ruta dentro de `tests/`, admite `::nodo`; opcional), `keyword` (`-k`; opcional) | Lanza `pytest -q` sin shell y resume el resultado |
+| `get_ontology` | `rule_id` (`R-xx`, sin distinguir mayúsculas; opcional) | Devuelve `specs/ontology.md` entero o la fila de una regla. Anotada `readOnlyHint` |
+
+Respuestas (objeto JSON, en `content[0].text`):
+
+```json
+{"columns": ["id", "name"], "rows": [[1, "Ana"]], "row_count": 1,
+ "truncated": false, "redacted_columns": []}
+```
+
+```json
+{"exit_code": 0, "passed": true, "timed_out": false,
+ "summary": "3 passed in 0.09s", "output_tail": "...", "duration_seconds": 1.2,
+ "command": ["<python>", "-m", "pytest", "-q", "--no-header", "-p", "no:cacheprovider"]}
+```
+
+```json
+{"rule_id": "R-02", "priority": "M", "text": "Contraseña ≥ 8 caracteres ..."}
+```
+
+Sin `rule_id`, `get_ontology` devuelve `{"path": "specs/ontology.md", "content": "..."}`.
+
+- **`query_database`**: rechaza escrituras, varias sentencias, las columnas y tablas
+  secretas (`password_hash`, `token_hash`, `totp_secret`, `totp_recovery_codes`;
+  `refresh_tokens`, `revoked_tokens`, `email_verification_tokens`,
+  `password_reset_tokens`) y los identificadores `U&"…"`; ejecuta en una transacción de
+  solo lectura (Postgres: `SET TRANSACTION READ ONLY` y `statement_timeout`; SQLite:
+  `PRAGMA query_only`) con `rollback` siempre; y tapa con `"***"` las columnas secretas,
+  las claves secretas dentro de un JSON y los valores con forma de hash bcrypt, token
+  Fernet o SHA-256 en hexadecimal. Fechas en ISO 8601, `Decimal` como texto, `bytes` como
+  `"<bytes>"`.
+- **`run_pytest`**: `passed` = `exit_code == 0`. Si se pasa de
+  `MCP_PYTEST_TIMEOUT_SECONDS` (600), `timed_out: true` y `exit_code: null`, sin error.
+  `summary` puede ir vacío si pytest falla antes del resumen; el detalle está en
+  `output_tail` (últimas 200 líneas).
+
+### Códigos de error
+
+Los errores previstos llegan al cliente como resultado con error (`isError: true`) y el
+texto `Error executing tool <herramienta>: <code>: <detalle>`.
+
+| Herramienta | `code` | Cuándo |
+|---|---|---|
+| `query_database` | `empty_query` | La consulta está vacía |
+| `query_database` | `multiple_statements` | Hay un `;` que no es el último carácter |
+| `query_database` | `read_only` | No empieza por `SELECT`/`WITH` o lleva una palabra prohibida (`INSERT`, `UPDATE`, `DELETE`, `DROP`, `SET`, `INTO`, `PRAGMA`…) |
+| `query_database` | `secret_not_allowed` | Menciona una columna o tabla secreta, o un identificador `U&"…"` |
+| `query_database` | `invalid_limit` | `limit` < 1 |
+| `query_database` | `query_failed` | Error de la BD (se devuelve el tipo de error, nunca la cadena de conexión) |
+| `run_pytest` | `invalid_target` | `target` empieza por `-`, es absoluto, sale de `tests/` o no existe |
+| `run_pytest` | `invalid_keyword` | `keyword` empieza por `-` |
+| `get_ontology` | `invalid_rule_id` | `rule_id` no tiene el formato `R-xx` (`R-2`, `X-1`) |
+| `get_ontology` | `rule_not_found` | La regla no existe (`R-99`) |

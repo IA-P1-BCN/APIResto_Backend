@@ -97,5 +97,43 @@ mensaje, para que corran a la vez. El prompt de cada uno incluye:
 - No inventes herramientas, parámetros ni reglas: si falta algo, pregunta a Levi.
 
 ## Informe de desempeño
-_(Lo rellena el líder al cerrar: cómo fue la orquestación, handoffs, devoluciones a
-especialistas y por qué, errores propios y cómo se corrigieron.)_
+**Antes del código.** Leí el SDK instalable sin instalarlo (`pip install --dry-run` y el
+wheel descargado a la scratchpad): `mcp` 2.3.0 ya no tiene `FastMCP` (ahora `MCPServer`).
+Lo fijé en la spec y en el contrato para que ningún agente copiara ejemplos de la 1.x.
+También detecté que la carpeta votada, `mcp/`, tapaba al SDK; Levi aprobó `mcp_server/`
+(decisión 1).
+
+**Oleada 1** (`agent-core`, `agent-tools-db`, `agent-tools-dev`, en paralelo). Los tres
+entregaron sin pisarse gracias al contrato compartido; `agent-core` probó `build_server()`
+con un stub mientras `database.py` no existía. Acepté tres desvíos pequeños del contrato
+(`.env` leído desde `REPO_ROOT`, comprobación de `production` antes del import, timeout de
+conexión de Postgres; `check=False` y `stdin=DEVNULL` en `run_pytest`). Revisión: alcance
+con `git status`, `ruff`, sin `#` ni `print`, y una ida y vuelta real por stdio con las
+herramientas reales.
+
+**Devoluciones.**
+- `agent-tools-db`, seguridad (R-02): al leer `database.py` vi que en Postgres
+  `row_to_json(u)` / `u::text` sacan la fila entera, y que `totp_recovery_codes`
+  (SHA-256 hex) no lo tapaba ninguna regex. Con el caso `U&"…"` que encontró el propio
+  agente, se lo planteé a Levi, que aprobó tres capas más (decisión 5). Las apliqué
+  primero en la spec y luego las devolví al agente; verifiqué que los `\b` no quedaban
+  como caracteres de retroceso tras su error con el heredoc.
+- `agent-tools-db`, docstrings desfasados tras la decisión 5 (aviso de `agent-docs`).
+
+**Oleada 2** (`agent-tests`, `agent-docs`, en paralelo). 93 tests nuevos sin Postgres ni
+red; ningún bug del código. Avisé a `agent-tests` de que nombrar `totp_recovery_codes` en
+el SQL se rechaza antes de la BD, para que probara la capa JSON con una columna normal.
+
+**Cierre.** `ruff check .` limpio; `pytest --cov=app` → 996 passed, cobertura 100 %
+(con `DATABASE_URL` a una SQLite temporal, porque el `.env` local apunta a un Postgres
+apagado). Nada en `app/` ni `migrations/`; fuera de `mcp_server/`, `tests/`, `docs/` y
+`specs/` solo las tres líneas de la decisión 2.
+
+**Errores propios.** Primera versión de la spec sin pensar en las consultas que devuelven
+la fila entera (lo corregí en la revisión de la oleada 1). En la prueba por stdio tomé la
+salida de error de SQLite (`row_to_json` no existe allí) como "falla bien"; el hueco real
+solo se ve en Postgres, y por eso lo detecté leyendo el código, no con la prueba.
+
+**Pendiente para Levi.** Que `.mcp.json` no está en `.gitignore` (el README lo advierte;
+añadirlo sería otra excepción fuera de la decisión 2). Y que un error imprevisto de una
+herramienta llega al cliente solo como `Error executing tool <nombre>`.
