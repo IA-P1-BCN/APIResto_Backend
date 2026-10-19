@@ -660,8 +660,9 @@ El mismo pedido visto por `kitchen` trae solo la línea de pasta, y `progress` y
 
 ## Facturas y exportación CSV · HU-14
 
-Una factura por pedido, solo para pedidos `served`. Facturar **no** cambia el estado del
-pedido (sigue `served`; después se marca `paid` con `PATCH /orders/{id}/status`).
+Una factura por pedido, para pedidos `served` o `paid` (si se cobró sin factura). Facturar
+**no** cambia el estado del pedido (uno `served` sigue así; después se marca `paid` con
+`PATCH /orders/{id}/status`).
 
 - **IVA:** 10 %, incluido en el precio de los platos. `base_amount = total / 1,10`
   (redondeado a céntimos) y `tax_amount = total - base_amount`, así que
@@ -671,7 +672,7 @@ pedido (sigue `served`; después se marca `paid` con `PATCH /orders/{id}/status`
 | Método | Ruta | Roles | Descripción |
 |---|---|---|---|
 | POST | `/orders/{order_id}/invoice` | admin, waiter | Genera la factura del pedido → `201` |
-| GET | `/invoices` | admin, waiter | Listado paginado (`Page[InvoiceOut]`) ordenado por número. Filtros `date_from`, `date_to` (fecha de emisión, ambos incluidos) |
+| GET | `/invoices` | admin, waiter | Listado paginado (`Page[InvoiceOut]`), de la factura más nueva a la más antigua. Filtros `date_from`, `date_to` (fecha de emisión, ambos incluidos) |
 | GET | `/invoices/{invoice_id}` | admin, waiter | Una factura |
 | GET | `/exports/invoices` | admin | CSV de facturas. Filtros `date_from`, `date_to` |
 | GET | `/exports/orders` | admin | CSV de pedidos. Filtros `status`, `date_from`, `date_to` (fecha de creación) |
@@ -700,7 +701,7 @@ punto, fechas ISO 8601 y UTF-8 con BOM (para que Excel lea bien los acentos).
 | HTTP | `code` | Cuándo |
 |---|---|---|
 | 404 | `not_found` | El pedido o la factura no existen |
-| 409 | `order_not_served` | Se intenta facturar un pedido que no está `served` |
+| 409 | `order_not_served` | Se intenta facturar un pedido que no está `served` ni `paid` |
 | 409 | `invoice_already_exists` | El pedido ya tiene factura |
 | 409 | `invoice_conflict` | Dos facturas a la vez chocan con el mismo número; reintentar |
 | 422 | `invalid_date_range` | `date_from` es posterior a `date_to` |

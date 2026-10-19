@@ -81,14 +81,25 @@ def test_order_stays_served_after_invoicing(client, db, admin, make_order):
     assert db.get(Order, order_id).status == "served"
 
 
-@pytest.mark.parametrize("status", ["pending", "in_kitchen", "paid", "cancelled"])
-def test_only_served_orders_can_be_invoiced(client, admin, make_order, status):
+@pytest.mark.parametrize("status", ["pending", "in_kitchen", "cancelled"])
+def test_only_served_or_paid_orders_can_be_invoiced(client, admin, make_order, status):
     order_id = make_order(status=status)
 
     r = client.post(f"/orders/{order_id}/invoice", headers=admin)
 
     assert r.status_code == 409
     assert r.json()["code"] == "order_not_served"
+
+
+def test_paid_order_without_invoice_can_be_invoiced(client, db, admin, make_order):
+    order_id = make_order(status="paid")
+
+    r = client.post(f"/orders/{order_id}/invoice", headers=admin)
+
+    assert r.status_code == 201
+    assert r.json()["order_id"] == order_id
+    db.expire_all()
+    assert db.get(Order, order_id).status == "paid"
 
 
 def test_order_cannot_be_invoiced_twice(client, admin, make_order):
@@ -127,7 +138,7 @@ def test_create_invoice_without_token_returns_401(client, make_order):
     assert r.status_code == 401
 
 
-def test_list_invoices_is_paginated_and_ordered(client, admin, make_order):
+def test_list_invoices_is_paginated_newest_first(client, admin, make_order):
     for _ in range(3):
         client.post(f"/orders/{make_order()}/invoice", headers=admin)
 
@@ -138,7 +149,7 @@ def test_list_invoices_is_paginated_and_ordered(client, admin, make_order):
     assert data["total"] == 3
     assert data["page"] == 1
     assert data["size"] == 2
-    assert [i["number"][-5:] for i in data["items"]] == ["00001", "00002"]
+    assert [i["number"][-5:] for i in data["items"]] == ["00003", "00002"]
 
 
 def test_list_invoices_filters_by_issue_date(client, db, admin, make_order):
