@@ -372,6 +372,39 @@ agente, la revisé y la commiteé primero.
 - **Lección:** comparar las URLs de una guía externa con `docs/deploy.md` antes de
   registrarlas como callback, y hacer `git branch -vv` para ver si la rama tiene remoto.
 
+### HU-39 · Servidor MCP propio con herramientas para agentes                                                                                                                                                                    
+
+#### 2026-10-18 · Servidor MCP local hecho por un equipo de agentes · @levifvy                                                                                                                                                   
+                                                                                                                                                                                                                                   
+- **Herramienta y modelo:** Claude Code · Opus 5.5, como agente líder que coordinó a cinco agentes especialistas en dos tandas en paralelo.                                                                                      
+- **Issue y reglas:** #82 · R-02                                                                                                                                                                                                 
+- **Prompt clave:** "Primero la spec y el equipo de agentes; nadie escribe código hasta que yo dé el OK. Cada agente tiene una sola tarea y sus propios archivos, y nadie toca `app/` ni hace commits."                          
+- **Resultado:** aceptado con cambios. 
+  - Un pequeño servidor que solo funciona en local, con tres herramientas para los agentes: consultar la base de datos en solo lectura, lanzar los tests y leer las reglas de la ontología. 
+  - 93 tests nuevos, la suite entera en verde (996) y la API sin cambios.                                                                                                                                                               
+- **Errores o alucinaciones:**                                                                                                                                                                                                   
+  - Casi todos los ejemplos de internet eran de una versión antigua del SDK. Lo vimos a tiempo comprobando la versión real antes de escribir código.                                                                             
+  - El líder vio al revisar el código que se podían leer datos sensibles por un camino indirecto (pidiendo la fila entera en vez de las columnas). Se cerró con tres protecciones más antes de seguir.                           
+  - Un agente rompió sin querer unas expresiones regulares al escribirlas con un script; el lint lo detectó y lo corrigió él mismo.                                                                                              
+- **Trabajo descartado:** la carpeta `mcp/` lo renombramos, porque chocaba con el propio SDK (se llamó `mcp_server/`), y compartir la configuración del servidor en el repo.                                                        
+- **Mi prompt o la spec:** 
+  - Desarrolla la HU-39 (Servidor MCP) usando SDD y un equipo agéntico (1 líder + 5 especialistas en paralelo). 
+  - Lee primero AGENTS.md, ontology.md, el Briefing y las specs de HU-27/33. 
+  - Redacta la spec y el lead.md, espera mi OK, y luego coordina a los agentes para programar en mcp_server/ y tests/. 
+  - Prohibido tocar app//migrations/ o hacer commits.                                                                                       
+- **Decisiones humanas:** decidí llamar a la carpeta `mcp_server/` en vez de `mcp/`, cambiar fuera del código nuevo solo tres archivos (`requirements.txt`, `.dockerignore` y `.env.example`)
+  - , no subir al repo la configuración del servidor para Claude Code (`.mcp.json`) y añadir tres protecciones más cuando el agente líder encontró el hueco de seguridad.                                              
+- **Lección:** 
+  - Si se hubiera creado una carpeta en la raíz llamada mcp/, habría chocado con el paquete oficial del SDK de Python (que también se llama mcp). 
+  - Cuando Python intentara importar `from mcp.server.mcpserver import MCPServer`, se habría encontrado primero con nuestra carpeta local en lugar de con la librería instalada, y el servidor no habría arrancado. 
+  - Por eso se llamó mcp_server/.
+
+  - Sobre el archivo .mcp.json, si lo creáramos y lo subiéramos a GitHub, cualquier persona del equipo que se descargara el proyecto tendría el servidor MCP activado por defecto 
+  - (lo cual no queríais, porque consume recursos y solo debe usarlo quien lo necesite).
+
+  - La carpeta mcp_server es el código fuente del servidor que se ha programado. 
+  - Es la carpeta donde vive la lógica (las herramientas query_database, run_pytest, etc.).
+
 ### HU-40 · Estación de barra en los pedidos
 
 #### 2026-10-15 · HU-40_Estación de barra en los pedidos  · @ManonChab

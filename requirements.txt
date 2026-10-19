@@ -27,6 +27,9 @@ httpx==0.28.1
 cachetools==7.2.0
 tzdata==2026.5
 
+# --- Servidor MCP local para agentes (HU-39) ---
+mcp==2.3.0
+
 # --- Tests y calidad ---
 pytest==9.1.1
 pytest-cov==7.1.0
