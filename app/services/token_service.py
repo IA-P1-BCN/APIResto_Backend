@@ -6,7 +6,11 @@ from sqlalchemy.orm import Session
 from app.config import settings
 from app.core.security import create_access_token, create_refresh_token
 from app.models.model_user import User
-from app.repositories import refresh_token_repository, revoked_token_repository, user_repository
+from app.repositories import (
+    refresh_token_repository,
+    revoked_token_repository,
+    user_repository,
+)
 
 
 def _hash(token: str) -> str:

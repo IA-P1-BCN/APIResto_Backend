@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import UTC, datetime
 
 from sqlalchemy.orm import Session
 
@@ -18,5 +18,5 @@ def get_by_hash(db: Session, token_hash: str) -> RefreshToken | None:
 
 
 def revoke(db: Session, rt: RefreshToken) -> None:
-    rt.revoked_at = datetime.utcnow()
+    rt.revoked_at = datetime.now(UTC)
     db.commit()

@@ -21,7 +21,12 @@ from app.database import get_db
 from app.schemas.schema_auth import RefreshTokenIn, TokenOut
 from app.schemas.schema_social import SocialLoginRequest, SocialProvider
 from app.schemas.schema_user import UserOut, UserRegister
-from app.services import email_verification_service, social_auth_service, token_service, user_service
+from app.services import (
+    email_verification_service,
+    social_auth_service,
+    token_service,
+    user_service,
+)
 from app.services.auth_emails import verification_email
 from app.services.login_rate_limit_service import login_rate_limiter
 from app.services.notifications import send_email
