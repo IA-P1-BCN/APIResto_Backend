@@ -18,6 +18,8 @@ EXPECTED_OPERATIONS = {
     ("post", "/auth/social/{provider}"),
     ("get", "/auth/me"),
     ("post", "/auth/set-password"),
+    ("post", "/auth/refresh"),
+    ("post", "/auth/logout"),
     ("post", "/users/"),
     ("get", "/users/"),
     ("get", "/users/{user_id}"),

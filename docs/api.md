@@ -660,8 +660,9 @@ El mismo pedido visto por `kitchen` trae solo la línea de pasta, y `progress` y
 
 ## Facturas y exportación CSV · HU-14
 
-Una factura por pedido, solo para pedidos `served`. Facturar **no** cambia el estado del
-pedido (sigue `served`; después se marca `paid` con `PATCH /orders/{id}/status`).
+Una factura por pedido, para pedidos `served` o `paid` (si se cobró sin factura). Facturar
+**no** cambia el estado del pedido (uno `served` sigue así; después se marca `paid` con
+`PATCH /orders/{id}/status`).
 
 - **IVA:** 10 %, incluido en el precio de los platos. `base_amount = total / 1,10`
   (redondeado a céntimos) y `tax_amount = total - base_amount`, así que
@@ -671,7 +672,7 @@ pedido (sigue `served`; después se marca `paid` con `PATCH /orders/{id}/status`
 | Método | Ruta | Roles | Descripción |
 |---|---|---|---|
 | POST | `/orders/{order_id}/invoice` | admin, waiter | Genera la factura del pedido → `201` |
-| GET | `/invoices` | admin, waiter | Listado paginado (`Page[InvoiceOut]`) ordenado por número. Filtros `date_from`, `date_to` (fecha de emisión, ambos incluidos) |
+| GET | `/invoices` | admin, waiter | Listado paginado (`Page[InvoiceOut]`), de la factura más nueva a la más antigua. Filtros `date_from`, `date_to` (fecha de emisión, ambos incluidos) |
 | GET | `/invoices/{invoice_id}` | admin, waiter | Una factura |
 | GET | `/exports/invoices` | admin | CSV de facturas. Filtros `date_from`, `date_to` |
 | GET | `/exports/orders` | admin | CSV de pedidos. Filtros `status`, `date_from`, `date_to` (fecha de creación) |
@@ -700,7 +701,7 @@ punto, fechas ISO 8601 y UTF-8 con BOM (para que Excel lea bien los acentos).
 | HTTP | `code` | Cuándo |
 |---|---|---|
 | 404 | `not_found` | El pedido o la factura no existen |
-| 409 | `order_not_served` | Se intenta facturar un pedido que no está `served` |
+| 409 | `order_not_served` | Se intenta facturar un pedido que no está `served` ni `paid` |
 | 409 | `invoice_already_exists` | El pedido ya tiene factura |
 | 409 | `invoice_conflict` | Dos facturas a la vez chocan con el mismo número; reintentar |
 | 422 | `invalid_date_range` | `date_from` es posterior a `date_to` |
@@ -757,3 +758,69 @@ Platos más vendidos (`GET /stats/top-dishes?limit=2`):
 | 403 | `forbidden` | El usuario no es `admin` |
 | 422 | `invalid_date_range` | `from` es posterior a `to` |
 | 422 | `validation_error` | Fecha con formato incorrecto o `limit` fuera de 1..50 |
+## Servidor MCP para agentes (local) · HU-39
+
+Servidor [MCP](https://modelcontextprotocol.io) propio (`resto-api-dev`) en `mcp_server/`
+para los agentes de código (Claude Code, OpenCode). **No es un endpoint HTTP y no cambia
+ninguno** (sin breaking-api): se ejecuta solo en local, por stdio, sin puertos abiertos.
+**No se despliega**: `mcp_server/` está en `.dockerignore` y el servidor no arranca con
+`ENVIRONMENT=production`. SDK `mcp==2.3.0` (API 2.x, `MCPServer`); arranque con
+`python -m mcp_server` (nada por `stdout`; logs a `stderr`). Cómo registrarlo, variables
+`MCP_*` y seguridad: [`mcp_server/README.md`](../mcp_server/README.md).
+
+| Herramienta | Parámetros | Qué hace |
+|---|---|---|
+| `query_database` | `sql` (str), `limit` (int, opcional; por defecto y máximo `MCP_QUERY_MAX_ROWS` = 100) | Una sola consulta `SELECT`/`WITH` de solo lectura contra la BD local (`MCP_DATABASE_URL` o `DATABASE_URL`), sin datos secretos (R-02). Anotada `readOnlyHint` |
+| `run_pytest` | `target` (ruta dentro de `tests/`, admite `::nodo`; opcional), `keyword` (`-k`; opcional) | Lanza `pytest -q` sin shell y resume el resultado |
+| `get_ontology` | `rule_id` (`R-xx`, sin distinguir mayúsculas; opcional) | Devuelve `specs/ontology.md` entero o la fila de una regla. Anotada `readOnlyHint` |
+
+Respuestas (objeto JSON, en `content[0].text`):
+
+```json
+{"columns": ["id", "name"], "rows": [[1, "Ana"]], "row_count": 1,
+ "truncated": false, "redacted_columns": []}
+```
+
+```json
+{"exit_code": 0, "passed": true, "timed_out": false,
+ "summary": "3 passed in 0.09s", "output_tail": "...", "duration_seconds": 1.2,
+ "command": ["<python>", "-m", "pytest", "-q", "--no-header", "-p", "no:cacheprovider"]}
+```
+
+```json
+{"rule_id": "R-02", "priority": "M", "text": "Contraseña ≥ 8 caracteres ..."}
+```
+
+Sin `rule_id`, `get_ontology` devuelve `{"path": "specs/ontology.md", "content": "..."}`.
+
+- **`query_database`**: rechaza escrituras, varias sentencias, las columnas y tablas
+  secretas (`password_hash`, `token_hash`, `totp_secret`, `totp_recovery_codes`;
+  `refresh_tokens`, `revoked_tokens`, `email_verification_tokens`,
+  `password_reset_tokens`) y los identificadores `U&"…"`; ejecuta en una transacción de
+  solo lectura (Postgres: `SET TRANSACTION READ ONLY` y `statement_timeout`; SQLite:
+  `PRAGMA query_only`) con `rollback` siempre; y tapa con `"***"` las columnas secretas,
+  las claves secretas dentro de un JSON y los valores con forma de hash bcrypt, token
+  Fernet o SHA-256 en hexadecimal. Fechas en ISO 8601, `Decimal` como texto, `bytes` como
+  `"<bytes>"`.
+- **`run_pytest`**: `passed` = `exit_code == 0`. Si se pasa de
+  `MCP_PYTEST_TIMEOUT_SECONDS` (600), `timed_out: true` y `exit_code: null`, sin error.
+  `summary` puede ir vacío si pytest falla antes del resumen; el detalle está en
+  `output_tail` (últimas 200 líneas).
+
+### Códigos de error
+
+Los errores previstos llegan al cliente como resultado con error (`isError: true`) y el
+texto `Error executing tool <herramienta>: <code>: <detalle>`.
+
+| Herramienta | `code` | Cuándo |
+|---|---|---|
+| `query_database` | `empty_query` | La consulta está vacía |
+| `query_database` | `multiple_statements` | Hay un `;` que no es el último carácter |
+| `query_database` | `read_only` | No empieza por `SELECT`/`WITH` o lleva una palabra prohibida (`INSERT`, `UPDATE`, `DELETE`, `DROP`, `SET`, `INTO`, `PRAGMA`…) |
+| `query_database` | `secret_not_allowed` | Menciona una columna o tabla secreta, o un identificador `U&"…"` |
+| `query_database` | `invalid_limit` | `limit` < 1 |
+| `query_database` | `query_failed` | Error de la BD (se devuelve el tipo de error, nunca la cadena de conexión) |
+| `run_pytest` | `invalid_target` | `target` empieza por `-`, es absoluto, sale de `tests/` o no existe |
+| `run_pytest` | `invalid_keyword` | `keyword` empieza por `-` |
+| `get_ontology` | `invalid_rule_id` | `rule_id` no tiene el formato `R-xx` (`R-2`, `X-1`) |
+| `get_ontology` | `rule_not_found` | La regla no existe (`R-99`) |

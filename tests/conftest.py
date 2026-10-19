@@ -97,7 +97,7 @@ def auth_headers(make_user):
         role = Role(role)
         if role not in cache:
             user = make_user(role)
-            cache[role] = {"Authorization": f"Bearer {create_access_token(user.id)}"}
+            cache[role] = {"Authorization": f"Bearer {create_access_token(user.id, user.role)}"}
         return cache[role]
     return _headers
 

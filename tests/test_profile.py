@@ -2,7 +2,7 @@ from app.core.security import create_access_token
 
 
 def me_headers(user):
-    return {"Authorization": f"Bearer {create_access_token(user.id)}"}
+    return {"Authorization": f"Bearer {create_access_token(user.id, user.role)}"}
 
 
 def login(client, email, password):

@@ -218,7 +218,7 @@ def test_delete_and_restore_forbidden_for_non_admin(client, auth_headers):
 
 
 def _bearer(user):
-    return {"Authorization": f"Bearer {create_access_token(user.id)}"}
+    return {"Authorization": f"Bearer {create_access_token(user.id, user.role)}"}
 
 
 def _assert_error(r, status_code, code):

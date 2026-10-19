@@ -372,6 +372,39 @@ agente, la revisé y la commiteé primero.
 - **Lección:** comparar las URLs de una guía externa con `docs/deploy.md` antes de
   registrarlas como callback, y hacer `git branch -vv` para ver si la rama tiene remoto.
 
+### HU-39 · Servidor MCP propio con herramientas para agentes                                                                                                                                                                    
+
+#### 2026-10-18 · Servidor MCP local hecho por un equipo de agentes · @levifvy                                                                                                                                                   
+                                                                                                                                                                                                                                   
+- **Herramienta y modelo:** Claude Code · Opus 5.5, como agente líder que coordinó a cinco agentes especialistas en dos tandas en paralelo.                                                                                      
+- **Issue y reglas:** #82 · R-02                                                                                                                                                                                                 
+- **Prompt clave:** "Primero la spec y el equipo de agentes; nadie escribe código hasta que yo dé el OK. Cada agente tiene una sola tarea y sus propios archivos, y nadie toca `app/` ni hace commits."                          
+- **Resultado:** aceptado con cambios. 
+  - Un pequeño servidor que solo funciona en local, con tres herramientas para los agentes: consultar la base de datos en solo lectura, lanzar los tests y leer las reglas de la ontología. 
+  - 93 tests nuevos, la suite entera en verde (996) y la API sin cambios.                                                                                                                                                               
+- **Errores o alucinaciones:**                                                                                                                                                                                                   
+  - Casi todos los ejemplos de internet eran de una versión antigua del SDK. Lo vimos a tiempo comprobando la versión real antes de escribir código.                                                                             
+  - El líder vio al revisar el código que se podían leer datos sensibles por un camino indirecto (pidiendo la fila entera en vez de las columnas). Se cerró con tres protecciones más antes de seguir.                           
+  - Un agente rompió sin querer unas expresiones regulares al escribirlas con un script; el lint lo detectó y lo corrigió él mismo.                                                                                              
+- **Trabajo descartado:** la carpeta `mcp/` lo renombramos, porque chocaba con el propio SDK (se llamó `mcp_server/`), y compartir la configuración del servidor en el repo.                                                        
+- **Mi prompt o la spec:** 
+  - Desarrolla la HU-39 (Servidor MCP) usando SDD y un equipo agéntico (1 líder + 5 especialistas en paralelo). 
+  - Lee primero AGENTS.md, ontology.md, el Briefing y las specs de HU-27/33. 
+  - Redacta la spec y el lead.md, espera mi OK, y luego coordina a los agentes para programar en mcp_server/ y tests/. 
+  - Prohibido tocar app//migrations/ o hacer commits.                                                                                       
+- **Decisiones humanas:** decidí llamar a la carpeta `mcp_server/` en vez de `mcp/`, cambiar fuera del código nuevo solo tres archivos (`requirements.txt`, `.dockerignore` y `.env.example`)
+  - , no subir al repo la configuración del servidor para Claude Code (`.mcp.json`) y añadir tres protecciones más cuando el agente líder encontró el hueco de seguridad.                                              
+- **Lección:** 
+  - Si se hubiera creado una carpeta en la raíz llamada mcp/, habría chocado con el paquete oficial del SDK de Python (que también se llama mcp). 
+  - Cuando Python intentara importar `from mcp.server.mcpserver import MCPServer`, se habría encontrado primero con nuestra carpeta local en lugar de con la librería instalada, y el servidor no habría arrancado. 
+  - Por eso se llamó mcp_server/.
+
+  - Sobre el archivo .mcp.json, si lo creáramos y lo subiéramos a GitHub, cualquier persona del equipo que se descargara el proyecto tendría el servidor MCP activado por defecto 
+  - (lo cual no queríais, porque consume recursos y solo debe usarlo quien lo necesite).
+
+  - La carpeta mcp_server es el código fuente del servidor que se ha programado. 
+  - Es la carpeta donde vive la lógica (las herramientas query_database, run_pytest, etc.).
+
 ### HU-40 · Estación de barra en los pedidos
 
 #### 2026-10-15 · HU-40_Estación de barra en los pedidos  · @ManonChab
@@ -634,4 +667,25 @@ agente, la revisé y la commiteé primero.
 - **Mi prompt o la spec:** nada
 - **Decisiones humanas:** aplicar la barra fija a todas las ventanas de formulario, no solo a la de pedidos (Anna).
 - **Lección:** probar la interfaz en pantallas bajas y medir, no solo mirar capturas.
+<<<<<<< HEAD
 >>>>>>> 3034c2613ac6a9e33ddaf18ccc29cbaa1775704f
+=======
+<<<<<<< HEAD
+>>>>>>> 3034c2613ac6a9e33ddaf18ccc29cbaa1775704f
+=======
+
+### PR #158 · Diagrama ER a 11 tablas y migraciones hasta la 0010
+
+#### 2026-10-19 · Actualizar docs/er.md y el diagrama (PR #158) · @arita-pereira
+
+- **Herramienta y modelo:** Claude (Pro) · Sonnet 5.5
+- **Issue y reglas:** PR #158, sin issue ni HU · R-04, R-10, R-14, R-16
+- **Prompt clave:** "actualizar `docs/er.md` y el diagrama a 11 tablas, con las columnas nuevas de `users` y Alembic hasta la `0010`, en PR aparte"
+- **Resultado:** aceptado. `docs/er.md` con las 11 tablas, tabla de migraciones 0001 a 0010 con su HU y notas de R-14, R-16 y R-10. Comprobado con `alembic upgrade head` en una BD vacía: coinciden las 11 tablas, las columnas, PK/FK/UK y las 12 relaciones con el bloque Mermaid. La comprobación se probó en falso con 4 errores metidos a propósito y los detectó todos. El PNG se regeneró con mermaid-cli y se ve menos limpio que el anterior (líneas cruzadas).
+- **Errores o alucinaciones:** mi lista de pendientes decía que faltaban 3 tablas y las columnas de `users`, pero `er.md` también carecía del rol `bartender`, de `categories.station` y de `order_items.prepared_quantity` y `served_quantity`. Causa raíz: la lista salió de las HU y no se comparó con `app/models/` ni con `migrations/versions/`. Se vio al leer los modelos. La primera búsqueda de migraciones usó `alembic/versions`, que no existe: están en `migrations/versions`.
+- **Trabajo descartado:** escribir que `create_all` ya no se usa, porque `app/main.py` lo sigue llamando. El doc dice que solo crea las tablas que faltan y que cualquier cambio en una tabla existente necesita migración.
+- **Mi prompt o la spec:** el prompt daba por completa la lista de cambios y no pedía contrastarla con los modelos y las migraciones.
+- **Decisiones humanas:** entrada identificada solo por la PR #158, sin HU (Rita).
+- **Lección:** antes de documentar el modelo, comparar con `app/models/` y `migrations/versions/` y comprobar el diagrama aplicando las migraciones en una BD vacía.
+>>>>>>> 9dfd5224f3c6f8389bda5a26bef1ca56a52d43cd
+>>>>>>> 55dfc4a69cc23094e697b9e2e187d7dc7fbf5b14

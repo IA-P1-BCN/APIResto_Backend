@@ -47,8 +47,8 @@ async def kitchen_websocket(
     Cierra con 1008 si falta el token, no es válido o el usuario no existe,
     está desactivado o no tiene rol admin o kitchen.
     """
-    user_id = decode_access_token(token) if token else None
-    user = user_repository.get_by_id(db, user_id) if user_id is not None else None
+    payload = decode_access_token(token) if token else None
+    user = user_repository.get_by_id(db, int(payload["sub"])) if payload is not None else None
     allowed = user is not None and user.is_active and user.role in ALLOWED_ROLES
     db.close()
     if not allowed:

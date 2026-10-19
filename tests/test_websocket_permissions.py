@@ -27,21 +27,21 @@ def test_ws_token_invalido_1008(client):
     assert_rejected(client, ws_url("no-es-un-jwt"))
 
 def test_ws_usuario_inexistente_1008(client):
-    assert_rejected(client, ws_url(create_access_token(999)))
+    assert_rejected(client, ws_url(create_access_token(999, "admin")))
 
 def test_ws_usuario_desactivado_1008(client, make_user):
     user = make_user(Role.kitchen, is_active=False)
-    assert_rejected(client, ws_url(create_access_token(user.id)))
+    assert_rejected(client, ws_url(create_access_token(user.id, user.role)))
 
 @pytest.mark.parametrize("role", [Role.waiter, Role.customer])
 def test_ws_rol_sin_permiso_1008(client, make_user, role):
     user = make_user(role)
-    assert_rejected(client, ws_url(create_access_token(user.id)))
+    assert_rejected(client, ws_url(create_access_token(user.id, user.role)))
 
 @pytest.mark.parametrize("role", [Role.admin, Role.kitchen])
 def test_ws_admin_y_cocina_conectan(client, make_user, role):
     user = make_user(role)
-    with client.websocket_connect(ws_url(create_access_token(user.id))) as ws:
+    with client.websocket_connect(ws_url(create_access_token(user.id, user.role))) as ws:
         assert len(kitchen_manager.active_connections) == 1
         ws.close()
     assert kitchen_manager.active_connections == []
