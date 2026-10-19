@@ -17,3 +17,4 @@ docker-compose.yml
 *.db
 bruno/
 scripts/generate_agent_diagrams.py
+mcp_server/
