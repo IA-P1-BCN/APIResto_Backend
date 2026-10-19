@@ -1,0 +1,52 @@
+meta {
+  name: Error 409 · reserva solapada
+  type: http
+  seq: 8
+}
+
+post {
+  url: {{baseUrl}}/reservations
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "table_id": {{tableId}},
+    "reserved_at": "{{reservedAt}}",
+    "party_size": 2
+  }
+}
+
+tests {
+  test("status 409", function() {
+    expect(res.status).to.equal(409);
+  });
+
+  test("error {detail, code} con code reservation_conflict", function() {
+    expect(res.body.detail).to.be.a("string");
+    expect(res.body.code).to.equal("reservation_conflict");
+  });
+}
+
+docs {
+  **`POST /reservations`**
+
+  Misma mesa y hora que una reserva confirmada.
+
+  **Roles permitidos:** admin, waiter, customer
+
+  **Auth en este request:** Bearer `{{token}}` (admin)
+
+  **Respuestas posibles:**
+
+  - `409`: `reservation_conflict`
+}

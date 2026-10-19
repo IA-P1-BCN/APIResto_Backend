@@ -1,6 +1,6 @@
 # HU-51 · Reservas hechas por el cliente
 
-> Issue: #106 · Prioridad por fijar (sugerencia de la profe) · Escribe: Anna · Implementa:
+> Issue: #106 · Prioridad: Must · Escribe: Anna · Implementa:
 > Manon (backend) y Anna (frontend) · Revisa: Rita · Aprueba: Levi (PO). Vocabulario:
 > `specs/ontology.md`. Usa `specs/HU-TEMPLATE.md`. Parte de frontend: pantalla de reservas
 > (Anna, issue por crear).
@@ -56,7 +56,7 @@ a mano como hasta ahora.
 - **Email**: el de confirmación ya incluye el número de mesa; no cambia.
 - **Capas**: `schemas/reservation.py` (campo opcional y constante) →
   `routers/reservations.py` (pasa al servicio si el usuario es `customer`) →
-  `services/reservations.py` (`_assign_table`, el límite de 8 y los dos errores) →
+  `services/reservations.py` (`_assign_table`, el límite de 8, la fecha pasada y los errores) →
   `repositories/dining_table_repository.py` (`list_available_page`, sin cambios).
 - **Código de otra persona**: el de reservas y mesas es de Levi (HU-10, HU-18). El cambio
   está acordado por todo el equipo; Manon avisa a Levi al abrir el PR.
@@ -67,6 +67,8 @@ a mano como hasta ahora.
 - Si la de 2 está reservada a esa hora → se asigna la de 4.
 - Mesas `out_of_service` y reservas canceladas: no cuentan como ocupadas.
 - Ninguna mesa libre → 409 `no_table_available`.
+- Sin `table_id` y `reserved_at` en el pasado → 422 `reservation_in_past`; con `table_id`
+  y fecha pasada sigue funcionando como hoy.
 - Cliente con 9 personas → 422 `party_size_too_large` al crear y al editar; con 8 → pasa.
 - `admin` o `waiter` con 9 personas y una mesa con sitio → 201.
 - Con `table_id` → todos los tests actuales de HU-10 siguen pasando sin cambios.
@@ -77,16 +79,17 @@ a mano como hasta ahora.
   a ocupada; la carrera real con dos conexiones no se prueba.
 
 ## Criterios de aceptación
-- [ ] Un `customer` crea una reserva con `reserved_at`, `party_size` y `notes`, sin
+- [x] Un `customer` crea una reserva con `reserved_at`, `party_size` y `notes`, sin
   `table_id`, y recibe 201 con la mesa asignada.
-- [ ] La mesa asignada es la más pequeña con sitio que está libre en ese hueco.
-- [ ] Sin mesa libre → 409 `no_table_available`.
-- [ ] Un `customer` con más de 8 personas → 422 `party_size_too_large` con el mensaje
+- [x] La mesa asignada es la más pequeña con sitio que está libre en ese hueco.
+- [x] Sin mesa libre → 409 `no_table_available`.
+- [x] Un `customer` con más de 8 personas → 422 `party_size_too_large` con el mensaje
   "Para reservas de más de 8 personas, llama al restaurante".
-- [ ] Los errores usan el formato estándar `{"detail", "code"}`.
-- [ ] Las reservas con `table_id` funcionan igual que antes y los tests de HU-10 pasan.
-- [ ] `/tables/available` sigue cerrado al `customer`.
-- [ ] `docs/api.md` documenta el `table_id` opcional, el límite de 8 y los dos errores
+- [x] Sin `table_id` y con fecha pasada → 422 `reservation_in_past`.
+- [x] Los errores usan el formato estándar `{"detail", "code"}`.
+- [x] Las reservas con `table_id` funcionan igual que antes y los tests de HU-10 pasan.
+- [x] `/tables/available` sigue cerrado al `customer`.
+- [x] `docs/api.md` documenta el `table_id` opcional, el límite de 8 y los tres errores
   nuevos.
 
 ## Out of Scope
@@ -104,13 +107,7 @@ a mano como hasta ahora.
 - Un aforo global del restaurante: lo marcan las mesas.
 
 ## Preguntas abiertas
-- [NEEDS CLARIFICATION: ¿El `customer` puede seguir enviando `table_id`? Recomendado: sí,
-  para no romper el contrato actual ni los tests de HU-10. La web del cliente no lo
-  enviará.]
-- [NEEDS CLARIFICATION: ¿Se rechaza una reserva en el pasado? Hoy no se valida. Recomendado:
-  422 `reservation_in_past` solo cuando la mesa se asigna automáticamente, para no cambiar
-  el flujo del personal.]
-- [NEEDS CLARIFICATION: Prioridad (Must, Should o Could). Sin fijar en el Kanban.]
+Ninguna: resueltas el 15/10/2026 (ver "Decisiones de la sesión").
 
 ## Decisiones de la sesión
 Acordado por todo el equipo, Levi (PO) incluido, el 15/10/2026:
@@ -125,3 +122,16 @@ Acordado por todo el equipo, Levi (PO) incluido, el 15/10/2026:
   haya. Rechazado: límite según la mesa más grande; aforo global `MAX_CAPACITY`.
 - **Mejor encaje = la mesa más pequeña con sitio** → mismo orden que `/tables/available`;
   deja libres las mesas grandes.
+
+Resueltas con Manon el 15/10/2026 (preguntas que estaban abiertas en la spec):
+- **El `customer` puede seguir enviando `table_id`** → no rompe el contrato ni los tests de
+  HU-10; la web del cliente no lo envía. Con `table_id` el flujo es el de siempre.
+- **Reserva en el pasado** → 422, `code` `reservation_in_past`, solo cuando la mesa se
+  asigna automáticamente (sin `table_id`). El flujo del personal con `table_id` no cambia.
+  Se añade a los tests y a los criterios de aceptación.
+- **Prioridad: Must** → sin esto el cliente no puede reservar en la práctica.
+- **Zona horaria de `reservation_in_past`** → `reserved_at` es la hora del reloj del
+  restaurante (el frontend envía y muestra hora local sin zona), así que se compara con
+  la hora actual en `RESTAURANT_TIMEZONE` (por defecto `Europe/Madrid`) y no con UTC.
+  Propuesto por Anna el 16/10/2026. Añade la dependencia `tzdata` (la imagen
+  `python:3.12-slim` no trae la base de zonas horarias).

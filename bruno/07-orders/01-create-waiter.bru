@@ -1,0 +1,100 @@
+meta {
+  name: Crear pedido (waiter)
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/orders/
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{tokenWaiter}}
+}
+
+body:json {
+  {
+    "table_id": {{tableId}},
+    "items": [
+      {
+        "dish_id": {{dishId}},
+        "quantity": 2,
+        "notes": "Sin cebolla"
+      },
+      {
+        "dish_id": {{barDishId}},
+        "quantity": 1
+      }
+    ]
+  }
+}
+
+script:post-response {
+  if (res.status === 201) {
+    const kitchenLine = res.body.items.find(i => i.dish_id === bru.getVar("dishId"));
+    const barLine = res.body.items.find(i => i.dish_id === bru.getVar("barDishId"));
+    bru.setVar("orderId", res.body.id);
+    bru.setVar("orderItemId", kitchenLine.id);
+    bru.setVar("orderBarItemId", barLine.id);
+    bru.setVar("orderTotal", res.body.total);
+  }
+}
+
+tests {
+  test("status 201", function() {
+    expect(res.status).to.equal(201);
+  });
+
+  test("shape: id, table_id, waiter_id, status, total, created_at, updated_at, items", function() {
+    expect(res.body).to.have.property("id");
+    expect(res.body).to.have.property("table_id");
+    expect(res.body).to.have.property("waiter_id");
+    expect(res.body).to.have.property("status");
+    expect(res.body).to.have.property("total");
+    expect(res.body).to.have.property("created_at");
+    expect(res.body).to.have.property("updated_at");
+    expect(res.body).to.have.property("items");
+  });
+
+  test("pendiente, del waiter y con total = suma de quantity x unit_price", function() {
+    expect(res.body.status).to.equal("pending");
+    expect(res.body.waiter_id).to.equal(bru.getVar("waiterId"));
+    const expected = res.body.items.reduce((sum, i) => sum + i.quantity * Number(i.unit_price), 0);
+    expect(Math.round(Number(res.body.total) * 100)).to.equal(Math.round(expected * 100));
+  });
+
+  test("una línea de cocina y otra de barra, sin preparar ni servir", function() {
+    expect(res.body.items).to.have.lengthOf(2);
+    const stations = res.body.items.map(i => i.station).sort();
+    expect(stations).to.deep.equal(["bar", "kitchen"]);
+    res.body.items.forEach(i => {
+      expect(i.prepared).to.equal(false);
+      expect(i.served).to.equal(false);
+    });
+  });
+}
+
+docs {
+  **`POST /orders/`**
+
+  Crea un pedido `pending` con el precio actual de cada plato. `waiter_id` es el usuario que lo crea. Lleva dos líneas: el plato de cocina (`dishId`, ×2) y el de barra (`barDishId`, ×1), para probar R-14 en `02-list-kitchen` y `03-get-bartender`. Notifica a cocina y barra por WebSocket (`order_created`). Guarda `orderId`, `orderItemId` (línea de cocina), `orderBarItemId` (línea de barra) y `orderTotal`.
+
+  **Roles permitidos:** admin, waiter
+
+  **Auth en este request:** Bearer `{{tokenWaiter}}` (waiter)
+
+  **Respuestas posibles:**
+
+  - `201`: `OrderOut`
+  - `401`: sin token (`unauthorized`)
+  - `403`: rol no permitido, solo admin y waiter (`forbidden`)
+  - `404`: `Table not found` (`not_found`)
+  - `409`: `Dish <id> not available`, también si el plato no existe (`conflict`)
+  - `422`: datos no válidos (`validation_error`)
+}

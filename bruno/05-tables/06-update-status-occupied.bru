@@ -1,0 +1,57 @@
+meta {
+  name: Cambiar estado a occupied (waiter)
+  type: http
+  seq: 6
+}
+
+patch {
+  url: {{baseUrl}}/tables/:table_id/status
+  body: json
+  auth: bearer
+}
+
+params:path {
+  table_id: {{tableId}}
+}
+
+headers {
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{tokenWaiter}}
+}
+
+body:json {
+  {
+    "status": "occupied"
+  }
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+
+  test("estado occupied", function() {
+    expect(res.body.status).to.equal("occupied");
+  });
+}
+
+docs {
+  **`PATCH /tables/{table_id}/status`**
+
+  Cambia solo `status`.
+
+  **Roles permitidos:** admin, waiter
+
+  **Auth en este request:** Bearer `{{tokenWaiter}}` (waiter)
+
+  **Respuestas posibles:**
+
+  - `200`: `DiningTableRead`
+  - `401`: sin token
+  - `403`: rol no permitido (solo admin, waiter)
+  - `404`: `Table <id> not found`
+  - `422`: `status` no válido o campos extra (`extra=forbid`)
+}

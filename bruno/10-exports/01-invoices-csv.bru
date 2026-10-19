@@ -1,0 +1,55 @@
+meta {
+  name: Exportar facturas de hoy a CSV
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/exports/invoices?date_from={{today}}&date_to={{today}}
+  body: none
+  auth: bearer
+}
+
+params:query {
+  date_from: {{today}}
+  date_to: {{today}}
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+
+  test("devuelve un CSV descargable", function() {
+    expect(res.headers["content-type"]).to.include("text/csv");
+    expect(res.headers["content-disposition"]).to.include("attachment");
+    expect(res.headers["content-disposition"]).to.match(/filename="invoices_.*\.csv"/);
+    expect(res.body).to.be.a("string").that.is.not.empty;
+  });
+
+  test("primera línea (sin BOM) = cabecera exacta", function() {
+    const lines = String(res.body).replace(/^\ufeff/, "").split(/\r?\n/);
+    expect(lines[0]).to.equal("number,issued_at,order_id,table_id,base_amount,tax_rate,tax_amount,total");
+  });
+}
+
+docs {
+  **`GET /exports/invoices`**
+
+  Facturas ordenadas por número. Filtros `date_from`, `date_to` (fecha de emisión).
+
+  **Roles permitidos:** admin
+
+  **Auth en este request:** Bearer `{{token}}` (admin)
+
+  **Respuestas posibles:**
+
+  - `200`: `text/csv; charset=utf-8` (UTF-8 con BOM) con `Content-Disposition: attachment; filename="invoices_<date_from>_<date_to>.csv"`
+  - `401`: sin token (`Not authenticated`) o token inválido / de usuario desactivado (`Invalid or expired token`)
+  - `403`: el rol no es admin
+  - `422`: `date_from` posterior a `date_to` (`invalid_date_range`) o fecha mal formada (`validation_error`)
+}

@@ -1,6 +1,6 @@
 from enum import Enum
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class SocialProvider(str, Enum):
@@ -9,6 +9,17 @@ class SocialProvider(str, Enum):
 
 
 class SocialLoginRequest(BaseModel):
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "code": "4/0AfJohXn-example-code",
+                    "redirect_uri": "https://app.example.com/auth/callback",
+                }
+            ]
+        }
+    )
+
     code: str = Field(min_length=1, description="`code` que el proveedor devolvió al frontend.")
     redirect_uri: str = Field(
         min_length=1,

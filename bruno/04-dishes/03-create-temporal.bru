@@ -1,0 +1,61 @@
+meta {
+  name: Crear plato temporal
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/dishes/
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "category_id": {{categoryId}},
+    "name": "Plato temporal Bruno {{runId}}",
+    "price": 1
+  }
+}
+
+script:post-response {
+  if (res.status === 201) {
+    bru.setVar("tempDishId", res.body.id);
+  }
+}
+
+tests {
+  test("status 201", function() {
+    expect(res.status).to.equal(201);
+  });
+
+  test("disponible por defecto", function() {
+    expect(res.body.is_available).to.equal(true);
+  });
+}
+
+docs {
+  **`POST /dishes/`**
+
+  Plato que se borra en el siguiente request.
+
+  **Roles permitidos:** admin
+
+  **Auth en este request:** Bearer `{{token}}` (admin)
+
+  **Respuestas posibles:**
+
+  - `201`: `DishOut`
+  - `401`: sin token
+  - `403`: rol distinto de admin (`Not enough permissions`)
+  - `404`: `Category not found` (`category_id` inexistente)
+  - `422`: datos no válidos (p. ej. `price` < 0)
+}

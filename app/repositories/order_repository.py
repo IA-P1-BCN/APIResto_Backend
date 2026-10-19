@@ -3,6 +3,8 @@ from datetime import date, datetime, time, timedelta
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
+from app.models.model_category import Category, Station
+from app.models.model_dish import Dish
 from app.models.model_order import Order
 from app.models.model_order_item import OrderItem
 
@@ -13,8 +15,23 @@ def exists_for_table(db: Session, table_id: int) -> bool:
     )
 
 
-def get_by_id(db: Session, order_id: int) -> Order | None:
-    return db.query(Order).filter(Order.id == order_id).first()
+WITH_STATIONS = (selectinload(Order.items).joinedload(OrderItem.dish).joinedload(Dish.category),)
+
+
+def _with_station_lines(station: Station):
+    return Order.id.in_(
+        select(OrderItem.order_id)
+        .join(Dish, Dish.id == OrderItem.dish_id)
+        .join(Category, Category.id == Dish.category_id)
+        .where(Category.station == station.value)
+    )
+
+
+def get_by_id(db: Session, order_id: int, station: Station | None = None) -> Order | None:
+    query = db.query(Order).options(*WITH_STATIONS).filter(Order.id == order_id)
+    if station:
+        query = query.filter(_with_station_lines(station))
+    return query.first()
 
 
 def list_orders(
@@ -25,8 +42,12 @@ def list_orders(
     date_to: str | None = None,
     skip: int = 0,
     limit: int = 100,
+    station: Station | None = None,
 ) -> list[Order]:
-    query = db.query(Order)
+    query = db.query(Order).options(*WITH_STATIONS)
+
+    if station:
+        query = query.filter(_with_station_lines(station))
 
     if status:
         query = query.filter(Order.status == status)
@@ -37,7 +58,7 @@ def list_orders(
     if date_to:
         query = query.filter(Order.created_at <= date_to)
 
-    return query.offset(skip).limit(limit).all()
+    return query.order_by(Order.id).offset(skip).limit(limit).all()
 
 
 def list_for_export(

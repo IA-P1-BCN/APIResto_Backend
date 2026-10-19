@@ -1,0 +1,49 @@
+meta {
+  name: Error 401 · editar mi perfil sin token
+  type: http
+  seq: 25
+}
+
+patch {
+  url: {{baseUrl}}/users/me
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "name": "Sin token"
+  }
+}
+
+tests {
+  test("status 401", function() {
+    expect(res.status).to.equal(401);
+  });
+
+  test("error {detail, code} con code unauthorized", function() {
+    expect(res.body.detail).to.be.a("string");
+    expect(res.body.code).to.equal("unauthorized");
+  });
+}
+
+docs {
+  **`PATCH /users/me`**
+
+  Sin token no se puede editar ningún perfil.
+
+  **Roles permitidos:** cualquier usuario autenticado
+
+  **Auth en este request:** ninguna
+
+  **Respuestas posibles:**
+
+  - `200`: `UserOut`
+  - `401`: sin token o token inválido (`unauthorized`)
+  - `409`: el email ya pertenece a otro usuario (`conflict`)
+  - `422`: datos no válidos o campos no editables como `role` o `is_active` (`validation_error`)
+}

@@ -1,0 +1,51 @@
+meta {
+  name: Error 401 · login con credenciales inválidas
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/auth/login
+  body: formUrlEncoded
+  auth: none
+}
+
+headers {
+  Content-Type: application/x-www-form-urlencoded
+}
+
+body:form-urlencoded {
+  username: noexiste.{{runId}}@restoapi.example.com
+  password: incorrecta{{runId}}
+}
+
+tests {
+  test("status 401", function() {
+    expect(res.status).to.equal(401);
+  });
+
+  test("error {detail, code} con code unauthorized", function() {
+    expect(res.body.detail).to.be.a("string");
+    expect(res.body.code).to.equal("unauthorized");
+  });
+
+  test("cabecera WWW-Authenticate: Bearer", function() {
+    expect(res.headers["www-authenticate"]).to.equal("Bearer");
+  });
+}
+
+docs {
+  **`POST /auth/login`**
+
+  Login con un email que no existe.
+
+  **Roles permitidos:** público
+
+  **Auth en este request:** ninguna
+
+  **Respuestas posibles:**
+
+  - `200`: `{access_token, token_type: "bearer"}`
+  - `401`: credenciales incorrectas o usuario desactivado (`unauthorized`)
+  - `422`: faltan `username` o `password` (`validation_error`)
+}

@@ -1,0 +1,65 @@
+meta {
+  name: Ver pedido (bartender)
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/orders/:order_id
+  body: none
+  auth: bearer
+}
+
+params:path {
+  order_id: {{orderId}}
+}
+
+auth:bearer {
+  token: {{tokenBartender}}
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+
+  test("shape: id, table_id, waiter_id, status, total, created_at, updated_at, items", function() {
+    expect(res.body).to.have.property("id");
+    expect(res.body).to.have.property("table_id");
+    expect(res.body).to.have.property("waiter_id");
+    expect(res.body).to.have.property("status");
+    expect(res.body).to.have.property("total");
+    expect(res.body).to.have.property("created_at");
+    expect(res.body).to.have.property("updated_at");
+    expect(res.body).to.have.property("items");
+  });
+
+  test("es el pedido pedido", function() {
+    expect(res.body.id).to.equal(bru.getVar("orderId"));
+  });
+
+  test("R-14: bartender solo ve la línea bar, con el total del pedido completo", function() {
+    expect(res.body.items).to.have.lengthOf(1);
+    expect(res.body.items[0].station).to.equal("bar");
+    expect(res.body.items[0].id).to.equal(bru.getVar("orderBarItemId"));
+    expect(res.body.total).to.equal(bru.getVar("orderTotal"));
+  });
+}
+
+docs {
+  **`GET /orders/{order_id}`**
+
+  Detalle de un pedido. Con el rol `bartender` solo se ven las líneas de estación `bar` y `total` sigue siendo el del pedido completo (R-14, HU-40). Un pedido sin líneas `bar` da 404 al bartender.
+
+  **Roles permitidos:** admin, waiter, kitchen, bartender
+
+  **Auth en este request:** Bearer `{{tokenBartender}}` (bartender)
+
+  **Respuestas posibles:**
+
+  - `200`: `OrderOut`
+  - `401`: sin token (`unauthorized`)
+  - `403`: rol no permitido (`forbidden`)
+  - `404`: `Order not found`, también si el pedido no tiene líneas de la estación del rol (`not_found`)
+  - `422`: `order_id` no entero (`validation_error`)
+}

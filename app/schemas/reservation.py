@@ -21,6 +21,7 @@ EditableReservationStatus = Literal["confirmed", "completed", "no_show"]
 
 MAX_DURATION_MIN = 8 * 60
 MAX_NOTES_LENGTH = 500
+MAX_CUSTOMER_PARTY_SIZE = 8
 
 
 def _to_naive_utc(value: datetime | None) -> datetime | None:
@@ -48,7 +49,13 @@ class ReservationCreate(BaseModel):
         },
     )
 
-    table_id: int = Field(gt=0, description="Mesa reservada.", examples=[3])
+    table_id: int | None = Field(
+        default=None,
+        gt=0,
+        description="Mesa reservada. Si se omite, el restaurante asigna la mesa "
+        "libre más pequeña con sitio.",
+        examples=[3],
+    )
     reserved_at: datetime = Field(
         description="Inicio de la reserva. Sin zona horaria; si se envía con zona "
         "se convierte a UTC.",

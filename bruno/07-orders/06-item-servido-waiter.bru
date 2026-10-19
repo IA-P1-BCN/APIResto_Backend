@@ -1,0 +1,60 @@
+meta {
+  name: Marcar línea servida (waiter)
+  type: http
+  seq: 6
+}
+
+patch {
+  url: {{baseUrl}}/orders/:order_id/items/:item_id
+  body: json
+  auth: bearer
+}
+
+params:path {
+  order_id: {{orderId}}
+  item_id: {{orderItemId}}
+}
+
+headers {
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{tokenWaiter}}
+}
+
+body:json {
+  {
+    "served": true
+  }
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+
+  test("línea servida", function() {
+    const line = res.body.items.find(i => i.id === bru.getVar("orderItemId"));
+    expect(line.served).to.equal(true);
+  });
+}
+
+docs {
+  **`PATCH /orders/{order_id}/items/{item_id}`**
+
+  La sala marca la línea como servida en la mesa.
+
+  **Roles permitidos:** admin, waiter (campo `served`)
+
+  **Auth en este request:** Bearer `{{tokenWaiter}}` (waiter)
+
+  **Respuestas posibles:**
+
+  - `200`: `OrderOut`
+  - `401`: sin token (`unauthorized`)
+  - `403`: el rol no puede marcar ese campo (`forbidden`)
+  - `404`: `Order not found` / `Order item not found` (`not_found`)
+  - `409`: `Cannot change items of an order in status 'paid'|'cancelled'` (`conflict`)
+  - `422`: sin `prepared` ni `served`, o campos extra (`validation_error`)
+}

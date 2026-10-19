@@ -1,0 +1,55 @@
+meta {
+  name: Error 422 · precio negativo
+  type: http
+  seq: 11
+}
+
+post {
+  url: {{baseUrl}}/dishes/
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "category_id": {{categoryId}},
+    "name": "Precio negativo",
+    "price": -1
+  }
+}
+
+tests {
+  test("status 422", function() {
+    expect(res.status).to.equal(422);
+  });
+
+  test("error {detail, code} con code validation_error", function() {
+    expect(res.body.detail).to.be.a("string");
+    expect(res.body.code).to.equal("validation_error");
+  });
+  test("incluye la lista de errores de campo", function() {
+    expect(res.body.errors).to.be.an("array").that.is.not.empty;
+  });
+}
+
+docs {
+  **`POST /dishes/`**
+
+  `price` debe ser ≥ 0.
+
+  **Roles permitidos:** admin
+
+  **Auth en este request:** Bearer `{{token}}` (admin)
+
+  **Respuestas posibles:**
+
+  - `422`: `validation_error`
+}

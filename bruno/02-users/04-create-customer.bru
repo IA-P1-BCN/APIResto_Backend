@@ -1,0 +1,78 @@
+meta {
+  name: Crear usuario customer
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/users/
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "name": "Cliente Bruno {{runId}}",
+    "email": "customer.{{runId}}@restoapi.example.com",
+    "phone": "600000004",
+    "password": "{{testPassword}}"
+  }
+}
+
+script:post-response {
+  if (res.status === 201) {
+    bru.setVar("customerId", res.body.id);
+    bru.setVar("customerEmail", res.body.email);
+  }
+}
+
+tests {
+  test("status 201", function() {
+    expect(res.status).to.equal(201);
+  });
+
+  test("shape: id, name, email, phone, role, is_active, created_at", function() {
+    expect(res.body).to.have.property("id");
+    expect(res.body).to.have.property("name");
+    expect(res.body).to.have.property("email");
+    expect(res.body).to.have.property("phone");
+    expect(res.body).to.have.property("role");
+    expect(res.body).to.have.property("is_active");
+    expect(res.body).to.have.property("created_at");
+  });
+
+  test("no expone password ni password_hash", function() {
+    expect(JSON.stringify(res.body)).to.not.match(/"password(_hash)?"/);
+  });
+
+  test("rol customer y activo", function() {
+    expect(res.body.role).to.equal("customer");
+    expect(res.body.is_active).to.equal(true);
+  });
+}
+
+docs {
+  **`POST /users/`**
+
+  Crea un usuario con rol `customer` (sin indicar `role`: por defecto es `customer`). Guarda `customerId` y `customerEmail`. La contraseña es `{{testPassword}}`, generada en cada ejecución.
+
+  **Roles permitidos:** admin
+
+  **Auth en este request:** Bearer `{{token}}` (admin)
+
+  **Respuestas posibles:**
+
+  - `201`: `UserOut` (sin contraseña)
+  - `401`: sin token
+  - `403`: el rol no es admin
+  - `409`: `Email already registered`
+  - `422`: datos no válidos (p. ej. email mal formado)
+}

@@ -8,7 +8,7 @@
 | API | Render (Web Service, free) | `restochino-dev/backend` | Push a `main` → `deploy.yml` → tests en verde → deploy hook |
 | Web | Vercel (Hobby) | `restochino-dev/frontend` | Push a `main` (producción) · cada PR genera una Preview URL |
 
-El equipo trabaja en `IA-P1-BCN/Resto-API_Backend` y `IA-P1-BCN/Resto-API_Frontend`. Se despliega desde los repos de `restochino-dev`: lo que está en `main` de IA-P1-BCN se sube con una PR a `main` de `restochino-dev` (ver [sección 5](#5-paso-a-producción-d5-y-d9)).
+El equipo trabaja en `IA-P1-BCN/APIResto_Backend` y `IA-P1-BCN/APIResto_Frontend` (hasta el 18/10/2026 se llamaban `Resto-API_Backend` y `Resto-API_Frontend`; GitHub redirige los nombres antiguos). Se despliega desde los repos de `restochino-dev`: lo que está en `main` de IA-P1-BCN se sube con una PR a `main` de `restochino-dev` (ver [sección 5](#5-paso-a-producción-d5-y-d9)).
 
 ## 1. Neon (base de datos)
 
@@ -42,7 +42,11 @@ Pasos (por si hay que recrearlo):
    | `DATABASE_URL` | Neon, rama `main` (pooled), empezando por `postgresql+psycopg://` (no `postgresql://`: ver paso 3 de Neon) |
    | `ALLOWED_ORIGINS` | URLs de producción de Vercel, exactas, sin `/` final y separadas por comas sin espacios. Ahora: `https://resto-api-f5.vercel.app,https://apiresto-f5.vercel.app` |
    | `BREVO_API_KEY`, `MAIL_FROM` | Vacías hasta HU-19 (D7) |
+   | `FRONTEND_URL` | URL de producción de Vercel, sin `/` final: `https://apiresto-f5.vercel.app`. Es la base del enlace del email para crear la contraseña (HU-52) y de los de verificar el email y restablecer la contraseña (HU-33). `PASSWORD_TOKEN_EXPIRE_HOURS` (48 por defecto) no hace falta tocarla |
+   | `EMAIL_VERIFY_EXPIRE_HOURS`, `PASSWORD_RESET_EXPIRE_HOURS`, `TOKEN_RESEND_COOLDOWN_SECONDS` | Opcionales (HU-33): horas de validez del enlace de verificación (48 por defecto) y del de recuperación de contraseña (1), y segundos mínimos entre dos envíos del mismo tipo a una cuenta (60). No son secretos; con los valores por defecto no hace falta tocarlas |
    | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET` | Login social (HU-38). Vacías = ese proveedor responde `503`. Se crean en Google Cloud Console y en GitHub (OAuth App) con la callback `<URL de Vercel>/auth/callback`; los secretos solo en Render |
+   | `LOGIN_MAX_ATTEMPTS`, `LOGIN_WINDOW_MINUTES`, `CLIENT_IP_HEADER` | Límite de intentos de login (HU-31). Valores: `5`, `15` y `True-Client-IP`. Están en `render.yaml`, pero en un servicio ya creado Render no vuelve a leerlo: hay que añadirlas a mano en **Environment**. Sin `CLIENT_IP_HEADER`, el límite usa la IP del proxy de Render (funciona como "solo email"). Tras el deploy, ver [Comprobar el límite de login](#comprobar-el-límite-de-login-hu-31) |
+   | `TOTP_ENCRYPTION_KEY` | Verificación en dos pasos (HU-37). Opcional: vacía = se deriva de `JWT_SECRET_KEY`. Si se pone, generarla con `python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"` y no cambiarla después: los usuarios con 2FA activada no podrían entrar |
 
    `JWT_SECRET_KEY` la genera Render automáticamente.
 3. **Settings → Deploy Hook** → copiar la URL.
@@ -60,7 +64,7 @@ En `restochino-dev/backend`, **Settings → Secrets and variables → Actions** 
 | Secret | `RENDER_DEPLOY_HOOK_URL` | URL del deploy hook de Render |
 | Secret | `JWT_SECRET_KEY_TEST` | Cualquier cadena (solo tests) |
 | Variable | `RENDER_URL` | `https://<servicio>.onrender.com` |
-| Variable | `COVERAGE_MIN` | `0` al principio · `70` en el Sprint 2 |
+| Variable | `COVERAGE_MIN` | `98` desde HU-34 (valor por defecto de `ci.yml`; si la variable existe, manda ella) |
 
 | Workflow | Cuándo | Qué hace |
 |---|---|---|
@@ -141,6 +145,33 @@ Al entrar en `main` de `restochino-dev`:
 sh scripts/smoke-deploy.sh https://<servicio>.onrender.com https://<proyecto>.vercel.app
 ```
 
+### Comprobar el límite de login (HU-31)
+
+Una vez, tras el primer deploy con HU-31, para confirmar que la API ve la IP real del cliente
+y que nadie la puede falsear. Usa un email que **no exista** (así no se bloquea ninguna cuenta
+real; el bloqueo se va solo a los 15 minutos).
+
+1. Seis logins con contraseña incorrecta. Los cinco primeros dan `401` y el sexto, `429`:
+
+   ```bash
+   for i in 1 2 3 4 5 6; do
+     curl -s -o /dev/null -w "%{http_code}\n" -X POST https://<servicio>.onrender.com/auth/login \
+       -d "username=prueba-hu31@example.com&password=incorrecta"
+   done
+   ```
+
+   En PowerShell: `1..6 | % { curl.exe -s -o NUL -w "%{http_code}`n" -X POST https://<servicio>.onrender.com/auth/login -d "username=prueba-hu31@example.com&password=incorrecta" }`.
+2. En Render → **Logs**, busca `Login blocked`. Su `client_ip` tiene que ser tu IP pública
+   (la que da `curl https://ifconfig.me`), no una IP interna (`10.x.x.x`).
+3. Repite el paso 1 con otro email (`prueba-hu31-b@example.com`) y la cabecera
+   `-H "True-Client-IP: 1.2.3.4"`. El nuevo `Login blocked` **no** puede mostrar `1.2.3.4`.
+
+| Resultado | Qué hacer |
+|---|---|
+| Paso 2 con tu IP y paso 3 sin `1.2.3.4` | Todo bien |
+| Paso 2 con una IP interna | La cabecera no llega: el límite funciona como "solo email". Avisar en Discord |
+| Paso 3 muestra `1.2.3.4` | El cliente puede falsear la IP: vaciar `CLIENT_IP_HEADER` en Render, reiniciar y avisar en Discord |
+
 ### Primer admin en producción
 
 El plan free de Render no tiene *Shell*, así que el primer admin se crea **desde tu equipo** contra la BD de producción (Neon `main`). La URL solo se pone en la variable de entorno de ese comando, nunca en el `.env` ni en el repo:
@@ -185,7 +216,7 @@ P2_Resto/
 └── Resto-API_Frontend/
 ```
 
-Si el frontend está en otra ruta, añadir `FRONTEND_PATH=/ruta/al/frontend` en el `.env` del backend.
+Si el frontend está en otra ruta, añadir `FRONTEND_PATH=/ruta/al/frontend` en el `.env` del backend. Por ejemplo, si se ha clonado con el nombre nuevo del repo: `FRONTEND_PATH=../APIResto_Frontend`.
 
 ```bash
 cd Resto-API_Backend
@@ -212,7 +243,8 @@ docker compose down -v           # parar y BORRAR los datos de la BD
 
 ## 8. Migraciones con Alembic (HU-23)
 
-Los cambios en el modelo de datos se hacen con migraciones de Alembic (`migrations/versions/`), nunca a mano en la BD. La primera migración (`0001_esquema_inicial`) crea las 8 tablas tal como están en P2; después, la `0002` añade `prepared` y `served` a `order_items`, la `0003` añade `station` (`kitchen` o `bar`) a `categories`, la `0004` el soft delete y la auditoría de usuarios, la `0005` las cuentas de login social, y la `0006` cambia `prepared` y `served` por el número de unidades preparadas y servidas de cada línea.
+Los cambios en el modelo de datos se hacen con migraciones de Alembic (`migrations/versions/`), nunca a mano en la BD. La primera migración (`0001_esquema_inicial`) crea las 8 tablas tal como están en P2; después, la `0002` añade `prepared` y `served` a `order_items`, la `0003` añade `station` (`kitchen` o `bar`) a `categories`, la `0004` el soft delete y la auditoría de usuarios, la `0005` las cuentas de login social, la `0006` cambia `prepared` y `served` por el número de unidades preparadas y servidas de cada línea, y la `0007` marca como `bar` las categorías `Bebidas` y `Postres` (por nombre, sin distinguir mayúsculas; si en la BD se llaman distinto, hay que ponerlas en `bar` con `PUT /categories/{id}`), la `0008` crea `password_reset_tokens` (HU-52) y la `0009` añade `users.email_verified` y la tabla `email_verification_tokens` (HU-33). La `0009` marca como verificadas (`email_verified = true`) todas las cuentas que ya existían; las nuevas nacen según la regla R-15 de la spec de HU-33.
+La `0010` añade a `users` las columnas de la verificación en dos pasos (`totp_secret`, `totp_enabled` y `totp_recovery_codes`, HU-37).
 
 ```bash
 alembic upgrade head        # aplicar las migraciones pendientes

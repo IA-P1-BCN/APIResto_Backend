@@ -61,7 +61,7 @@ jobs:
         run: alembic upgrade head
       - name: Tests + cobertura
         if: hashFiles('tests/**/*.py') != ''
-        run: pytest --cov=app --cov-report=term-missing --cov-fail-under=${{ vars.COVERAGE_MIN || 0 }}
+        run: pytest --cov=app --cov-report=term-missing --cov-fail-under=${{ vars.COVERAGE_MIN || 98 }}
       - name: Build de la imagen Docker
         if: hashFiles('Dockerfile') != ''
         run: docker build -t restoapi-backend .

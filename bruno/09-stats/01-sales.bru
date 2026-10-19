@@ -1,0 +1,62 @@
+meta {
+  name: Resumen de ventas
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/stats/sales
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+
+  test("shape: date_from, date_to, orders_count, total_sales, average_ticket, daily", function() {
+    expect(res.body).to.have.property("date_from");
+    expect(res.body).to.have.property("date_to");
+    expect(res.body).to.have.property("orders_count");
+    expect(res.body).to.have.property("total_sales");
+    expect(res.body).to.have.property("average_ticket");
+    expect(res.body).to.have.property("daily");
+  });
+
+  test("hay al menos un pedido cobrado", function() {
+    expect(res.body.orders_count).to.be.at.least(1);
+    expect(res.body.daily).to.be.an("array");
+  });
+
+  test("tipos de SalesSummaryOut y SalesDayOut", function() {
+    expect(res.body.orders_count).to.be.a("number");
+    expect(res.body.total_sales).to.be.a("string");
+    expect(res.body.average_ticket).to.be.a("string");
+    res.body.daily.forEach(d => {
+      expect(d).to.include.keys("day", "orders_count", "total_sales");
+      expect(d.orders_count).to.be.a("number");
+    });
+  });
+}
+
+docs {
+  **`GET /stats/sales`**
+
+  Número de pedidos, total vendido, ticket medio y desglose diario. Sin filtros: todo el histórico. Solo cuentan pedidos `served` o `paid` (el pedido del flujo queda `paid` en 08-invoices/11).
+
+  **Roles permitidos:** admin
+
+  **Auth en este request:** Bearer `{{token}}` (admin)
+
+  **Respuestas posibles:**
+
+  - `200`: `SalesSummaryOut`
+  - `401`: sin token (`Not authenticated`) o token inválido / de usuario desactivado (`Invalid or expired token`)
+  - `403`: el rol no es admin
+  - `422`: `from` posterior a `to` (`invalid_date_range`)
+}

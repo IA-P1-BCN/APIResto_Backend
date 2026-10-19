@@ -6,8 +6,10 @@ from sqlalchemy import (
     Numeric,
     String,
 )
+from sqlalchemy.orm import relationship
 
 from app.database import Base
+from app.models.model_category import Station
 
 
 class OrderItem(Base):
@@ -21,6 +23,14 @@ class OrderItem(Base):
     notes = Column(String(255))
     prepared_quantity = Column(Integer, nullable=False, default=0, server_default="0")
     served_quantity = Column(Integer, nullable=False, default=0, server_default="0")
+
+    dish = relationship("Dish")
+
+    @property
+    def station(self) -> str:
+        """Estación de la línea: la de la categoría de su plato (R-14)."""
+        category = self.dish.category if self.dish else None
+        return category.station if category else Station.kitchen.value
 
     @property
     def prepared(self) -> bool:

@@ -1,0 +1,54 @@
+meta {
+  name: Listar reservas (customer)
+  type: http
+  seq: 6
+}
+
+get {
+  url: {{baseUrl}}/reservations?page=1&size=100
+  body: none
+  auth: bearer
+}
+
+params:query {
+  page: 1
+  size: 100
+}
+
+auth:bearer {
+  token: {{tokenCustomer}}
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+
+  test("shape Page: items, total, page, size", function() {
+    expect(res.body.items).to.be.an("array");
+    expect(res.body.total).to.be.a("number");
+    expect(res.body.page).to.be.a("number");
+    expect(res.body.size).to.be.a("number");
+  });
+
+  test("solo ve sus reservas", function() {
+    res.body.items.forEach(r => expect(r.user_id).to.equal(bru.getVar("customerId")));
+  });
+}
+
+docs {
+  **`GET /reservations`**
+
+  Un customer solo ve sus reservas, aunque no filtre por `user_id`.
+
+  **Roles permitidos:** admin, waiter, customer (solo las suyas)
+
+  **Auth en este request:** Bearer `{{tokenCustomer}}` (customer)
+
+  **Respuestas posibles:**
+
+  - `200`: `Page[ReservationRead]`
+  - `401`: sin token o token no válido (`unauthorized`)
+  - `403`: rol sin acceso, kitchen o bartender (`forbidden`); customer que filtra por el `user_id` de otro usuario (`reservation_forbidden`)
+  - `422`: query params no válidos, p. ej. `size` > 100 (`validation_error`)
+}

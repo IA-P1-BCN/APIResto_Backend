@@ -1,0 +1,53 @@
+meta {
+  name: Error 409 · email de otro usuario en mi perfil
+  type: http
+  seq: 24
+}
+
+patch {
+  url: {{baseUrl}}/users/me
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{tokenCustomer}}
+}
+
+body:json {
+  {
+    "email": "{{waiterEmail}}"
+  }
+}
+
+tests {
+  test("status 409", function() {
+    expect(res.status).to.equal(409);
+  });
+
+  test("error {detail, code} con code conflict", function() {
+    expect(res.body.detail).to.be.a("string");
+    expect(res.body.code).to.equal("conflict");
+  });
+}
+
+docs {
+  **`PATCH /users/me`**
+
+  El email de otro usuario (`waiterEmail`) da 409: el email es único (R-01).
+
+  **Roles permitidos:** cualquier usuario autenticado
+
+  **Auth en este request:** Bearer `{{tokenCustomer}}` (customer)
+
+  **Respuestas posibles:**
+
+  - `200`: `UserOut`
+  - `401`: sin token o token inválido (`unauthorized`)
+  - `409`: el email ya pertenece a otro usuario (`conflict`)
+  - `422`: datos no válidos o campos no editables como `role` o `is_active` (`validation_error`)
+}

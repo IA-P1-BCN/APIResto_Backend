@@ -1,0 +1,62 @@
+meta {
+  name: Listar pedidos pendientes de la mesa (kitchen)
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/orders/?status=pending&table_id={{tableId}}&skip=0&limit=100
+  body: none
+  auth: bearer
+}
+
+params:query {
+  status: pending
+  table_id: {{tableId}}
+  skip: 0
+  limit: 100
+}
+
+auth:bearer {
+  token: {{tokenKitchen}}
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+
+  test("devuelve una lista", function() {
+    expect(res.body).to.be.an("array");
+  });
+
+  test("incluye el pedido y todos están pending", function() {
+    expect(res.body.map(o => o.id)).to.include(bru.getVar("orderId"));
+    res.body.forEach(o => expect(o.status).to.equal("pending"));
+  });
+
+  test("R-14: kitchen solo ve las líneas kitchen, con el total del pedido completo", function() {
+    const order = res.body.find(o => o.id === bru.getVar("orderId"));
+    expect(order.items).to.have.lengthOf(1);
+    expect(order.items[0].station).to.equal("kitchen");
+    expect(order.items[0].id).to.equal(bru.getVar("orderItemId"));
+    expect(order.total).to.equal(bru.getVar("orderTotal"));
+  });
+}
+
+docs {
+  **`GET /orders/`**
+
+  Lista simple (no `Page`). Filtros: `status`, `table_id`, `date_from`, `date_to`; paginación `skip`/`limit`. Filtro por estación según el rol (HU-40, R-14): `kitchen` solo recibe los pedidos con líneas `kitchen` y solo ve esas líneas; `total` es el del pedido completo.
+
+  **Roles permitidos:** admin, waiter, kitchen, bartender
+
+  **Auth en este request:** Bearer `{{tokenKitchen}}` (kitchen)
+
+  **Respuestas posibles:**
+
+  - `200`: `list[OrderOut]`
+  - `401`: sin token (`unauthorized`)
+  - `403`: rol no permitido (`forbidden`)
+  - `422`: query param no válido (`validation_error`)
+}

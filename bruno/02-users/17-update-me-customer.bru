@@ -1,0 +1,75 @@
+meta {
+  name: Editar mi perfil (customer)
+  type: http
+  seq: 17
+}
+
+patch {
+  url: {{baseUrl}}/users/me
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{tokenCustomer}}
+}
+
+body:json {
+  {
+    "name": "Cliente Bruno {{runId}} (perfil)",
+    "email": "CUSTOMER.{{runId}}@RESTOAPI.EXAMPLE.COM",
+    "phone": "611111111"
+  }
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+
+  test("shape: id, name, email, phone, role, is_active, created_at", function() {
+    expect(res.body).to.have.property("id");
+    expect(res.body).to.have.property("name");
+    expect(res.body).to.have.property("email");
+    expect(res.body).to.have.property("phone");
+    expect(res.body).to.have.property("role");
+    expect(res.body).to.have.property("is_active");
+    expect(res.body).to.have.property("created_at");
+  });
+
+  test("no expone password ni password_hash", function() {
+    expect(JSON.stringify(res.body)).to.not.match(/"password(_hash)?"/);
+  });
+
+  test("edita su propio perfil y no cambia el rol", function() {
+    expect(res.body.id).to.equal(bru.getVar("customerId"));
+    expect(res.body.name).to.equal("Cliente Bruno " + bru.getVar("runId") + " (perfil)");
+    expect(res.body.phone).to.equal("611111111");
+    expect(res.body.role).to.equal("customer");
+  });
+
+  test("R-01: el email se guarda en minúsculas", function() {
+    expect(res.body.email).to.equal(bru.getVar("customerEmail"));
+  });
+}
+
+docs {
+  **`PATCH /users/me`**
+
+  Edita `name`, `email` y `phone` del usuario autenticado (HU-25), de cualquier rol. Solo se aplican los campos enviados. Envía el mismo email en mayúsculas: se guarda en minúsculas (R-01), así que `customerEmail` no cambia y no choca consigo mismo.
+
+  **Roles permitidos:** cualquier usuario autenticado
+
+  **Auth en este request:** Bearer `{{tokenCustomer}}` (customer)
+
+  **Respuestas posibles:**
+
+  - `200`: `UserOut`
+  - `401`: sin token o token inválido (`unauthorized`)
+  - `409`: el email ya pertenece a otro usuario (`conflict`)
+  - `422`: datos no válidos o campos no editables como `role` o `is_active` (`validation_error`)
+}

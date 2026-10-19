@@ -1,0 +1,42 @@
+meta {
+  name: Borrar reserva (customer dueño)
+  type: http
+  seq: 18
+}
+
+delete {
+  url: {{baseUrl}}/reservations/:reservation_id
+  body: none
+  auth: bearer
+}
+
+params:path {
+  reservation_id: {{customerReservationId}}
+}
+
+auth:bearer {
+  token: {{tokenCustomer}}
+}
+
+tests {
+  test("status 204", function() {
+    expect(res.status).to.equal(204);
+  });
+}
+
+docs {
+  **`DELETE /reservations/{reservation_id}`**
+
+  Borrado definitivo (para conservar el historial es preferible cancelar).
+
+  **Roles permitidos:** admin, waiter y el dueño
+
+  **Auth en este request:** Bearer `{{tokenCustomer}}` (customer)
+
+  **Respuestas posibles:**
+
+  - `204`: sin contenido
+  - `401`: sin token o token no válido (`unauthorized`)
+  - `403`: rol sin acceso o reserva de otro usuario (`forbidden`)
+  - `404`: reserva inexistente (`reservation_not_found`)
+}
