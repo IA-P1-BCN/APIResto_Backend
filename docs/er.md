@@ -1,8 +1,9 @@
 # RestoAPI · Diagrama entidad-relación final
 
 Diagrama ER del plan del proyecto (§3.3) actualizado al final de P3, con las tablas tal como
-están en los modelos SQLAlchemy de `app/models/` y las migraciones de Alembic hasta la `0010`
-(`migrations/versions/`). Imagen exportada: [`er-diagram.png`](er-diagram.png).
+están en los modelos SQLAlchemy de `app/models/` y las migraciones de Alembic hasta la
+`c50fc2ad47e1`, la que sigue a la `0010` (`migrations/versions/`). Imagen exportada:
+[`er-diagram.png`](er-diagram.png).
 
 ```mermaid
 erDiagram
@@ -11,6 +12,7 @@ erDiagram
     USERS ||--o{ SOCIAL_ACCOUNTS : links
     USERS ||--o{ PASSWORD_RESET_TOKENS : resets_with
     USERS ||--o{ EMAIL_VERIFICATION_TOKENS : verifies_with
+    USERS ||--o{ REFRESH_TOKENS : renews_with
     DINING_TABLES ||--o{ RESERVATIONS : receives
     DINING_TABLES |o--o{ ORDERS : generates
     USERS |o--o{ ORDERS : serves
@@ -62,6 +64,21 @@ erDiagram
         datetime expires_at
         datetime used_at "un solo uso"
         datetime created_at
+    }
+
+    REFRESH_TOKENS {
+        int id PK
+        int user_id FK "ON DELETE CASCADE"
+        string token_hash "SHA-256, sin UNIQUE"
+        datetime expires_at
+        datetime revoked_at "NULL si sigue vigente"
+        datetime created_at
+    }
+
+    REVOKED_TOKENS {
+        string jti PK "id del JWT, sin FK"
+        datetime expires_at "caducidad del access token"
+        datetime revoked_at
     }
 
     DINING_TABLES {
@@ -138,7 +155,7 @@ erDiagram
 
 ## Cambios respecto al plan
 
-El plan tenía 9 tablas; el modelo final tiene **11**: se quita `roles` y se añaden tres
+El plan tenía 9 tablas; el modelo final tiene **13**: se quita `roles` y se añaden cinco
 tablas de autenticación.
 
 | Tabla | Plan (§3.1) | Final | Motivo |
@@ -148,6 +165,8 @@ tablas de autenticación.
 | `social_accounts` | No estaba | Nueva (HU-38) | Vincula un usuario con su cuenta de Google o GitHub. `UNIQUE (provider, provider_user_id)` |
 | `password_reset_tokens` | No estaba | Nueva (HU-52) | Enlace de un solo uso para crear o recuperar la contraseña. Solo se guarda el hash del token |
 | `email_verification_tokens` | No estaba | Nueva (HU-33) | Enlace de un solo uso para verificar el email. Solo se guarda el hash del token |
+| `refresh_tokens` | No estaba | Nueva (HU-30) | Token para renovar la sesión (R-05, R-06). Solo se guarda su hash SHA-256; al usarlo se rota y se marca `revoked_at` |
+| `revoked_tokens` | No estaba | Nueva (HU-30) | `jti` de los access token invalidados antes de caducar con el logout (R-07). No tiene FK: el access token no se guarda |
 | `categories` | Sin `station` | Añade `station` (`kitchen` o `bar`, por defecto `kitchen`) | Decide a qué rol llega cada línea de un pedido (R-14). Sin `CHECK` en la BD: los valores se validan en la API |
 | `order_items` | Sin unidades preparadas ni servidas | Añade `prepared_quantity` y `served_quantity` (por defecto 0) | Unidades ya preparadas y ya servidas de cada línea (tarea #117) |
 | `invoices` | `subtotal`, `tax`, `payment_method` | `base_amount`, `tax_rate`, `tax_amount`, `year`, `sequence`; sin `payment_method` | Nombres más claros, IVA guardado por si cambia el tipo, numeración que se reinicia cada año (`UNIQUE (year, sequence)`). El método de pago no entró en la HU-14 |
@@ -179,6 +198,11 @@ las BD creadas antes de Alembic, está en [`deploy.md`](deploy.md) (sección 8).
 | `0008_tokens_para_crear_contrasena` | Tabla `password_reset_tokens` | HU-52 |
 | `0009_verificacion_email` | `users.email_verified` (las cuentas existentes quedan verificadas) y tabla `email_verification_tokens` | HU-33 |
 | `0010_verificacion_en_dos_pasos` | `users.totp_secret`, `totp_enabled` y `totp_recovery_codes` | HU-37 |
+| `c50fc2ad47e1_add_refresh_tokens_and_revoked_tokens` | Tablas `refresh_tokens` y `revoked_tokens` | HU-30 |
+
+La última migración no lleva número porque se generó con `alembic revision --autogenerate`. Cuelga
+de la `0010`, así que sigue habiendo una sola cabeza; la siguiente tiene que usar
+`down_revision = 'c50fc2ad47e1'`.
 
 `app/main.py` todavía llama a `Base.metadata.create_all` al arrancar. Solo crea las tablas que
 faltan y no modifica las existentes, así que cualquier cambio en una tabla ya creada necesita su
@@ -198,10 +222,13 @@ migración.
 - **Límite de intentos de login (HU-31, R-10):** tampoco usa tablas. Los contadores están en
   memoria y se pierden al reiniciar la API.
 - **Secretos de seguridad (HU-37, HU-33, HU-52):** `users.totp_secret` se guarda cifrado con
-  Fernet, los códigos de recuperación y los tokens de las dos tablas de tokens solo como hash.
-  Nunca se guarda el valor original.
+  Fernet, los códigos de recuperación y los tokens de `password_reset_tokens`,
+  `email_verification_tokens` y `refresh_tokens` solo como hash. Nunca se guarda el valor original.
+- **Access token (R-07):** el JWT no se guarda. Solo el `jti` entra en `revoked_tokens` al cerrar
+  sesión, y `expires_at` sirve para purgar los que ya habrían caducado.
 - **Borrado de usuarios (R-04):** un usuario nunca se borra físicamente. Las FK de
-  `social_accounts` y de las dos tablas de tokens llevan `ON DELETE CASCADE` por si se limpia la
+  `social_accounts`, `password_reset_tokens`, `email_verification_tokens` y `refresh_tokens`
+  llevan `ON DELETE CASCADE` por si se limpia la
   BD a mano, y `created_by` y `updated_by` llevan `ON DELETE SET NULL`.
 - **Regenerar la imagen** si cambia el modelo: pegar el bloque Mermaid en
   [mermaid.live](https://mermaid.live), exportar como PNG y guardarlo en `docs/er-diagram.png`.
