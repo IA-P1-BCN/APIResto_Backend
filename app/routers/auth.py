@@ -16,12 +16,17 @@ from sqlalchemy.orm import Session
 from app.config import settings
 from app.core.openapi import error_responses
 from app.core.permissions import CurrentUser
-from app.core.security import create_access_token
+from app.core.security import decode_access_token
 from app.database import get_db
-from app.schemas.schema_auth import TokenOut
+from app.schemas.schema_auth import RefreshTokenIn, TokenOut
 from app.schemas.schema_social import SocialLoginRequest, SocialProvider
 from app.schemas.schema_user import UserOut, UserRegister
-from app.services import email_verification_service, social_auth_service, user_service
+from app.services import (
+    email_verification_service,
+    social_auth_service,
+    token_service,
+    user_service,
+)
 from app.services.auth_emails import verification_email
 from app.services.login_rate_limit_service import login_rate_limiter
 from app.services.notifications import send_email
@@ -124,7 +129,7 @@ def login(
     login_rate_limiter.reset(ip, form_data.username)
     if user.totp_enabled:
         return JSONResponse(start_challenge(user))
-    return {"access_token": create_access_token(user.id), "token_type": "bearer"}
+    return token_service.create_token_pair(db, user)
 
 
 @router.post(
@@ -165,7 +170,7 @@ def social_login(
     user = social_auth_service.login(db, provider, data)
     if user.totp_enabled:
         return JSONResponse(start_challenge(user))
-    return {"access_token": create_access_token(user.id), "token_type": "bearer"}
+    return token_service.create_token_pair(db, user)
 
 
 @router.get(
@@ -177,3 +182,65 @@ def social_login(
 def get_me(current_user: CurrentUser):
     """Devuelve los datos del usuario autenticado. Rol: cualquier usuario autenticado."""
     return current_user
+
+
+@router.post(
+    "/refresh",
+    response_model=TokenOut,
+    summary="Renovar token",
+    responses=error_responses(
+        401,
+        422,
+        descriptions={
+            401: "Refresh token inválido, caducado o ya revocado "
+            "(`invalid_refresh_token`, R-06).",
+            422: "Falta `refresh_token` (`validation_error`).",
+        },
+    ),
+)
+def refresh(data: RefreshTokenIn, db: DbSession):
+    """Rota el RefreshToken y devuelve un par AccessToken + RefreshToken nuevo (R-06).
+
+    Rol: público.
+    """
+    try:
+        return token_service.refresh(db, data.refresh_token)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Refresh token inválido",
+        )
+
+
+@router.post(
+    "/logout",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Cerrar sesión",
+    responses=error_responses(
+        401,
+        422,
+        descriptions={
+            401: "Token no válido o caducado (`unauthorized`).",
+            422: "Falta `refresh_token` (`validation_error`).",
+        },
+    ),
+)
+def logout(
+    data: RefreshTokenIn,
+    db: DbSession,
+    current_user: CurrentUser,
+    request: Request,
+):
+    """Revoca el RefreshToken y añade el jti del AccessToken a RevokedToken (R-07).
+
+    El access token deja de ser válido de inmediato aunque no haya caducado.
+    Rol: cualquier usuario autenticado.
+    """
+    from datetime import UTC, datetime
+
+    auth_header = request.headers.get("Authorization", "")
+    token = auth_header.removeprefix("Bearer ").strip()
+    payload = decode_access_token(token)
+    if payload:
+        access_expires = datetime.fromtimestamp(payload["exp"], tz=UTC)
+        token_service.logout(db, data.refresh_token, payload["jti"], access_expires)

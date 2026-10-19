@@ -32,11 +32,11 @@ def test_users_token_caducado_401(client, make_user):
 
 def test_users_usuario_desactivado_401(client, make_user):
     user = make_user(Role.admin, is_active=False)
-    r = client.get("/users/", headers={"Authorization": f"Bearer {create_access_token(user.id)}"})
+    r = client.get("/users/", headers={"Authorization": f"Bearer {create_access_token(user.id, user.role)}"})
     assert r.status_code == 401
 
 def test_users_usuario_inexistente_401(client):
-    r = client.get("/users/", headers={"Authorization": f"Bearer {create_access_token(999)}"})
+    r = client.get("/users/", headers={"Authorization": f"Bearer {create_access_token(999, 'admin')}"})
     assert r.status_code == 401
 
 @pytest.mark.parametrize("role", [Role.waiter, Role.kitchen, Role.customer])
@@ -59,7 +59,7 @@ def test_users_admin_200(client, admin_headers):
     assert r.status_code == 200
 
 def test_token_ida_y_vuelta():
-    assert decode_access_token(create_access_token(42)) == 42
+    assert decode_access_token(create_access_token(42, "admin"))["sub"] == "42"
 
 def test_customer_ve_sus_reservas(make_user):
     customer = make_user(Role.customer)

@@ -51,7 +51,7 @@ def test_login_usuario_desactivado_401(client, make_user):
 
 def test_get_me_success(client, make_user):
     user = make_user(Role.customer, email="test@test.com")
-    r = client.get("/auth/me", headers={"Authorization": f"Bearer {create_access_token(user.id)}"})
+    r = client.get("/auth/me", headers={"Authorization": f"Bearer {create_access_token(user.id, user.role)}"})
     assert r.status_code == 200
     assert r.json()["email"] == "test@test.com"
     assert "password_hash" not in r.json()

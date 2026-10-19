@@ -47,7 +47,7 @@ def test_barra_no_puede_lo_de_otros_roles_403(client, auth_headers, method, url)
 
 def test_barra_se_conecta_al_websocket(client, make_user):
     user = make_user(Role.bartender)
-    with client.websocket_connect(f"/ws/kitchen?token={create_access_token(user.id)}") as ws:
+    with client.websocket_connect(f"/ws/kitchen?token={create_access_token(user.id, user.role)}") as ws:
         assert len(kitchen_manager.active_connections) == 1
         ws.close()
 
@@ -55,7 +55,7 @@ def test_barra_se_conecta_al_websocket(client, make_user):
 def test_camarero_sigue_sin_websocket(client, make_user):
     user = make_user(Role.waiter)
     with pytest.raises(WebSocketDisconnect) as exc, client.websocket_connect(
-        f"/ws/kitchen?token={create_access_token(user.id)}"
+        f"/ws/kitchen?token={create_access_token(user.id, user.role)}"
     ):
         pass
     assert exc.value.code == status.WS_1008_POLICY_VIOLATION

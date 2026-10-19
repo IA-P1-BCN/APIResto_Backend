@@ -124,7 +124,7 @@ def test_cambiar_la_estacion_de_la_categoria_cambia_las_lineas_abiertas(client, 
 
 
 def ws_url(user):
-    return f"/ws/kitchen?token={create_access_token(user.id)}"
+    return f"/ws/kitchen?token={create_access_token(user.id, user.role)}"
 
 
 def test_el_websocket_envia_a_cada_rol_solo_sus_lineas(client, auth_headers, make_user, menu):

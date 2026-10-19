@@ -7,7 +7,6 @@ from sqlalchemy.orm import Session
 
 from app.core.openapi import error_responses
 from app.core.permissions import CurrentUser
-from app.core.security import create_access_token
 from app.database import get_db
 from app.schemas.schema_2fa import (
     RecoveryCodesOut,
@@ -17,7 +16,7 @@ from app.schemas.schema_2fa import (
     TwoFactorVerifyRequest,
 )
 from app.schemas.schema_auth import TokenOut
-from app.services import totp_service
+from app.services import token_service, totp_service
 
 router = APIRouter(prefix="/auth/2fa", tags=["auth"])
 me_router = APIRouter(prefix="/users/me/2fa", tags=["users"])
@@ -53,7 +52,7 @@ def verify(data: TwoFactorVerifyRequest, db: DbSession) -> dict:
     con un código correcto (HU-31). Rol: público.
     """
     user = totp_service.verify_challenge(db, data.mfa_token, data.code)
-    return {"access_token": create_access_token(user.id), "token_type": "bearer"}
+    return token_service.create_token_pair(db, user)
 
 
 @me_router.get(
