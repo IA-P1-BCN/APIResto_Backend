@@ -43,7 +43,7 @@ def test_login_ok_returns_200_and_token_of_the_user(client, make_user):
     assert r.status_code == 200
     body = r.json()
     assert body["token_type"] == "bearer"
-    assert decode_access_token(body["access_token"]) == user.id
+    assert decode_access_token(body["access_token"])["sub"] == str(user.id)
 
 
 def test_login_token_gives_access_to_protected_endpoint(client, make_user):
@@ -145,8 +145,8 @@ def test_customer_gets_other_customer_reservation_returns_403(client, db, make_u
     db.add(reservation)
     db.commit()
 
-    own = client.get(f"/reservations/{reservation.id}", headers=_bearer(create_access_token(owner.id)))
-    alien = client.get(f"/reservations/{reservation.id}", headers=_bearer(create_access_token(other.id)))
+    own = client.get(f"/reservations/{reservation.id}", headers=_bearer(create_access_token(owner.id, owner.role)))
+    alien = client.get(f"/reservations/{reservation.id}", headers=_bearer(create_access_token(other.id, other.role)))
 
     assert own.status_code == 200
     assert alien.status_code == 403

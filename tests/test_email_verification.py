@@ -48,7 +48,7 @@ def login(client, email, password):
 
 
 def me_headers(user_id):
-    return {"Authorization": f"Bearer {create_access_token(user_id)}"}
+    return {"Authorization": f"Bearer {create_access_token(user_id, 'customer')}"}
 
 
 def tokens_of(db, user_id):

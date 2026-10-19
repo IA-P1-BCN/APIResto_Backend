@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     JWT_SECRET_KEY: str = "dev-secret-cambiar-en-produccion-0000"
     JWT_ALGORITHM: str = "HS256"
     JWT_EXPIRE_MINUTES: int = 60
+    JWT_REFRESH_EXPIRE_DAYS: int = 7
     ALLOWED_ORIGINS: str = "http://localhost:5173"
     EMAIL_ENABLED: bool = False
     BREVO_API_KEY: str = ""

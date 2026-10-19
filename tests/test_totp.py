@@ -208,11 +208,11 @@ def test_login_social_sin_2fa_igual_que_antes(client, db, waiter, monkeypatch):
         "/auth/social/google", json={"code": "abc", "redirect_uri": "http://localhost:5173/auth/callback"}
     )
     assert r.status_code == 200
-    assert set(r.json()) == {"access_token", "token_type"}
+    assert set(r.json()) == {"access_token", "refresh_token", "token_type"}
 
 
 def test_login_sin_2fa_igual_que_antes(client, waiter):
-    assert set(_login(client).json()) == {"access_token", "token_type"}
+    assert set(_login(client).json()) == {"access_token", "refresh_token", "token_type"}
 
 
 def test_desactivar_con_codigo(client, db, waiter, headers, enabled):

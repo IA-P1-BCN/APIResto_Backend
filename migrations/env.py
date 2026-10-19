@@ -14,6 +14,8 @@ from app.models import (  # noqa: F401
     model_order,
     model_order_item,
     model_password_reset_token,
+    model_refresh_token,
+    model_revoked_token,
     model_social_account,
     model_user,
     reservation,

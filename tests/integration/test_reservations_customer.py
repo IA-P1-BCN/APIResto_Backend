@@ -21,7 +21,7 @@ LIMIT_MESSAGE = "Para reservas de más de 8 personas, llama al restaurante"
 
 
 def _headers(user: User) -> dict[str, str]:
-    return {"Authorization": f"Bearer {create_access_token(user.id)}"}
+    return {"Authorization": f"Bearer {create_access_token(user.id, user.role)}"}
 
 
 def _assert_error(response: Any, status_code: int, code: str) -> dict[str, Any]:
