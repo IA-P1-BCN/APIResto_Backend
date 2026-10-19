@@ -654,3 +654,17 @@ agente, la revisé y la commiteé primero.
 - **Mi prompt o la spec:** nada
 - **Decisiones humanas:** aplicar la barra fija a todas las ventanas de formulario, no solo a la de pedidos (Anna).
 - **Lección:** probar la interfaz en pantallas bajas y medir, no solo mirar capturas.
+
+### PR #158 · Diagrama ER a 11 tablas y migraciones hasta la 0010
+
+#### 2026-10-19 · Actualizar docs/er.md y el diagrama (PR #158) · @arita-pereira
+
+- **Herramienta y modelo:** Claude (Pro) · Sonnet 5.5
+- **Issue y reglas:** PR #158, sin issue ni HU · R-04, R-10, R-14, R-16
+- **Prompt clave:** "actualizar `docs/er.md` y el diagrama a 11 tablas, con las columnas nuevas de `users` y Alembic hasta la `0010`, en PR aparte"
+- **Resultado:** aceptado. `docs/er.md` con las 11 tablas, tabla de migraciones 0001 a 0010 con su HU y notas de R-14, R-16 y R-10. Comprobado con `alembic upgrade head` en una BD vacía: coinciden las 11 tablas, las columnas, PK/FK/UK y las 12 relaciones con el bloque Mermaid. La comprobación se probó en falso con 4 errores metidos a propósito y los detectó todos. El PNG se regeneró con mermaid-cli y se ve menos limpio que el anterior (líneas cruzadas).
+- **Errores o alucinaciones:** mi lista de pendientes decía que faltaban 3 tablas y las columnas de `users`, pero `er.md` también carecía del rol `bartender`, de `categories.station` y de `order_items.prepared_quantity` y `served_quantity`. Causa raíz: la lista salió de las HU y no se comparó con `app/models/` ni con `migrations/versions/`. Se vio al leer los modelos. La primera búsqueda de migraciones usó `alembic/versions`, que no existe: están en `migrations/versions`.
+- **Trabajo descartado:** escribir que `create_all` ya no se usa, porque `app/main.py` lo sigue llamando. El doc dice que solo crea las tablas que faltan y que cualquier cambio en una tabla existente necesita migración.
+- **Mi prompt o la spec:** el prompt daba por completa la lista de cambios y no pedía contrastarla con los modelos y las migraciones.
+- **Decisiones humanas:** entrada identificada solo por la PR #158, sin HU (Rita).
+- **Lección:** antes de documentar el modelo, comparar con `app/models/` y `migrations/versions/` y comprobar el diagrama aplicando las migraciones en una BD vacía.
