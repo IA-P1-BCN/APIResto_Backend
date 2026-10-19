@@ -668,3 +668,17 @@ agente, la revisé y la commiteé primero.
 - **Mi prompt o la spec:** el prompt daba por completa la lista de cambios y no pedía contrastarla con los modelos y las migraciones.
 - **Decisiones humanas:** entrada identificada solo por la PR #158, sin HU (Rita).
 - **Lección:** antes de documentar el modelo, comparar con `app/models/` y `migrations/versions/` y comprobar el diagrama aplicando las migraciones en una BD vacía.
+
+### PR #163 · Diagrama ER a 13 tablas con refresh_tokens y revoked_tokens
+
+#### 2026-10-19 · Añadir las tablas de tokens al diagrama (PR #163) · @arita-pereira
+
+- **Herramienta y modelo:** Claude (Pro) · Sonnet 5.5
+- **Issue y reglas:** PR #163, sin issue ni HU · R-05, R-06, R-07
+- **Prompt clave:** el aviso de Anna ("he tenido que poner dos nuevas tablas ... sobre el tema de renovar tokens") y la petición de actualizar el diagrama
+- **Resultado:** aceptado. `docs/er.md` y el PNG con las 13 tablas y la migración `c50fc2ad47e1`. Comprobado con `alembic upgrade head` en una BD vacía: 13 tablas y 13 relaciones coinciden con el bloque Mermaid y hay una sola cabeza; probado en falso con 3 errores metidos a propósito. En la misma PR se quitaron 17 líneas de marcas de conflicto que la #157 dejó en este archivo.
+- **Errores o alucinaciones:** mi primer parche de limpieza del ai-log salió con 3 archivos (también `er.md` y el PNG) porque la rama temporal heredó el índice; se vio con `git diff --stat` antes de entregarlo y se rehízo. Del código de la HU-30 salieron dos hallazgos, sin error del agente: la migración sin número (`c50fc2ad47e1`) y `refresh_tokens.token_hash` sin `UNIQUE` ni índice. El diagrama de la #158 quedó desfasado a las pocas horas porque la #157 entró después (16:02 frente a 14:49).
+- **Trabajo descartado:** renombrar la migración a `0011`, porque cambia un id que Render y Neon pueden tener guardado; es decisión de Anna.
+- **Mi prompt o la spec:** nada
+- **Decisiones humanas:** arreglar las marcas de conflicto de la #157 en esta PR, en un commit aparte y avisando por Discord (Rita).
+- **Lección:** antes de dar un diagrama por cerrado, volver a mirar `dev` y las PR de modelo abiertas (misma lección que la HU-31 y la #158, va a `AGENTS.md`); y buscar `^<<<<<<<` con `grep` antes de commitear un merge.
