@@ -1,0 +1,43 @@
+meta {
+  name: Borrar mesa temporal
+  type: http
+  seq: 9
+}
+
+delete {
+  url: {{baseUrl}}/tables/:table_id
+  body: none
+  auth: bearer
+}
+
+params:path {
+  table_id: {{tempTableId}}
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+tests {
+  test("status 204", function() {
+    expect(res.status).to.equal(204);
+  });
+}
+
+docs {
+  **`DELETE /tables/{table_id}`**
+
+  Borra una mesa sin pedidos ni reservas. Con pedidos o reservas devuelve 409 `table_in_use` (ver 11-cleanup).
+
+  **Roles permitidos:** admin
+
+  **Auth en este request:** Bearer `{{token}}` (admin)
+
+  **Respuestas posibles:**
+
+  - `204`: sin contenido
+  - `401`: sin token
+  - `403`: rol distinto de admin (`Not enough permissions`)
+  - `404`: `Table <id> not found`
+  - `409`: mesa con pedidos o reservas (code `table_in_use`)
+}

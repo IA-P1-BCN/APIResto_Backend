@@ -7,9 +7,9 @@ from app.models.model_dish import Dish
 from app.models.model_user import Role
 
 
-def create_test_data(db):
+def create_test_data(db, station="kitchen"):
     table = DiningTable(number=1, capacity=4, location="terrace")
-    category = Category(name="Principales")
+    category = Category(name="Principales", station=station)
     db.add(category)
     db.flush()
     dish = Dish(name="Pasta", price=10.50, is_available=True, category_id=category.id)
@@ -48,7 +48,7 @@ def test_create_order_success(client, db, auth_headers):
 def test_create_order_guarda_el_camarero(client, db, make_user):
     table_id, dish_id = create_test_data(db)
     waiter = make_user(Role.waiter)
-    headers = {"Authorization": f"Bearer {create_access_token(waiter.id)}"}
+    headers = {"Authorization": f"Bearer {create_access_token(waiter.id, waiter.role)}"}
     r = new_order(client, headers, table_id, dish_id)
     assert r.status_code == 201
     assert r.json()["waiter_id"] == waiter.id

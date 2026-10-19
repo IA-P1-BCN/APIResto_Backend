@@ -16,6 +16,11 @@ from app.core.security import create_access_token
 from app.database import Base, get_db
 from app.main import app
 from app.models.model_user import Role, User
+from app.routers import auth, router_email_verification, router_password, router_user
+from app.services.login_rate_limit_service import (
+    login_rate_limiter,
+    two_factor_rate_limiter,
+)
 
 engine = create_engine(
     "sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool
@@ -38,6 +43,16 @@ def setup_db():
     yield
     app.dependency_overrides.pop(get_db, None)
     Base.metadata.drop_all(bind=engine)
+
+
+@pytest.fixture(autouse=True)
+def reset_login_attempts():
+    """Vacía los contadores de login y de 2FA (HU-31): todos los tests llegan desde la misma IP."""
+    login_rate_limiter.clear()
+    two_factor_rate_limiter.clear()
+    yield
+    login_rate_limiter.clear()
+    two_factor_rate_limiter.clear()
 
 
 @pytest.fixture
@@ -82,7 +97,7 @@ def auth_headers(make_user):
         role = Role(role)
         if role not in cache:
             user = make_user(role)
-            cache[role] = {"Authorization": f"Bearer {create_access_token(user.id)}"}
+            cache[role] = {"Authorization": f"Bearer {create_access_token(user.id, user.role)}"}
         return cache[role]
     return _headers
 
@@ -109,3 +124,15 @@ def waiter_token(auth_headers) -> str:
 @pytest.fixture
 def customer_token(auth_headers) -> str:
     return _token(auth_headers(Role.customer))
+
+
+@pytest.fixture
+def outbox(monkeypatch):
+    """Sustituye send_email en los routers que envían emails (HU-33): sin red ni Brevo.
+
+    Cada email queda en la lista como (to, subject, html).
+    """
+    emails = []
+    for module in (auth, router_email_verification, router_password, router_user):
+        monkeypatch.setattr(module, "send_email", lambda *email: emails.append(email))
+    return emails

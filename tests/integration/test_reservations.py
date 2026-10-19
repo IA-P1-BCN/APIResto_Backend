@@ -26,7 +26,7 @@ DAY = "2026-10-10"
 
 
 def _headers(user: User) -> dict[str, str]:
-    return {"Authorization": f"Bearer {create_access_token(user.id)}"}
+    return {"Authorization": f"Bearer {create_access_token(user.id, user.role)}"}
 
 
 def _assert_error(response: Any, status_code: int, code: str) -> None:

@@ -1,0 +1,65 @@
+meta {
+  name: Crear categoría
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/categories/
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "name": "Bruno {{runId}}",
+    "sort_order": 99,
+    "station": "kitchen"
+  }
+}
+
+script:post-response {
+  if (res.status === 201) {
+    bru.setVar("categoryId", res.body.id);
+    bru.setVar("categoryName", res.body.name);
+  }
+}
+
+tests {
+  test("status 201", function() {
+    expect(res.status).to.equal(201);
+  });
+
+  test("shape: id, name, sort_order, station", function() {
+    expect(res.body).to.have.property("id");
+    expect(res.body).to.have.property("name");
+    expect(res.body).to.have.property("sort_order");
+    expect(res.body.station).to.equal("kitchen");
+  });
+}
+
+docs {
+  **`POST /categories/`**
+
+  Crea una categoría (`name` ≤ 50 caracteres, único). `station`: `kitchen` | `bar` (por defecto `kitchen`); decide si sus platos van a cocina o a barra. Guarda `categoryId` y `categoryName`.
+
+  **Roles permitidos:** admin
+
+  **Auth en este request:** Bearer `{{token}}` (admin)
+
+  **Respuestas posibles:**
+
+  - `201`: `CategoryOut`
+  - `401`: sin token
+  - `403`: rol distinto de admin (`Not enough permissions`)
+  - `409`: `Category already exists`
+  - `422`: `name` > 50 caracteres o `station` distinta de `kitchen`/`bar`
+}

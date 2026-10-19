@@ -1,0 +1,61 @@
+meta {
+  name: Crear mesa temporal
+  type: http
+  seq: 8
+}
+
+post {
+  url: {{baseUrl}}/tables
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "number": {{tempTableNumber}},
+    "capacity": 2,
+    "location": "bar"
+  }
+}
+
+script:post-response {
+  if (res.status === 201) {
+    bru.setVar("tempTableId", res.body.id);
+  }
+}
+
+tests {
+  test("status 201", function() {
+    expect(res.status).to.equal(201);
+  });
+
+  test("status por defecto available", function() {
+    expect(res.body.status).to.equal("available");
+  });
+}
+
+docs {
+  **`POST /tables`**
+
+  Mesa sin pedidos ni reservas que se borra en el siguiente request.
+
+  **Roles permitidos:** admin
+
+  **Auth en este request:** Bearer `{{token}}` (admin)
+
+  **Respuestas posibles:**
+
+  - `201`: `DiningTableRead`
+  - `401`: sin token
+  - `403`: rol distinto de admin (`Not enough permissions`)
+  - `409`: `Table number <n> already exists` (code `conflict`)
+  - `422`: datos no válidos o campos extra (`extra=forbid`)
+}

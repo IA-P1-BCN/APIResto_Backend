@@ -2,8 +2,8 @@
 # Bloquea el merge en dev y main si el CI no está en verde (HU-16).
 #
 # Crea (o actualiza) en los dos repos un ruleset "CI obligatorio" que exige el check del CI:
-#   - Resto-API_Backend  → job "tests" de ci.yml
-#   - Resto-API_Frontend → job "build" de ci.yml
+#   - APIResto_Backend  → job "tests" de ci.yml
+#   - APIResto_Frontend → job "build" de ci.yml
 # No toca la protección de ramas que ya existe (aprobaciones, main solo para Anna).
 #
 # Requisitos: gh autenticado con permisos de admin en la organización.
@@ -43,5 +43,5 @@ EOF
   fi
 }
 
-aplicar Resto-API_Backend tests
-aplicar Resto-API_Frontend build
+aplicar APIResto_Backend tests
+aplicar APIResto_Frontend build

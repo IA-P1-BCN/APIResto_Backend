@@ -1,0 +1,55 @@
+meta {
+  name: Error 409 · editar una línea de un pedido pagado
+  type: http
+  seq: 12
+}
+
+patch {
+  url: {{baseUrl}}/orders/:order_id/items/:item_id
+  body: json
+  auth: bearer
+}
+
+params:path {
+  order_id: {{orderId}}
+  item_id: {{orderItemId}}
+}
+
+headers {
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{tokenWaiter}}
+}
+
+body:json {
+  {
+    "served": false
+  }
+}
+
+tests {
+  test("status 409", function() {
+    expect(res.status).to.equal(409);
+  });
+
+  test("error {detail, code} con code conflict", function() {
+    expect(res.body.detail).to.be.a("string");
+    expect(res.body.code).to.equal("conflict");
+  });
+}
+
+docs {
+  **`PATCH /orders/{order_id}/items/{item_id}`**
+
+  Las líneas de pedidos `paid` o `cancelled` no se pueden cambiar.
+
+  **Roles permitidos:** admin, waiter
+
+  **Auth en este request:** Bearer `{{tokenWaiter}}` (waiter)
+
+  **Respuestas posibles:**
+
+  - `409`: `Cannot change items of an order in status 'paid'`
+}

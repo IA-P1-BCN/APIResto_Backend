@@ -91,3 +91,29 @@ def test_delete_category_with_dishes():
     client.post("/dishes/", json={"category_id": 1, "name": "Flan", "price": 4.5})
     r = client.delete("/categories/1")
     assert r.status_code == 409
+
+
+def test_create_category_default_station():
+    r = client.post("/categories/", json=category_data())
+    assert r.status_code == 201
+    assert r.json()["station"] == "kitchen"
+
+
+def test_create_category_bar_station():
+    r = client.post("/categories/", json={"name": "Bebidas", "station": "bar"})
+    assert r.status_code == 201
+    assert r.json()["station"] == "bar"
+
+
+def test_create_category_invalid_station():
+    r = client.post(
+        "/categories/", json={"name": "Bebidas", "station": "terrace"})
+    assert r.status_code == 422
+
+
+def test_update_category_station():
+    client.post("/categories/", json=category_data())
+    r = client.put("/categories/1", json={"station": "bar"})
+    assert r.status_code == 200
+    assert r.json()["station"] == "bar"
+    assert r.json()["name"] == "Postres"

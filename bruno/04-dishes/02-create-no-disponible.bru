@@ -1,0 +1,72 @@
+meta {
+  name: Crear plato no disponible
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/dishes/
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "category_id": {{categoryId}},
+    "name": "Plato agotado Bruno {{runId}}",
+    "price": 8,
+    "is_available": false
+  }
+}
+
+script:post-response {
+  if (res.status === 201) {
+    bru.setVar("unavailableDishId", res.body.id);
+  }
+}
+
+tests {
+  test("status 201", function() {
+    expect(res.status).to.equal(201);
+  });
+
+  test("shape: id, category_id, name, description, price, allergens, is_available", function() {
+    expect(res.body).to.have.property("id");
+    expect(res.body).to.have.property("category_id");
+    expect(res.body).to.have.property("name");
+    expect(res.body).to.have.property("description");
+    expect(res.body).to.have.property("price");
+    expect(res.body).to.have.property("allergens");
+    expect(res.body).to.have.property("is_available");
+  });
+
+  test("no disponible", function() {
+    expect(res.body.is_available).to.equal(false);
+  });
+}
+
+docs {
+  **`POST /dishes/`**
+
+  Plato con `is_available=false`. Lo usa el caso 409 de pedidos. Guarda `unavailableDishId`.
+
+  **Roles permitidos:** admin
+
+  **Auth en este request:** Bearer `{{token}}` (admin)
+
+  **Respuestas posibles:**
+
+  - `201`: `DishOut`
+  - `401`: sin token
+  - `403`: rol distinto de admin (`Not enough permissions`)
+  - `404`: `Category not found` (`category_id` inexistente)
+  - `422`: datos no válidos (p. ej. `price` < 0)
+}

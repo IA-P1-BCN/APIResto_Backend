@@ -1,0 +1,74 @@
+meta {
+  name: Editar usuario
+  type: http
+  seq: 11
+}
+
+put {
+  url: {{baseUrl}}/users/:user_id
+  body: json
+  auth: bearer
+}
+
+params:path {
+  user_id: {{customerId}}
+}
+
+headers {
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "name": "Cliente Bruno {{runId}} (editado)",
+    "phone": "699999999"
+  }
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+
+  test("shape: id, name, email, phone, role, is_active, created_at", function() {
+    expect(res.body).to.have.property("id");
+    expect(res.body).to.have.property("name");
+    expect(res.body).to.have.property("email");
+    expect(res.body).to.have.property("phone");
+    expect(res.body).to.have.property("role");
+    expect(res.body).to.have.property("is_active");
+    expect(res.body).to.have.property("created_at");
+  });
+
+  test("no expone password ni password_hash", function() {
+    expect(JSON.stringify(res.body)).to.not.match(/"password(_hash)?"/);
+  });
+
+  test("aplica los cambios", function() {
+    expect(res.body.name).to.include("(editado)");
+    expect(res.body.phone).to.equal("699999999");
+  });
+}
+
+docs {
+  **`PUT /users/{user_id}`**
+
+  Edición parcial: todos los campos de `UserUpdate` son opcionales (`name`, `email`, `phone`, `password`, `role`). Solo cambian los enviados.
+
+  **Roles permitidos:** admin
+
+  **Auth en este request:** Bearer `{{token}}` (admin)
+
+  **Respuestas posibles:**
+
+  - `200`: `UserOut`
+  - `401`: sin token
+  - `403`: el rol no es admin
+  - `404`: `User not found`
+  - `409`: el nuevo email ya lo usa otro usuario
+  - `422`: datos no válidos
+}

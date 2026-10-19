@@ -1,0 +1,60 @@
+meta {
+  name: Crear categoría temporal
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{baseUrl}}/categories/
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "name": "Bruno temporal {{runId}}"
+  }
+}
+
+script:post-response {
+  if (res.status === 201) {
+    bru.setVar("tempCategoryId", res.body.id);
+  }
+}
+
+tests {
+  test("status 201", function() {
+    expect(res.status).to.equal(201);
+  });
+
+  test("sort_order por defecto 0 y station por defecto kitchen", function() {
+    expect(res.body.sort_order).to.equal(0);
+    expect(res.body.station).to.equal("kitchen");
+  });
+}
+
+docs {
+  **`POST /categories/`**
+
+  Categoría sin platos que se borra en el siguiente request.
+
+  **Roles permitidos:** admin
+
+  **Auth en este request:** Bearer `{{token}}` (admin)
+
+  **Respuestas posibles:**
+
+  - `201`: `CategoryOut`
+  - `401`: sin token
+  - `403`: rol distinto de admin (`Not enough permissions`)
+  - `409`: `Category already exists`
+  - `422`: `name` > 50 caracteres o `station` distinta de `kitchen`/`bar`
+}

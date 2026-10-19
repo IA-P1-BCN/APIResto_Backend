@@ -1,0 +1,47 @@
+meta {
+  name: Error 422 · status de pedido inválido
+  type: http
+  seq: 5
+}
+
+get {
+  url: {{baseUrl}}/exports/orders?status=entregado
+  body: none
+  auth: bearer
+}
+
+params:query {
+  status: entregado
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+tests {
+  test("status 422", function() {
+    expect(res.status).to.equal(422);
+  });
+
+  test("error {detail, code} con code validation_error", function() {
+    expect(res.body.detail).to.be.a("string");
+    expect(res.body.code).to.equal("validation_error");
+  });
+  test("incluye la lista de errores de campo", function() {
+    expect(res.body.errors).to.be.an("array").that.is.not.empty;
+  });
+}
+
+docs {
+  **`GET /exports/orders`**
+
+  `status` debe ser un estado de pedido válido.
+
+  **Roles permitidos:** admin
+
+  **Auth en este request:** Bearer `{{token}}` (admin)
+
+  **Respuestas posibles:**
+
+  - `422`: `validation_error`
+}

@@ -1,0 +1,40 @@
+meta {
+  name: Health check
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/health
+  body: none
+  auth: none
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+
+  test("shape: status, commit", function() {
+    expect(res.body).to.have.property("status");
+    expect(res.body).to.have.property("commit");
+  });
+
+  test("status ok", function() {
+    expect(res.body.status).to.equal("ok");
+  });
+}
+
+docs {
+  **`GET /health`**
+
+  Health check usado por Render. `commit` es el SHA desplegado (null en local).
+
+  **Roles permitidos:** público
+
+  **Auth en este request:** ninguna
+
+  **Respuestas posibles:**
+
+  - `200`: `{"status": "ok", "commit": "<sha>|null"}`
+}

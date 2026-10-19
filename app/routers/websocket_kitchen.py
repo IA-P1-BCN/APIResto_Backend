@@ -15,17 +15,17 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect, status
 from sqlalchemy.orm import Session
 
-from app.core.permissions import KITCHEN
+from app.core.permissions import BARTENDER, KITCHEN
 from app.core.security import decode_access_token
 from app.database import get_db
-from app.models.model_user import User
+from app.repositories import user_repository
 from app.websocket.kitchen import kitchen_manager
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
-ALLOWED_ROLES = {role.value for role in KITCHEN}
+ALLOWED_ROLES = {role.value for role in (*KITCHEN, *BARTENDER)}
 
 
 @router.websocket("/ws/kitchen")
@@ -47,15 +47,15 @@ async def kitchen_websocket(
     Cierra con 1008 si falta el token, no es válido o el usuario no existe,
     está desactivado o no tiene rol admin o kitchen.
     """
-    user_id = decode_access_token(token) if token else None
-    user = db.get(User, user_id) if user_id is not None else None
+    payload = decode_access_token(token) if token else None
+    user = user_repository.get_by_id(db, int(payload["sub"])) if payload is not None else None
     allowed = user is not None and user.is_active and user.role in ALLOWED_ROLES
     db.close()
     if not allowed:
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
         return
 
-    await kitchen_manager.connect(websocket)
+    await kitchen_manager.connect(websocket, user.role)
 
     try:
         while True:

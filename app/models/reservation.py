@@ -19,6 +19,8 @@ from app.schemas.reservation import ReservationStatus
 
 RESERVATION_STATUSES: tuple[str, ...] = get_args(ReservationStatus)
 DEFAULT_DURATION_MIN = 90
+CONFIRMED = "confirmed"
+CANCELLED = "cancelled"
 
 
 class Reservation(Base):

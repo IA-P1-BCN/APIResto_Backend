@@ -1,0 +1,59 @@
+meta {
+  name: Error 422 · email mal formado
+  type: http
+  seq: 16
+}
+
+post {
+  url: {{baseUrl}}/users/
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+body:json {
+  {
+    "name": "Email mal",
+    "email": "no-es-un-email",
+    "password": "{{testPassword}}"
+  }
+}
+
+tests {
+  test("status 422", function() {
+    expect(res.status).to.equal(422);
+  });
+
+  test("error {detail, code} con code validation_error", function() {
+    expect(res.body.detail).to.be.a("string");
+    expect(res.body.code).to.equal("validation_error");
+  });
+  test("incluye la lista de errores de campo", function() {
+    expect(res.body.errors).to.be.an("array").that.is.not.empty;
+  });
+}
+
+docs {
+  **`POST /users/`**
+
+  `email` se valida como `EmailStr`.
+
+  **Roles permitidos:** admin
+
+  **Auth en este request:** Bearer `{{token}}` (admin)
+
+  **Respuestas posibles:**
+
+  - `201`: `UserOut` (sin contraseña)
+  - `401`: sin token
+  - `403`: el rol no es admin
+  - `409`: `Email already registered`
+  - `422`: datos no válidos (p. ej. email mal formado)
+}

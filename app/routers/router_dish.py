@@ -6,9 +6,9 @@ from sqlalchemy.orm import Session
 
 from app.core.pagination import Page, PageParamsDep
 from app.core.permissions import MENU_READ, MENU_WRITE, require_role
-from app.crud import crud_dish
 from app.database import get_db
 from app.schemas.schema_dish import DishCreate, DishOut, DishUpdate
+from app.services import dish_service
 
 router = APIRouter(prefix="/dishes", tags=["dishes"])
 
@@ -20,7 +20,7 @@ WRITE = [Depends(require_role(*MENU_WRITE))]
 
 @router.post("/", response_model=DishOut, status_code=201, dependencies=WRITE)
 def create_dish(dish: DishCreate, db: DbSession):
-    return crud_dish.create_dish(db, dish)
+    return dish_service.create_dish(db, dish)
 
 
 @router.get("/", response_model=Page[DishOut], dependencies=READ)
@@ -31,7 +31,7 @@ def list_dishes(
     is_available: bool | None = None,
     max_price: Annotated[Decimal | None, Query(ge=0)] = None,
 ):
-    return crud_dish.get_dishes(
+    return dish_service.list_dishes(
         db,
         params,
         category_id=category_id,
@@ -42,14 +42,14 @@ def list_dishes(
 
 @router.get("/{dish_id}", response_model=DishOut, dependencies=READ)
 def get_dish(dish_id: int, db: DbSession):
-    return crud_dish.get_dish_or_404(db, dish_id)
+    return dish_service.get_dish(db, dish_id)
 
 
 @router.put("/{dish_id}", response_model=DishOut, dependencies=WRITE)
 def update_dish(dish_id: int, data: DishUpdate, db: DbSession):
-    return crud_dish.update_dish(db, dish_id, data)
+    return dish_service.update_dish(db, dish_id, data)
 
 
 @router.delete("/{dish_id}", status_code=204, dependencies=WRITE)
 def delete_dish(dish_id: int, db: DbSession):
-    crud_dish.delete_dish(db, dish_id)
+    dish_service.delete_dish(db, dish_id)

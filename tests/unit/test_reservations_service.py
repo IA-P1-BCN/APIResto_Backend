@@ -7,10 +7,10 @@ import httpx
 import pytest
 
 from app.config import settings
-from app.core.exceptions import ReservationConflict, UnprocessableError
+from app.core.exceptions import ConflictError, ReservationConflict, UnprocessableError
 from app.models.dining_table import DiningTable
 from app.models.reservation import Reservation
-from app.schemas.reservation import ReservationUpdate
+from app.schemas.reservation import ReservationCreate, ReservationUpdate
 from app.services import notifications
 from app.services import reservations as service
 from app.services.reservations import find_overlapping
@@ -391,3 +391,143 @@ def test_send_email_email_disabled_loguea(monkeypatch, caplog):
 
     assert "Email simulado" in caplog.text
     assert "Error enviando email" not in caplog.text
+
+
+def _create_data(**overrides) -> ReservationCreate:
+    fields = {
+        "reserved_at": datetime.fromisoformat("2099-10-10T20:00"),
+        "party_size": 2,
+    }
+    return ReservationCreate(**{**fields, **overrides})
+
+
+@pytest.fixture
+def two_tables(db, make_user):
+    customer = make_user("customer")
+    small = DiningTable(number=1, capacity=2, location="indoor")
+    large = DiningTable(number=2, capacity=4, location="indoor")
+    db.add_all([small, large])
+    db.commit()
+    return customer, small, large
+
+
+def test_create_without_table_id_assigns_the_tightest_table(db, two_tables):
+    customer, small, _large = two_tables
+
+    reservation = service.create_reservation(
+        db, _create_data(), customer.id, is_customer=True
+    )
+
+    assert reservation.table_id == small.id
+
+
+def test_create_tries_the_next_candidate_when_the_chosen_one_is_taken(
+    db, monkeypatch, two_tables
+):
+    customer, small, large = two_tables
+    real_check = service._ensure_no_overlap
+
+    def small_is_taken(db, *, table_id, **kwargs):
+        if table_id == small.id:
+            raise ReservationConflict("ocupada")
+        real_check(db, table_id=table_id, **kwargs)
+
+    monkeypatch.setattr(service, "_ensure_no_overlap", small_is_taken)
+
+    reservation = service.create_reservation(
+        db, _create_data(), customer.id, is_customer=True
+    )
+
+    assert reservation.table_id == large.id
+
+
+def test_create_without_table_id_fails_when_every_candidate_is_taken(
+    db, monkeypatch, two_tables
+):
+    customer, _small, _large = two_tables
+
+    def always_taken(db, **kwargs):
+        raise ReservationConflict("ocupada")
+
+    monkeypatch.setattr(service, "_ensure_no_overlap", always_taken)
+
+    with pytest.raises(ConflictError) as error:
+        service.create_reservation(db, _create_data(), customer.id, is_customer=True)
+
+    assert error.value.code == "no_table_available"
+
+
+def test_customer_party_size_limit_is_checked_before_looking_for_a_table(
+    db, two_tables
+):
+    customer, _small, _large = two_tables
+
+    with pytest.raises(UnprocessableError) as error:
+        service.create_reservation(
+            db, _create_data(party_size=9), customer.id, is_customer=True
+        )
+
+    assert error.value.code == "party_size_too_large"
+
+
+def test_staff_is_not_limited_to_8_people(db, make_user):
+    waiter = make_user("waiter")
+    db.add(DiningTable(number=1, capacity=12, location="indoor"))
+    db.commit()
+
+    reservation = service.create_reservation(db, _create_data(party_size=9), waiter.id)
+
+    assert reservation.party_size == 9
+
+
+def test_update_party_size_over_the_limit_is_rejected_for_customers(db, booked):
+    with pytest.raises(UnprocessableError) as error:
+        service.update_reservation(
+            db, booked, ReservationUpdate(party_size=9), is_customer=True
+        )
+
+    assert error.value.code == "party_size_too_large"
+
+
+NOW_UTC = datetime.fromisoformat("2026-10-20T18:30:00+00:00")
+
+
+class _FrozenDatetime(datetime):
+    @classmethod
+    def now(cls, tz=None):
+        return NOW_UTC.astimezone(tz) if tz else NOW_UTC.replace(tzinfo=None)
+
+
+@pytest.fixture
+def frozen_now(monkeypatch):
+    """Congela el reloj en las 18:30 UTC, que son las 20:30 en Madrid."""
+    monkeypatch.setattr(service, "datetime", _FrozenDatetime)
+
+
+def test_reservation_after_restaurant_now_is_accepted(db, two_tables, frozen_now):
+    customer, small, _large = two_tables
+    data = _create_data(reserved_at=datetime.fromisoformat("2026-10-20T21:00"))
+
+    reservation = service.create_reservation(db, data, customer.id, is_customer=True)
+
+    assert reservation.table_id == small.id
+
+
+def test_reservation_before_restaurant_now_is_rejected(db, two_tables, frozen_now):
+    customer, _small, _large = two_tables
+    data = _create_data(reserved_at=datetime.fromisoformat("2026-10-20T20:00"))
+
+    with pytest.raises(UnprocessableError) as error:
+        service.create_reservation(db, data, customer.id, is_customer=True)
+
+    assert error.value.code == "reservation_in_past"
+
+
+def test_restaurant_timezone_is_configurable(db, two_tables, frozen_now, monkeypatch):
+    customer, _small, _large = two_tables
+    monkeypatch.setattr(settings, "RESTAURANT_TIMEZONE", "UTC")
+    data = _create_data(reserved_at=datetime.fromisoformat("2026-10-20T19:00"))
+
+    reservation = service.create_reservation(db, data, customer.id, is_customer=True)
+
+    assert reservation.reserved_at == data.reserved_at

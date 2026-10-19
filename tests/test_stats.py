@@ -383,3 +383,8 @@ def test_only_admin_can_see_stats(client, auth_headers, path, role):
 @pytest.mark.parametrize("path", ["/stats/sales", "/stats/top-dishes"])
 def test_stats_without_token_is_401(client, path):
     assert client.get(path).status_code == 401
+
+
+@pytest.mark.parametrize("value", [date(2026, 10, 1), "2026-10-01"])
+def test_as_date_accepts_postgres_date_and_sqlite_text(value):
+    assert stats._as_date(value) == date(2026, 10, 1)

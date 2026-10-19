@@ -1,0 +1,61 @@
+meta {
+  name: Listar usuarios
+  type: http
+  seq: 9
+}
+
+get {
+  url: {{baseUrl}}/users/?page=1&size=5
+  body: none
+  auth: bearer
+}
+
+params:query {
+  page: 1
+  size: 5
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+
+  test("shape Page[UserOut]: items, total, page, size", function() {
+    expect(res.body.items).to.be.an("array");
+    expect(res.body.total).to.be.a("number");
+    expect(res.body.page).to.be.a("number");
+    expect(res.body.size).to.be.a("number");
+  });
+
+  test("no expone password ni password_hash", function() {
+    expect(JSON.stringify(res.body)).to.not.match(/"password(_hash)?"/);
+  });
+
+  test("respeta page y size", function() {
+    expect(res.body.page).to.equal(1);
+    expect(res.body.size).to.equal(5);
+    expect(res.body.items.length).to.be.at.most(5);
+    expect(res.body.total).to.be.at.least(res.body.items.length);
+  });
+}
+
+docs {
+  **`GET /users/`**
+
+  Listado paginado (`Page[UserOut]`, HU-24) con `page` (≥ 1) y `size` (1-100, por defecto 20). Filtros opcionales: `role`, `is_active`, `q` (búsqueda en nombre o email) e `include_deleted`. Orden fijo por `id`.
+
+  **Roles permitidos:** admin
+
+  **Auth en este request:** Bearer `{{token}}` (admin)
+
+  **Respuestas posibles:**
+
+  - `200`: `Page[UserOut]` (`items`, `total`, `page`, `size`)
+  - `401`: sin token
+  - `403`: el rol no es admin
+  - `422`: parámetros no válidos (p. ej. `size` > 100)
+}

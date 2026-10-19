@@ -8,8 +8,9 @@ from sqlalchemy.orm import Session
 from app.core.security import decode_access_token
 from app.database import get_db
 from app.models.model_user import Role, User
+from app.repositories import revoked_token_repository
 
-ALL_ROLES = (Role.admin, Role.waiter, Role.kitchen, Role.customer)
+ALL_ROLES = (Role.admin, Role.waiter, Role.kitchen, Role.bartender, Role.customer)
 USERS = (Role.admin,)
 MENU_READ = ALL_ROLES
 MENU_WRITE = (Role.admin,)
@@ -17,6 +18,7 @@ TABLES = (Role.admin, Role.waiter)
 RESERVATIONS = (Role.admin, Role.waiter, Role.customer)
 ORDERS = (Role.admin, Role.waiter)
 KITCHEN = (Role.admin, Role.kitchen)
+BARTENDER = (Role.admin, Role.bartender)
 INVOICES = (Role.admin, Role.waiter)
 STATS = (Role.admin,)
 
@@ -32,10 +34,15 @@ def get_current_user(
         detail="Invalid or expired token",
         headers={"WWW-Authenticate": "Bearer"},
     )
-    user_id = decode_access_token(token)
-    if user_id is None:
+    payload = decode_access_token(token)
+    if payload is None:
         raise unauthorized
-    user = db.get(User, user_id)
+
+    # R-07: un jti revocado (logout) invalida el access token aunque no haya caducado
+    if revoked_token_repository.is_revoked(db, payload["jti"]):
+        raise unauthorized
+
+    user = db.get(User, int(payload["sub"]))
     if user is None or not user.is_active:
         raise unauthorized
     return user

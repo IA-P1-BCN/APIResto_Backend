@@ -1,0 +1,55 @@
+meta {
+  name: Ver plato (kitchen)
+  type: http
+  seq: 7
+}
+
+get {
+  url: {{baseUrl}}/dishes/:dish_id
+  body: none
+  auth: bearer
+}
+
+params:path {
+  dish_id: {{dishId}}
+}
+
+auth:bearer {
+  token: {{tokenKitchen}}
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+
+  test("shape: id, category_id, name, description, price, allergens, is_available", function() {
+    expect(res.body).to.have.property("id");
+    expect(res.body).to.have.property("category_id");
+    expect(res.body).to.have.property("name");
+    expect(res.body).to.have.property("description");
+    expect(res.body).to.have.property("price");
+    expect(res.body).to.have.property("allergens");
+    expect(res.body).to.have.property("is_available");
+  });
+
+  test("es el plato pedido", function() {
+    expect(res.body.id).to.equal(bru.getVar("dishId"));
+  });
+}
+
+docs {
+  **`GET /dishes/{dish_id}`**
+
+  Detalle de un plato.
+
+  **Roles permitidos:** todos
+
+  **Auth en este request:** Bearer `{{tokenKitchen}}` (kitchen)
+
+  **Respuestas posibles:**
+
+  - `200`: `DishOut`
+  - `401`: sin token
+  - `404`: `Dish not found`
+}

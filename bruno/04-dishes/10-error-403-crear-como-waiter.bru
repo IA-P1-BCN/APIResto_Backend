@@ -1,0 +1,52 @@
+meta {
+  name: Error 403 · crear plato como waiter
+  type: http
+  seq: 10
+}
+
+post {
+  url: {{baseUrl}}/dishes/
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{tokenWaiter}}
+}
+
+body:json {
+  {
+    "category_id": {{categoryId}},
+    "name": "No permitido",
+    "price": 5
+  }
+}
+
+tests {
+  test("status 403", function() {
+    expect(res.status).to.equal(403);
+  });
+
+  test("error {detail, code} con code forbidden", function() {
+    expect(res.body.detail).to.be.a("string");
+    expect(res.body.code).to.equal("forbidden");
+  });
+}
+
+docs {
+  **`POST /dishes/`**
+
+  Solo admin escribe en el menú.
+
+  **Roles permitidos:** admin
+
+  **Auth en este request:** Bearer `{{tokenWaiter}}` (waiter)
+
+  **Respuestas posibles:**
+
+  - `403`: `Not enough permissions`
+}

@@ -1,0 +1,58 @@
+meta {
+  name: Estado del pedido facturado → paid
+  type: http
+  seq: 11
+}
+
+patch {
+  url: {{baseUrl}}/orders/:order_id/status
+  body: json
+  auth: bearer
+}
+
+params:path {
+  order_id: {{orderId}}
+}
+
+headers {
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{tokenWaiter}}
+}
+
+body:json {
+  {
+    "status": "paid"
+  }
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+
+  test("paid", function() {
+    expect(res.body.status).to.equal("paid");
+  });
+}
+
+docs {
+  **`PATCH /orders/{order_id}/status`**
+
+  Tras facturar, el pedido sigue `served`; se marca `paid` aparte. Las estadísticas y el CSV lo cuentan.
+
+  **Roles permitidos:** admin, waiter, kitchen, bartender
+
+  **Auth en este request:** Bearer `{{tokenWaiter}}` (waiter)
+
+  **Respuestas posibles:**
+
+  - `200`: `OrderOut` (pedir el mismo estado devuelve 200 sin cambios)
+  - `401`: sin token (`unauthorized`)
+  - `403`: rol no permitido (`forbidden`)
+  - `404`: `Order not found` (`not_found`)
+  - `409`: `Cannot change status from '<actual>' to '<nuevo>'` (`conflict`)
+  - `422`: `status` fuera de `pending|in_kitchen|served|paid|cancelled` (`validation_error`)
+}

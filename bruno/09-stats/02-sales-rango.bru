@@ -1,0 +1,48 @@
+meta {
+  name: Resumen de ventas de hoy
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/stats/sales?from={{today}}&to={{today}}
+  body: none
+  auth: bearer
+}
+
+params:query {
+  from: {{today}}
+  to: {{today}}
+}
+
+auth:bearer {
+  token: {{token}}
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+
+  test("rango aplicado", function() {
+    expect(res.body.date_from).to.equal(bru.getVar("today"));
+    expect(res.body.date_to).to.equal(bru.getVar("today"));
+  });
+}
+
+docs {
+  **`GET /stats/sales`**
+
+  Filtros `from` y `to` (fecha de creación, ambos incluidos, AAAA-MM-DD).
+
+  **Roles permitidos:** admin
+
+  **Auth en este request:** Bearer `{{token}}` (admin)
+
+  **Respuestas posibles:**
+
+  - `200`: `SalesSummaryOut`
+  - `401`: sin token (`Not authenticated`) o token inválido / de usuario desactivado (`Invalid or expired token`)
+  - `403`: el rol no es admin
+  - `422`: `from` posterior a `to` (`invalid_date_range`)
+}

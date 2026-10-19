@@ -26,6 +26,7 @@ NOT_FOUND_CODE = "not_found"
 METHOD_NOT_ALLOWED_CODE = "method_not_allowed"
 CONFLICT_CODE = "conflict"
 UNPROCESSABLE_CODE = "unprocessable"
+TOO_MANY_REQUESTS_CODE = "too_many_requests"
 VALIDATION_ERROR_CODE = "validation_error"
 INTERNAL_ERROR_CODE = "internal_error"
 HTTP_ERROR_CODE = "http_error"
@@ -38,6 +39,7 @@ CODES_BY_STATUS = {
     status.HTTP_405_METHOD_NOT_ALLOWED: METHOD_NOT_ALLOWED_CODE,
     status.HTTP_409_CONFLICT: CONFLICT_CODE,
     status.HTTP_422_UNPROCESSABLE_CONTENT: UNPROCESSABLE_CODE,
+    status.HTTP_429_TOO_MANY_REQUESTS: TOO_MANY_REQUESTS_CODE,
 }
  
 VALIDATION_ERROR_DETAIL = "Invalid request data"
@@ -77,6 +79,36 @@ class UnprocessableError(AppError):
     default_code = UNPROCESSABLE_CODE
  
  
+class UnauthorizedError(AppError):
+    status_code = status.HTTP_401_UNAUTHORIZED
+    default_code = UNAUTHORIZED_CODE
+
+
+class TooManyRequestsError(AppError):
+    """Demasiados intentos (429); la cabecera `Retry-After` dice cuántos segundos esperar."""
+
+    status_code = status.HTTP_429_TOO_MANY_REQUESTS
+    default_code = TOO_MANY_REQUESTS_CODE
+
+    def __init__(self, detail: str, *, retry_after: int, code: str | None = None) -> None:
+        super().__init__(detail, code=code)
+        self.headers = {"Retry-After": str(retry_after)}
+
+
+class BadGatewayError(AppError):
+    """An external provider failed or answered something unusable (502)."""
+
+    status_code = status.HTTP_502_BAD_GATEWAY
+    default_code = "bad_gateway"
+
+
+class ServiceUnavailableError(AppError):
+    """A feature is not configured on this server (503)."""
+
+    status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+    default_code = "service_unavailable"
+
+
 class ReservationConflict(ConflictError):
     """The reservation overlaps another active reservation of the same table."""
  

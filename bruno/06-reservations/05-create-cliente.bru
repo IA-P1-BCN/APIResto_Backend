@@ -1,0 +1,78 @@
+meta {
+  name: Crear reserva (customer a su nombre)
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{baseUrl}}/reservations
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{tokenCustomer}}
+}
+
+body:json {
+  {
+    "table_id": {{tableId}},
+    "reserved_at": "{{reservedAtCustomer}}",
+    "duration_min": 60,
+    "party_size": 2
+  }
+}
+
+script:post-response {
+  if (res.status === 201) {
+    bru.setVar("customerReservationId", res.body.id);
+  }
+}
+
+tests {
+  test("status 201", function() {
+    expect(res.status).to.equal(201);
+  });
+
+  test("shape: id, user_id, table_id, reserved_at, duration_min, ends_at, party_size, status, notes, created_at", function() {
+    expect(res.body).to.have.property("id");
+    expect(res.body).to.have.property("user_id");
+    expect(res.body).to.have.property("table_id");
+    expect(res.body).to.have.property("reserved_at");
+    expect(res.body).to.have.property("duration_min");
+    expect(res.body).to.have.property("ends_at");
+    expect(res.body).to.have.property("party_size");
+    expect(res.body).to.have.property("status");
+    expect(res.body).to.have.property("notes");
+    expect(res.body).to.have.property("created_at");
+  });
+
+  test("a nombre del customer", function() {
+    expect(res.body.user_id).to.equal(bru.getVar("customerId"));
+  });
+}
+
+docs {
+  **`POST /reservations`**
+
+  Un customer reserva para sí mismo sin indicar `user_id`. Guarda `customerReservationId`.
+
+  Comportamiento actual (HU-43): un customer puede crear reservas a su nombre (201), indique o no su propio `user_id`; el 403 (`reservation_forbidden`) solo salta si indica el `user_id` de otro usuario (ver `09-error-403-cliente-para-otro-usuario`).
+
+  **Roles permitidos:** admin, waiter, customer
+
+  **Auth en este request:** Bearer `{{tokenCustomer}}` (customer)
+
+  **Respuestas posibles:**
+
+  - `201`: `ReservationRead`
+  - `401`: sin token o token no válido (`unauthorized`)
+  - `403`: rol sin acceso, kitchen o bartender (`forbidden`); customer que indica el `user_id` de otro usuario (`reservation_forbidden`)
+  - `404`: mesa inexistente (`table_not_found`); usuario inexistente cuando admin o waiter indican `user_id` (`user_not_found`)
+  - `409`: solapamiento con otra reserva activa de la mesa (`reservation_conflict`)
+  - `422`: datos no válidos, p. ej. campo extra o `party_size` <= 0 (`validation_error`); `party_size` > capacidad de la mesa (`party_size_exceeds_capacity`)
+}

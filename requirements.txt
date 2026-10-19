@@ -17,9 +17,18 @@ email-validator==2.3.0
 PyJWT==2.15.1
 bcrypt==5.0.0
 
+# --- Verificación en dos pasos (HU-37) ---
+pyotp==2.10.0
+cryptography==50.0.2
+segno==1.6.6
+
 # --- Servicios externos (Brevo) y caché ---
 httpx==0.28.1
 cachetools==7.2.0
+tzdata==2026.5
+
+# --- Servidor MCP local para agentes (HU-39) ---
+mcp==2.3.0
 
 # --- Tests y calidad ---
 pytest==9.1.1

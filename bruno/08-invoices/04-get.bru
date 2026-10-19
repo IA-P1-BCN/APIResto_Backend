@@ -1,0 +1,58 @@
+meta {
+  name: Ver factura
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{baseUrl}}/invoices/:invoice_id
+  body: none
+  auth: bearer
+}
+
+params:path {
+  invoice_id: {{invoiceId}}
+}
+
+auth:bearer {
+  token: {{tokenWaiter}}
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+
+  test("shape: id, number, order_id, base_amount, tax_rate, tax_amount, total, issued_at", function() {
+    expect(res.body).to.have.property("id");
+    expect(res.body).to.have.property("number");
+    expect(res.body).to.have.property("order_id");
+    expect(res.body).to.have.property("base_amount");
+    expect(res.body).to.have.property("tax_rate");
+    expect(res.body).to.have.property("tax_amount");
+    expect(res.body).to.have.property("total");
+    expect(res.body).to.have.property("issued_at");
+  });
+
+  test("es la factura pedida", function() {
+    expect(res.body.id).to.equal(bru.getVar("invoiceId"));
+  });
+}
+
+docs {
+  **`GET /invoices/{invoice_id}`**
+
+  Detalle de una factura.
+
+  **Roles permitidos:** admin, waiter
+
+  **Auth en este request:** Bearer `{{tokenWaiter}}` (waiter)
+
+  **Respuestas posibles:**
+
+  - `200`: `InvoiceOut`
+  - `401`: sin token (`unauthorized`)
+  - `403`: rol no permitido (`forbidden`)
+  - `404`: `Invoice not found` (`not_found`)
+  - `422`: `invoice_id` no entero (`validation_error`)
+}

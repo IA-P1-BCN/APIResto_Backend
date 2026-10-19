@@ -1,0 +1,40 @@
+meta {
+  name: Error 401 · /auth/me con token inválido
+  type: http
+  seq: 5
+}
+
+get {
+  url: {{baseUrl}}/auth/me
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: token-invalido
+}
+
+tests {
+  test("status 401", function() {
+    expect(res.status).to.equal(401);
+  });
+
+  test("error {detail, code} con code unauthorized", function() {
+    expect(res.body.detail).to.be.a("string");
+    expect(res.body.code).to.equal("unauthorized");
+  });
+}
+
+docs {
+  **`GET /auth/me`**
+
+  Un JWT mal formado, con firma incorrecta o caducado devuelve 401.
+
+  **Roles permitidos:** cualquier usuario autenticado
+
+  **Auth en este request:** Bearer `token-invalido` (a propósito)
+
+  **Respuestas posibles:**
+
+  - `401`: `Invalid or expired token`
+}
