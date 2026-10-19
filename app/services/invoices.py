@@ -1,10 +1,10 @@
 """Facturas de pedidos (HU-14).
 
 Decisiones (issue #12):
-- Solo se factura un pedido en estado `served`, y una sola vez.
+- Se factura un pedido `served`, o `paid` si se cobró sin factura, y una sola vez.
 - Los precios llevan el IVA incluido: base = total / (1 + IVA) e IVA = total - base.
 - Número `F-AÑO-NNNNN`, con un correlativo que vuelve a 1 cada año.
-- Facturar no cambia el estado del pedido (sigue `served`; luego se marca `paid`).
+- Facturar no cambia el estado del pedido (uno `served` sigue así; luego se marca `paid`).
 """
 
 import logging
@@ -23,7 +23,7 @@ from app.schemas.schema_invoice import InvoiceOut
 logger = logging.getLogger(__name__)
 
 TAX_RATE = Decimal("0.10")
-INVOICEABLE_STATUS = "served"
+INVOICEABLE_STATUSES = {"served", "paid"}
 CENT = Decimal("0.01")
 
 
@@ -48,13 +48,13 @@ def next_sequence(db: Session, year: int) -> int:
 
 
 def create_invoice(db: Session, order_id: int) -> Invoice:
-    """Genera la factura de un pedido servido. 404 si no existe, 409 si no se puede."""
+    """Genera la factura de un pedido servido o pagado. 404 si no existe, 409 si no se puede."""
     order = order_repository.get_by_id(db, order_id)
     if order is None:
         raise NotFoundError("Order not found")
-    if order.status != INVOICEABLE_STATUS:
+    if order.status not in INVOICEABLE_STATUSES:
         raise ConflictError(
-            f"Only served orders can be invoiced (current status: {order.status})",
+            f"Only served or paid orders can be invoiced (current status: {order.status})",
             code="order_not_served",
         )
     if order.invoice is not None:
@@ -110,4 +110,5 @@ def list_invoices(
     date_from: date | None = None,
     date_to: date | None = None,
 ) -> Page[InvoiceOut]:
-    return paginate(db, invoice_repository.list_query(date_from, date_to), params, InvoiceOut)
+    query = invoice_repository.list_query(date_from, date_to, newest_first=True)
+    return paginate(db, query, params, InvoiceOut)

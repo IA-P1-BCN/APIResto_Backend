@@ -24,13 +24,13 @@ STAFF = [Depends(require_role(*INVOICES))]
     status_code=status.HTTP_201_CREATED,
     dependencies=STAFF,
     summary="Generate the invoice of an order",
-    description="Only for orders in status `served`, once per order. "
-    "Prices include 10% VAT. Roles: admin, waiter.",
+    description="Only for orders in status `served` or `paid` (paid without invoice), "
+    "once per order. Prices include 10% VAT. Roles: admin, waiter.",
     responses={
         404: {"model": ErrorResponse, "description": "Order not found"},
         409: {
             "model": ErrorResponse,
-            "description": "Order not served (`order_not_served`) or already "
+            "description": "Order neither served nor paid (`order_not_served`) or already "
             "invoiced (`invoice_already_exists`)",
         },
     },
@@ -44,7 +44,7 @@ def create_invoice(order_id: int, db: DbSession):
     response_model=Page[InvoiceOut],
     dependencies=STAFF,
     summary="List invoices",
-    description="Paginated list ordered by invoice number. Optional filters by "
+    description="Paginated list, newest invoice first. Optional filters by "
     "issue date (`date_from`, `date_to`, both included). Roles: admin, waiter.",
 )
 def list_invoices(
