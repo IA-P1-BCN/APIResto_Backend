@@ -11,7 +11,7 @@ con **141 requests**: el flujo completo de punta a punta y los casos de error y 
 > El WebSocket de cocina (`/ws/kitchen`) tampoco está en el runner (sección 8).
 
 - Documentación de la API: [`docs/api.md`](../docs/api.md)
-- Swagger: <https://restoapi-47sp.onrender.com/docs> (en local: <http://localhost:8000/docs>)
+- Swagger: <https://restoapi-ths2.onrender.com/docs> (en local: <http://localhost:8000/docs>)
 
 ---
 
@@ -88,7 +88,7 @@ En el selector de entorno elige:
 | Entorno | `baseUrl` | Uso |
 |---|---|---|
 | `Local` | `http://localhost:8000` | Flujo completo (Collection Runner) |
-| `Production` | `https://restoapi-47sp.onrender.com` | Solo lectura: `GET` y `POST /auth/login`; el resto se cancela antes de enviarse |
+| `Production` | `https://restoapi-ths2.onrender.com` | Solo lectura: `GET` y `POST /auth/login`; el resto se cancela antes de enviarse |
 
 ## 6. Orden de ejecución (flujo de punta a punta)
 
@@ -187,7 +187,7 @@ Lo usan la cocina y la barra. Para probarlo a mano:
    - **websocat:** `websocat "ws://localhost:8000/ws/kitchen?token=<TOKEN>"`
    - **wscat:** `npx wscat -c "ws://localhost:8000/ws/kitchen?token=<TOKEN>"`
    - **Bruno** (versiones recientes): **New Request → WebSocket** con la misma URL.
-   - En Production: `wss://restoapi-47sp.onrender.com/ws/kitchen?token=<TOKEN>`.
+   - En Production: `wss://restoapi-ths2.onrender.com/ws/kitchen?token=<TOKEN>`.
 3. Lanza `07-orders/01-create-waiter` o `07-orders/04-status-in-kitchen` y verás los eventos:
 
    ```json

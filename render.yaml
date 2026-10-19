@@ -60,6 +60,6 @@ services:
       - key: KEEP_AWAKE_ENABLED
         value: "false"
       - key: KEEP_AWAKE_URL
-        sync: false # p.ej. https://restoapi-47sp.onrender.com/health
+        sync: false # p.ej. https://restoapi-ths2.onrender.com/health
       - key: KEEP_AWAKE_MINUTES
         value: "10"
