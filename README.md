@@ -6,7 +6,7 @@
 
 **[🇪🇸 Castellano](#castellano) · [🇬🇧 English](#english) · [📸 Capturas / Screenshots](#capturas--screenshots) · [🛠️ Documentación técnica / Technical docs](#documentación-técnica--technical-docs)**
 
-> 🌐 **App:** [apiresto-f5.vercel.app](https://apiresto-f5.vercel.app) · **API:** [restoapi-47sp.onrender.com](https://restoapi-47sp.onrender.com) ([Swagger](https://restoapi-47sp.onrender.com/docs)) · **Frontend:** [IA-P1-BCN/APIResto_Frontend](https://github.com/IA-P1-BCN/APIResto_Frontend) · **Backend:** [IA-P1-BCN/APIResto_Backend](https://github.com/IA-P1-BCN/APIResto_Backend)
+> 🌐 **App:** [apiresto-f5.vercel.app](https://apiresto-f5.vercel.app) · **API:** [restoapi-ths2.onrender.com](https://restoapi-ths2.onrender.com) ([Swagger](https://restoapi-ths2.onrender.com/docs)) · **Frontend:** [IA-P1-BCN/APIResto_Frontend](https://github.com/IA-P1-BCN/APIResto_Frontend) · **Backend:** [IA-P1-BCN/APIResto_Backend](https://github.com/IA-P1-BCN/APIResto_Backend)
 
 ![Panel de administración de APIResto / APIResto admin dashboard](docs/capturas/02-inicio-admin.png)
 
