@@ -1,14 +1,4 @@
-<<<<<<< HEAD
-<<<<<<< HEAD
-# Bitácora de Uso de IA (AI Log)
 
-Este archivo registra el uso de asistentes de IA (Claude Code, OpenCode, etc.) en cada funcionalidad para la retrospectiva y actualización de `AGENTS.md`.
-
-## Entradas
-=======
-=======
-
->>>>>>> 3034c2613ac6a9e33ddaf18ccc29cbaa1775704f
 # Bitácora de IA (ai-log)
 
 Registro de cómo usa el equipo los agentes de IA (Claude Code, OpenCode) para desarrollar
@@ -595,9 +585,6 @@ agente, la revisé y la commiteé primero.
 - **Decisiones humanas:** separar HU-21 en HU-21 (OpenCode, Anna) y HU-53 (bitácora, Rita), decidido por mí.
 - **Lección:** antes de pedir una propuesta, pedir al agente que lea `AGENTS.md` y el estado de `dev`.
 
-<<<<<<< HEAD
->>>>>>> 27711f50e5988202260aa8fc7a37551c78cb32e4
-=======
 ### Tarea #117 · Unidades preparadas y servidas
 
 #### 2026-10-14 · Contar unidades (Backend #118 y #119, Frontend #42) · @costanna
@@ -667,9 +654,6 @@ agente, la revisé y la commiteé primero.
 - **Mi prompt o la spec:** nada
 - **Decisiones humanas:** aplicar la barra fija a todas las ventanas de formulario, no solo a la de pedidos (Anna).
 - **Lección:** probar la interfaz en pantallas bajas y medir, no solo mirar capturas.
-<<<<<<< HEAD
->>>>>>> 3034c2613ac6a9e33ddaf18ccc29cbaa1775704f
-=======
 
 ### PR #158 · Diagrama ER a 11 tablas y migraciones hasta la 0010
 
@@ -684,4 +668,3 @@ agente, la revisé y la commiteé primero.
 - **Mi prompt o la spec:** el prompt daba por completa la lista de cambios y no pedía contrastarla con los modelos y las migraciones.
 - **Decisiones humanas:** entrada identificada solo por la PR #158, sin HU (Rita).
 - **Lección:** antes de documentar el modelo, comparar con `app/models/` y `migrations/versions/` y comprobar el diagrama aplicando las migraciones en una BD vacía.
->>>>>>> 9dfd5224f3c6f8389bda5a26bef1ca56a52d43cd
