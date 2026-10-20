@@ -1,14 +1,4 @@
-<<<<<<< HEAD
-<<<<<<< HEAD
-# Bitácora de Uso de IA (AI Log)
 
-Este archivo registra el uso de asistentes de IA (Claude Code, OpenCode, etc.) en cada funcionalidad para la retrospectiva y actualización de `AGENTS.md`.
-
-## Entradas
-=======
-=======
-
->>>>>>> 3034c2613ac6a9e33ddaf18ccc29cbaa1775704f
 # Bitácora de IA (ai-log)
 
 Registro de cómo usa el equipo los agentes de IA (Claude Code, OpenCode) para desarrollar
@@ -595,9 +585,6 @@ agente, la revisé y la commiteé primero.
 - **Decisiones humanas:** separar HU-21 en HU-21 (OpenCode, Anna) y HU-53 (bitácora, Rita), decidido por mí.
 - **Lección:** antes de pedir una propuesta, pedir al agente que lea `AGENTS.md` y el estado de `dev`.
 
-<<<<<<< HEAD
->>>>>>> 27711f50e5988202260aa8fc7a37551c78cb32e4
-=======
 ### Tarea #117 · Unidades preparadas y servidas
 
 #### 2026-10-14 · Contar unidades (Backend #118 y #119, Frontend #42) · @costanna
@@ -667,9 +654,6 @@ agente, la revisé y la commiteé primero.
 - **Mi prompt o la spec:** nada
 - **Decisiones humanas:** aplicar la barra fija a todas las ventanas de formulario, no solo a la de pedidos (Anna).
 - **Lección:** probar la interfaz en pantallas bajas y medir, no solo mirar capturas.
-<<<<<<< HEAD
->>>>>>> 3034c2613ac6a9e33ddaf18ccc29cbaa1775704f
-=======
 
 ### PR #158 · Diagrama ER a 11 tablas y migraciones hasta la 0010
 
@@ -684,4 +668,18 @@ agente, la revisé y la commiteé primero.
 - **Mi prompt o la spec:** el prompt daba por completa la lista de cambios y no pedía contrastarla con los modelos y las migraciones.
 - **Decisiones humanas:** entrada identificada solo por la PR #158, sin HU (Rita).
 - **Lección:** antes de documentar el modelo, comparar con `app/models/` y `migrations/versions/` y comprobar el diagrama aplicando las migraciones en una BD vacía.
->>>>>>> 9dfd5224f3c6f8389bda5a26bef1ca56a52d43cd
+
+### PR #163 · Diagrama ER a 13 tablas con refresh_tokens y revoked_tokens
+
+#### 2026-10-19 · Añadir las tablas de tokens al diagrama (PR #163) · @arita-pereira
+
+- **Herramienta y modelo:** Claude (Pro) · Sonnet 5.5
+- **Issue y reglas:** PR #163, sin issue ni HU · R-05, R-06, R-07
+- **Prompt clave:** el aviso de Anna ("he tenido que poner dos nuevas tablas ... sobre el tema de renovar tokens") y la petición de actualizar el diagrama
+- **Resultado:** aceptado. `docs/er.md` y el PNG con las 13 tablas y la migración `c50fc2ad47e1`. Comprobado con `alembic upgrade head` en una BD vacía: 13 tablas y 13 relaciones coinciden con el bloque Mermaid y hay una sola cabeza; probado en falso con 3 errores metidos a propósito.
+- **Errores o alucinaciones:** mi primer parche de limpieza del ai-log salió con 3 archivos (también `er.md` y el PNG) porque la rama temporal heredó el índice; se vio con `git diff --stat` antes de entregarlo y se rehízo. Del código de la HU-30 salieron dos hallazgos, sin error del agente: la migración sin número (`c50fc2ad47e1`) y `refresh_tokens.token_hash` sin `UNIQUE` ni índice. El diagrama de la #158 quedó desfasado a las pocas horas porque la #157 entró después (16:02 frente a 14:49).
+- **Trabajo descartado:** renombrar la migración a `0011`, porque cambia un id que Render y Neon pueden tener guardado; es decisión de Anna.
+- **Mi prompt o la spec:** nada
+- **Decisiones humanas:** la PR se aceptó con solo el commit del ER, antes de subir esta entrada; la entrada y la limpieza de las 17 líneas de marcas de conflicto que dejó la #157 van en una PR aparte (Rita).
+- **Lección:** antes de dar un diagrama por cerrado, volver a mirar `dev` y las PR de modelo abiertas (misma lección que la HU-31 y la #158, va a `AGENTS.md`); y buscar `^<<<<<<<` con `grep` antes de commitear un merge.
+
