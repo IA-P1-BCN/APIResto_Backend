@@ -595,9 +595,7 @@ agente, la revisé y la commiteé primero.
 - **Decisiones humanas:** separar HU-21 en HU-21 (OpenCode, Anna) y HU-53 (bitácora, Rita), decidido por mí.
 - **Lección:** antes de pedir una propuesta, pedir al agente que lea `AGENTS.md` y el estado de `dev`.
 
-<<<<<<< HEAD
->>>>>>> 27711f50e5988202260aa8fc7a37551c78cb32e4
-=======
+
 ### Tarea #117 · Unidades preparadas y servidas
 
 #### 2026-10-14 · Contar unidades (Backend #118 y #119, Frontend #42) · @costanna
@@ -667,12 +665,6 @@ agente, la revisé y la commiteé primero.
 - **Mi prompt o la spec:** nada
 - **Decisiones humanas:** aplicar la barra fija a todas las ventanas de formulario, no solo a la de pedidos (Anna).
 - **Lección:** probar la interfaz en pantallas bajas y medir, no solo mirar capturas.
-<<<<<<< HEAD
->>>>>>> 3034c2613ac6a9e33ddaf18ccc29cbaa1775704f
-=======
-<<<<<<< HEAD
->>>>>>> 3034c2613ac6a9e33ddaf18ccc29cbaa1775704f
-=======
 
 ### PR #158 · Diagrama ER a 11 tablas y migraciones hasta la 0010
 
@@ -687,5 +679,79 @@ agente, la revisé y la commiteé primero.
 - **Mi prompt o la spec:** el prompt daba por completa la lista de cambios y no pedía contrastarla con los modelos y las migraciones.
 - **Decisiones humanas:** entrada identificada solo por la PR #158, sin HU (Rita).
 - **Lección:** antes de documentar el modelo, comparar con `app/models/` y `migrations/versions/` y comprobar el diagrama aplicando las migraciones en una BD vacía.
->>>>>>> 9dfd5224f3c6f8389bda5a26bef1ca56a52d43cd
->>>>>>> 55dfc4a69cc23094e697b9e2e187d7dc7fbf5b14
+
+
+### AI Log · IA (interacciones con modelos)
+
+#### 2026-10-19 · Registro de uso de IA · @carlaDC
+
+- **Herramienta y modelo:** OpenCode · modelo gratuito
+- **Issue y reglas:** #N · nada
+- **Prompt clave:** "documenta el ai-log de IA: prompts, respuestas, tokens, costo y latencia de las llamadas a modelos"
+- **Resultado:** aceptado. Categoría `ia` para registrar cada llamada a un modelo de IA (LLM): modelo usado, proveedor, tokens de entrada/salida, costo estimado en USD, latencia en ms y motivo de finalización (`finish_reason`). Ejemplo: `nemotron-3.5-super-vl-free`, 234 tokens totales, 0.00117 USD, 1240 ms.
+- **Errores o alucinaciones:** nada
+- **Trabajo descartado:** nada
+- **Mi prompt o la spec:** no había spec previa; se definió desde cero.
+- **Decisiones humanas:** los campos `prompt` y `response` se redactan si contienen datos sensibles antes de escribirse al log.
+- **Lección:** llevar el `cost_usd` y el `total_tokens` permite controlar el gasto de IA por sesión y detectar picos de uso.
+
+
+### AI Log · Token (autenticación y JWT)
+
+#### 2026-10-20 · Registro de tokens y autenticación · @carlaDC
+
+- **Herramienta y modelo:** OpenCode · modelo gratuito
+- **Issue y reglas:** #N · R-01, R-02, R-09
+- **Prompt clave:** "documenta el ai-log de token: login, JWT, refresh, 2FA y eventos de autenticación del restaurante"
+- **Resultado:** aceptado. Categoría `token` para registrar eventos de autenticación y autorización: login exitoso o fallido, generación de access/refresh token, refresh de token expirado, logout, verificación de email, restablecimiento de contraseña y 2FA. Campos extra: `user_id`, `action`, `token_type`, `success`, `ip_address`, `user_agent`, `expires_in`, `failure_reason`. Ejemplo: login exitoso con `action: login`, `token_type: access`, `success: true`.
+- **Errores o alucinaciones:** nada
+- **Trabajo descartado:** nada
+- **Mi prompt o la spec:** no había spec previa; se definió siguiendo el formato del `ai-log.md` existente.
+- **Decisiones humanas:** el valor del token JWT nunca se escribe al log (se redacta como `***`); solo se registra el tipo y si la acción tuvo éxito.
+- **Lección:** separar `token_type` (`access`, `refresh`, `password_reset`, `email_verification`) facilita buscar por tipo de token cuando hay un incidente de seguridad.
+
+
+### AI Log · WebSocket (cocina y barra)
+
+#### 2026-10-15 · Registro de WebSocket en tiempo real · @carlaDC
+
+- **Herramienta y modelo:** OpenCode · modelo gratuito
+- **Issue y reglas:** #N · R-14
+- **Prompt clave:** "documenta el ai-log de websocket: conexiones de cocina/barra, broadcast de órdenes y eventos de estaciones"
+- **Resultado:** aceptado. Categoría `websocket` para registrar conexiones WebSocket de cocina y barra: conexión abierta/cerrada, mensajes recibidos, eventos enviados (orden creada, cambio de estado), broadcast por estación y errores de envío o reconexión. Campos extra: `event`, `role`, `station`, `connection_id`, `total_connections`, `order_id`, `order_status`, `retry_attempt`, `error`. Ejemplo: `event: broadcast`, `order_id: 128`, `order_status: en_preparacion`, `station: principales`.
+- **Errores o alucinaciones:** nada
+- **Trabajo descartado:** nada
+- **Mi prompt o la spec:** no había spec previa; se definió desde cero.
+- **Decisiones humanas:** registrar el `role` (`cocina`, `barra`, `admin`, `waiter`) y la `station` para saber qué cliente recibió cada mensaje en el filtrado por estación (R-14).
+- **Lección:** el campo `total_connections` ayuda a detectar si los cocineros/barra se están desconectando masivamente o si hay fugas de conexión.
+
+
+### HU-28 · AI Log · IA (interacciones con modelos)
+
+#### 2026-10-19 · AI logs de IA del restaurante · @carlaDC
+
+- **Herramienta y modelo:** OpenCode · modelo gratuito
+- **Issue y reglas:** #N · nada
+- **Prompt clave:** "crea la documentación de ai-log de IA para el backend del restaurante"
+- **Resultado:** aceptado. Categoría `ia` para registrar cada llamada a un modelo de IA (LLM): modelo usado, proveedor, tokens de entrada/salida, costo estimado en USD, latencia en ms y motivo de finalización (`finish_reason`). Ejemplo: `nemotron-3.5-super-vl-free`, 234 tokens totales, 0.00117 USD, 1240 ms.
+- **Errores o alucinaciones:** nada
+- **Trabajo descartado:** nada
+- **Mi prompt o la spec:** no había spec previa para los ai-logs de IA; se definió desde cero.
+- **Decisiones humanas:** los campos `prompt` y `response` se redactan si contienen datos sensibles antes de escribirse al log.
+- **Lección:** llevar el `cost_usd` y el `total_tokens` permite controlar el gasto de IA por sesión y detectar picos de uso.
+
+
+### HU-28 · AI Log · Token (autenticación y JWT)
+
+#### 2026-10-19 · AI logs de token del restaurante · @carlaDC
+
+- **Herramienta y modelo:** OpenCode · modelo gratuito
+- **Issue y reglas:** #N · R-01, R-02, R-09
+- **Prompt clave:** "crea la documentación de ai-log de token para el backend del restaurante"
+- **Resultado:** aceptado. Categoría `token` para registrar eventos de autenticación y autorización: login exitoso o fallido, generación de access/refresh token, refresh de token expirado, logout, verificación de email, restablecimiento de contraseña y 2FA. Campos extra: `user_id`, `action`, `token_type`, `success`, `ip_address`, `user_agent`, `expires_in`, `failure_reason`. Ejemplo: login exitoso con `action: login`, `token_type: access`, `success: true`.
+- **Errores o alucinaciones:** nada
+- **Trabajo descartado:** nada
+- **Mi prompt o la spec:** no había spec previa para los ai-logs de token; se definió desde cero.
+- **Decisiones humanas:** el valor del token JWT nunca se escribe al log (se redacta como `***`); solo se registra el tipo y si la acción tuvo éxito.
+- **Lección:** separar `token_type` (`access`, `refresh`, `password_reset`, `email_verification`) facilita buscar por tipo de token cuando hay un incidente de seguridad.
+
