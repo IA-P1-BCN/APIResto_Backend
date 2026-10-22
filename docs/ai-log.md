@@ -758,3 +758,17 @@ agente, la revisé y la commiteé primero.
 - **Decisiones humanas:** el valor del token JWT nunca se escribe al log (se redacta como `***`); solo se registra el tipo y si la acción tuvo éxito.
 - **Lección:** separar `token_type` (`access`, `refresh`, `password_reset`, `email_verification`) facilita buscar por tipo de token cuando hay un incidente de seguridad.
 
+
+### Retrospectiva · Uso de IA en P3
+
+#### 2026-10-22 · Retrospectiva a partir de la bitácora · @arita-pereira
+
+- **Herramienta y modelo:** Claude (app, con el repo clonado en solo lectura) · Sonnet 5.5
+- **Issue y reglas:** sin issue ni HU · nada
+- **Prompt clave:** "quiero que hagas la retrospectiva a partir del docs/ai-log.md"; después, varias veces, "actualízala" cada vez que cambiaba `dev`
+- **Resultado:** aceptado con cambios. `docs/retrospectiva.md` con resumen, qué funcionó, seis patrones de fallo con causa raíz, siete reglas propuestas para `AGENTS.md` y estado de la bitácora. Las cifras (40 entradas, por persona) se contrastaron con `docs/ai-log.md` en `dev` y se rehicieron tres veces: la #164 limpió las marcas de conflicto, la #165 las reintrodujo y borró mi entrada de la #163, y la #166 lo arregló.
+- **Errores o alucinaciones:** (1) El primer análisis dijo que `AGENTS.md` no tenía la sección "Registro de IA" actualizada; existe desde antes (línea 87). Causa raíz: lo afirmó sin releer el archivo. Se quitó antes de pasarlo al documento. (2) Dijo que las marcas de la #157 llegaron a `dev` "con CI en verde" sin haber mirado el CI; solo era razonable suponer que ningún test revisa un `.md`. Lo corregí al preguntar por qué. (3) Me dio la ruta `~/Descargas` para el parche, y en mi Mac la carpeta es `Downloads`. Causa raíz: dio por hecho el idioma del sistema. El `git apply` falló sin cambiar nada y se repitió con la ruta correcta.
+- **Trabajo descartado:** la PR a `AGENTS.md` con las siete reglas, porque el proyecto está entregado; quedan como propuesta en la retrospectiva. También la primera versión de la retrospectiva, que daba 35 entradas y a Carla sin ninguna.
+- **Mi prompt o la spec:** el prompt no decía el formato ni dónde iba la retrospectiva; acabó en un documento de Claude, uno de Google, el proyecto de Claude y el repo. Tampoco avisé de que la bitácora seguía cambiando mientras tanto.
+- **Decisiones humanas:** no hacer la PR a `AGENTS.md` ahora y dejar la fecha del documento en el 21/10 (Rita). Restaurar mi entrada de la #163 y quitar las marcas de conflicto en una PR aparte, la #166, aceptada por Anna.
+- **Lección:** cuando se analiza un archivo que otras personas siguen editando, releer `dev` antes de cada versión y no afirmar nada de él sin abrirlo; y preguntar cómo se llaman las carpetas del ordenador antes de dar una ruta.
